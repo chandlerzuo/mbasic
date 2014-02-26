@@ -23,7 +23,8 @@ INSTALLATION
 
 MBASIC will be available at Bioconductor. Currently you can download the development version here and install in R by:
 
-    install.packages( "MBASIC" )
+    library( devtools )
+    install_github( "chandlerzuo/mbasic" )
 
 
 REFERENCES
