@@ -1,0 +1,56 @@
+\name{MBASIC.sim.state}
+\alias{MBASIC.sim.state}
+\title{Simulate the state matrix for general MBASIC models.}
+\usage{
+MBASIC.sim.state(I, K, J, S = 2, struct = NULL, delta = NULL,
+  delta.non = NULL, zeta = 0.1)
+}
+\arguments{
+  \item{I}{An integer for the total number of units.}
+
+  \item{K}{An integer for the number of different
+  experimental conditions.}
+
+  \item{J}{An integer for the number of clusters.}
+
+  \item{S}{An integer for the number of states.}
+
+  \item{struct}{An K by J integer matrix. The j-th column
+  denotes the levels for the cluster level parameter. See
+  details for more information. Default: NULL.}
+
+  \item{delta}{A vector of length S, or NULL. This is the
+  dirichlet prior parameter to simulate the probability
+  across the S states for each CLUSTERED unit and each
+  experiment. If NULL, rep(0.1,S) is used.}
+
+  \item{delta.non}{A vector of length S, or NULL. This is
+  the dirichlet prior parameter to simulate the probability
+  across the S states for each UNCLUSTERED unit and each
+  experiment. If NULL, rep(0.1,S) is used.}
+
+  \item{zeta}{The probability that each unit does not
+  belong to any cluster. Default: 0.1.}
+}
+\value{
+A list containing: \tabular{ll}{ Theta \tab A K by I
+matrix. The (k,i)-th element is the indicator of whether
+the i-th unit is binding for condition k.\cr W \tab A K by
+J matrix. Each row is the indicators of the loci sets
+related an individual replicate. \cr Z \tab An I by J
+matrix. Each column is the indicator for an individual loci
+set.\cr delta \tab Same as the input argument 'delta'.\cr
+zeta \tab Same as the input argumnent 'zeta'.\cr non.id
+\tab A vector of length I indicating the number of each
+unit not to belong to any cluster.\cr }
+}
+\description{
+Simulate for the Theta matrix
+}
+\examples{
+dat.sim <- MBASIC.sim.state( I = 100, K = 10, J = 3 )
+}
+\author{
+Chandler Zuo \email{zuo@stat.wisc.edu}
+}
+

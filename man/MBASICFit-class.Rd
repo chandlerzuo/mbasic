@@ -1,0 +1,67 @@
+\docType{class}
+\name{MBASICFit-class}
+\alias{MBASICFit-class}
+\title{An S-4 class containing the model fit information for MBASIC model.}
+\description{
+\describe{ \item{Theta}{A K by I matrix. The (k,i)-th
+element is the posterior probability for the i-th locus to
+be UNENRICHED under the k-th experimental condition.}
+\item{W}{A K by J matrix. The (k,j)-th element is the
+posterior probability that loci in the j-th group are
+UNENRICHED under the k-th experimental condition.}
+\item{V}{NULL except if this object is fitted from
+'MBASIC.binary' function.In that case, this is a K by nsig
+matrix. The (k,s)-th element is the weight of the s-th
+enrichment component for the k-th experimental condition.}
+\item{Z}{An I by J matrix. The (i,j)-th element is the
+posterior probability that the i-th unit (locus) belongs to
+the j-th cluster.} \item{b}{A vector of length I. The i-th
+element is the posterior probability that the i-th unit
+(locus) does not belong to any cluster.} \item{aic}{The AIC
+value of the fitted model.} \item{bic}{The BIC value of the
+fitted model.} \item{aicc}{The AICC value of the fitted
+model.} \item{lik}{The log-likelihood after the final
+iteration.} \item{alllik}{The vector for the log-likelihood
+after each E-M iteration.} \item{zeta}{The hyper
+probability for each unit (locus) to belong to some
+cluster.} \item{Mu}{If this object is fitted from
+'MBASIC.binary' function, this slot is an N by nsig matrix.
+The (n,s)-th entry is the mean parameter for the s-th
+enrichment component for the n-th replicate. Otherwise,
+this is an N by S matrix, where the (n,s)-th entry is the
+mean parameter for the s-th component.} \item{Sigma}{If
+this object is fitted by the 'MBASIC.binary' function, this
+slot is an N by nsig matrix. The (n,s)-th entry is the
+dispersion parameter for the s-th enrichment component for
+the n-th experiment. Otherwise, this is an N by S matrix,
+where the (n,s)-th entry is the dispersion parameter for
+the s-th component.} \item{sigma0}{NULL except if this
+object is fitted by the 'MBASIC.binary' function. In that
+case, this is a vector of length N. The n-th entry is the
+dispersion parameter for the unenrichment component of the
+n-th experiment.} \item{e}{NULL except if this object is
+fitted by the 'MBASIC.binary' function. In that case, this
+is a vector of length N. The n-th entry is the
+normalization value for the background of the n-th
+experiment.} \item{probz}{A vector of length J. The j-th
+entry is the hyper probability of any locus to belong to
+the j-th cluster.} \item{P}{A matrix of length I by S. The
+(i,s)-th entry is the probability for the i-th locus to
+have state s, conditional on that this locus does not
+belong to any cluster.} \item{ converged}{Whether the final
+model is converged.} \item{Theta.err}{Mean absolute
+differences between the finally fitted Theta matrix and the
+true value passed by the 'para' argument.}
+\item{ARI}{Adjusted Rand Index between the fitted
+clustering and the true clsutering passed by the 'para'
+argument.} \item{W.err}{Mean squared error between the
+elements of the fitted W matrix in the final model and the
+true values passed by the 'para' argument.}
+\item{MisClassRate}{Mis-classification rate by comparing
+the fitted clustering and the true clustering passed by the
+'para' argument.} }
+}
+\examples{
+showClass("MBASICFit")
+}
+

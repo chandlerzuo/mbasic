@@ -1,0 +1,31 @@
+\name{bkng_mean}
+\alias{bkng_mean}
+\title{Compute the background means.}
+\usage{
+bkng_mean(inputdat, target, nknots = 2, family = "lognormal")
+}
+\arguments{
+  \item{inputdat}{A matrix for the input counts at each
+  locus (column) for each experiment (row).}
+
+  \item{target}{A \link{GRanges} object with two fiels
+  named "mappability" and "GC".The length of target must be
+  the same as the column of inputdat.}
+
+  \item{nknots}{A integer for the number of knots for the
+  spline function. Default: 2.}
+
+  \item{family}{A string for the distributional family.
+  Must be either "lognormal" ( default ) or "negbin".}
+}
+\value{
+A numeric matrix for the background counts at each locus
+(column) for each experiment (row).
+}
+\description{
+Compute the background means.
+}
+\author{
+Chandler Zuo \email{zuo@stat.wisc.edu}
+}
+

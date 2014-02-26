@@ -1,0 +1,385 @@
+%% \VignetteIndexEntry{CSSP: ChIP-Seq Statistical Power}
+\documentclass[a4paper,10pt]{article}
+\usepackage{amsmath,mathrsfs,graphicx}
+\usepackage[top=2cm,bottom=2cm,left=2cm,right=2cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{color}
+%\usepackage{natbib}
+
+\title{MBASIC: Matrix-formed Bayesian Analysis for State-space Inference and Clustering}
+
+\author{Chandler Zuo\footnote{Department of Statistics, 1300 University Avenue, Madison, WI, 53706, USA.}  \\ 
+S\"und\"uz Kele\c{s}\footnote{Departments of Statistics and of  Biostatistics and Medical Informatics, 1300 University Avenue, Madison, WI, 53706, USA.}}
+\date{}
+
+\usepackage{Sweave}
+\begin{document}
+\maketitle
+
+\tableofcontents
+
+\section{Introduction}
+
+This document provides an introduction to the power analysis of ChIP-seq data with
+the \texttt{MBASIC} package. This \texttt{R} package implements \textbf{MBASIC} which stands for \textbf{M}atrix-formed \textbf{B}ayesian \textbf{A}nalysis for \textbf{S}tate-space \textbf{I}nference and \textbf{C}lustering in \cite{zuo14}. \textbf{MBASIC} provides a Bayesian framework for clustering units based on their infered states over a set of experimental conditions.
+
+\texttt{MBASIC} is especially useful for integrative analysis for ChIP-seq experiments. In this case, a set of prespecified loci is clustered based on their activities over celltypes and transcription factors. We build a pipeline in the \texttt{MBASIC} package and will focus on this pipeline in this vignette. We will introduce the general functionalities for the \textbf{MBASIC} model at the end of the vignette.
+
+\section{MBASIC Pipeline for Sequencing Data}
+
+\subsection{Workflow}
+
+The \texttt{MBASIC} framework consists of five major steps:
+
+\begin{enumerate}
+  \item \textit{Matching ChIP replicate files with their inputs:} This step matches ChIP replicate files with their matching input files;
+  \item \textit{Calculating mapped counts and genomic scores on the target loci:} This step calculates the mapped counts from each ChIP and input replicate files on each of the target locus;
+  \item \textit{Calculating the mappability and GC-content scores for the target loci:} This step computes the average mappability and GC scores for loci from external files;
+  \item \textit{Estimating the background means:} This step uses regression models for the input data and the M, GC scores to estimate the background means for the ChIP replicates;
+  \item \textit{Fitting MBASIC model:} This step fits the MBASIC model to identify the binding states for each locus and cluster the loci based on their binding states across different conditions.
+\end{enumerate}
+
+\texttt{MBASIC} integrates Step 2-5 in a single function called ``MBASIC.pipeline". For Step 1 \texttt{MBASIC} provides a function ``ChIPInputMatch'' that assists matching the ChIP files with input files based on the naming convention of the ENCODE datasets. We have found that in practice, more often than not, some violations to the ENCODE file name conventions always occur, and manual adjustments to the results of our automated matching are inevitable. Therefore, we do not integrate this function in ``MBASIC.pipeline".
+
+\subsection{Match ChIP and Input Datasets}
+
+<<start,eval = TRUE, echo = FALSE, results = hide, cache = FALSE>>=
+rm( list = ls() )
+mydir <- getwd()
+options( width = 50 )
+setwd( "/p/keles/ChenZuo/CSNet/test/" )
+@ 
+
+To illustrate Step 1 we first generate a set of synthetic data.
+
+\texttt{MBASIC} package provides a function ``generateSyntheticData'' to assist our demo. This function generates synthetic BED data for ChIP and input samples, as well as mappability and GC scores in a directory specified by the ``dir" argument. It also generates a target set of loci for our analysis. By default, the number of loci is 100, each with size 20 bp. All data are generated across 5 chromosomes, each with size 10K bp. ChIP data are from 2 celltypes, and for each celltype there are K=5 TFs. Under each condition randomly 1-3 replicates for the ChIP data are generated. All ChIP data from the same celltype are matched to the same set of 3 input replicates. 
+
+<<generatedata,eval=TRUE,echo=TRUE,results=verbatim,cache=FALSE>>=
+library(MBASIC)
+target <- generateSyntheticData( dir = "syntheticData" )
+target
+system( "ls syntheticData/*/*" )
+@ 
+
+Function ``ChIPInputMatch'' assists Step 1. It reads all files with suffix ``.bed" in directories specified by the argument ``.dir", and matches the files assuming ENCODE naming convention. It looks up files up to the number of levels of subdirectories specified by ``depth". The output of this function contains multiple columns. The first column contains the file name for each ChIP replicate. The second column is the initial string for the matching input replicates, because for each ChIP replicate there are possibly multiple input replicates. The rest of the columns contains information for lab, experiment identifier, factor and control identifier. This information is parsed from the file names.
+
+<<match,eval=TRUE,echo=TRUE,results=verbatim,cache=FALSE>>=
+tbl <- ChIPInputMatch( dir = paste( "syntheticData/", 
+                         c( "chip", "input" ), sep = "" ), 
+                      suffix = ".bed", depth = 5 )
+head( tbl )
+@ 
+
+We also need to prepare the following meta data information. Below the vector ``n" specifies the number of replicates within the same experimental conditions.
+
+<<replicate,eval=TRUE,echo=TRUE,results=verbatim,cache=FALSE>>=
+conds <- paste( tbl$cell, tbl$factor, sep = "." )
+@ 
+
+Now we are in a position to continue the next steps in the pipeline. There are two ways to execute these steps: (1) use function ``MBASIC.pipeline", which wraps up all the consecutive steps; or (2) execute each step separately.
+
+\subsection{Pipeline Execution}
+
+The following code calls the function ``MBASIC.pipeline":
+
+<<replicate,eval=FALSE,echo=TRUE,results=hide,cache=FALSE>>=
+MBASIC.fit <- MBASIC.pipeline( chipfile = tbl$chipfile,
+                                inputfile = tbl$inputfile, 
+                                input.suffix = ".bed", 
+                                target = target, 
+                                format = "BED", 
+                                fragLen = 150, 
+                                pairedEnd = FALSE, 
+                                unique = TRUE, 
+                                m.prefix = "syntheticData/mgc/", 
+                                m.suffix = "_M.txt", 
+                                gc.prefix = "syntheticData/mgc/", 
+                                gc.suffix = "_GC.txt", 
+                                fac = conds,
+                                struct = NULL, J = 3, 
+                                family = "negbin", 
+                                burnin = 20, maxitr = 100, 
+                                tol = 1e-4, nsig = 2, 
+                                datafile = NULL )
+@ 
+
+``MBASIC.pipeline'' requires a number of arguments. We list these arguments in Table \ref{tbl:arguments}. For details users are recommended to read our manual.
+
+\begin{table}
+  \centering
+  \caption{Arguments for the ``MBASIC.pipeline'' function.}\label{tbl:arguments}
+  \begin{tabular}{p{2cm}p{10cm}}
+    \hline
+    \multicolumn{2}{c}{Data Sources}\\
+    \hline
+    chipfile & A string vector for the ChIP files.\\
+    inputfile & A string vector for the matching input files. The length must be the same as ``chipfile".\\
+    input.suffix & A string for the suffix of input files. If NULL, ``inputfile" will be treated as the full names of the input files. Otherwise, all inputfiles with the initial ``inputfile" and this suffix will be merged.\\
+    format & A string specifying the type of the file.  Currently two file types are allowed: ``BAM" or ``BED".  Default: ``BAM".\\
+    m.prefix & A string for the prefix of the mappability files.\\
+    m.suffix & A string for the suffix of the mappability files. See our man files for more details.  Default: NULL.\\
+    gc.prefix & A string for the prefix of the GC files.\\
+    gc.suffix & A string for the suffix of the GC files.  See our man files for more details. Default: NULL.\\
+    \hline
+    \multicolumn{2}{c}{Genomic Information}\\
+    \hline
+    target & A GenomicRanges object for the target intervals where the reads are mapped.\\
+    fragLen & Either a single value or a 2-column matrix of the fragment lengths for the chip and input files.  Default: 150.\\
+    pairedEnd & Either a boolean value or a 2-column boolean matrix for  whether each file is a paired-end data set. Currently this function only allows ``BAM" files for paired-end data. Default: FALSE.\\
+    unique & A boolean value for whether only reads with distinct genomic coordinates or strands are mapped.  Default: TRUE.\\
+    \hline
+    \multicolumn{2}{c}{Model Parameters}\\
+    \hline
+    fac & A vector of length N for the experimental condition of each ChIP replicate.\\
+    struct & A matrix indicating the levels of the signal matrix. \\
+    J & The number of clusters to be identified.\\
+    family & The distribution of family to be used.  Either ``lognormal" or ``negbin". See our man files for more information.\\
+    nsig & The number of mixture components for the distribution of the signal state. Default: 2.\\
+    \hline
+    \multicolumn{2}{c}{Tuning Parameters}\\
+    \hline
+    burnin & An integer value for the number of iterations in initialization. Default: 20.\\
+    maxitr & The maximum number of iterations in the E-M algorithm. Default: 100.\\
+    tol & Tolerance for error in checking the E-M algorithm's convergence. Default: 1e-04.\\
+    datafile & The location to save the count matrices.\\
+    \hline
+  \end{tabular}
+\end{table}
+
+\subsection{Stepwise Execution}
+
+Alternatively, each step in the pipeline can be executed separately.
+
+<<eval = TRUE, echo = TRUE, results = verbatim >>=
+## Step 2: Generate mapped count matrices
+dat <- generateReadMatrices( chipfile = tbl$chipfile, 
+                            inputfile = tbl$inputfile, 
+                            input.suffix = ".bed", 
+                            target = target, 
+                            format = "BED", 
+                            fragLen = 150, 
+                            pairedEnd = FALSE, 
+                            unique = TRUE )
+
+## Step 3: Compute M and GC scores
+target <- averageMGC( target = target, 
+                     m.prefix = "syntheticData/mgc/", 
+                     m.suffix = "_M.txt", 
+                     gc.prefix = "syntheticData/mgc/", 
+                     gc.suffix = "_GC.txt" )
+
+## Step 4: Compute the background means
+Mu0 <- bkng_mean( inputdat = dat$input, 
+                 target = target, 
+                 family = "negbin" )
+@ 
+
+<<eval=FALSE,echo=FALSE>>=
+save( dat, Mu0, conds,file = "dat.Rda" )
+@ 
+
+
+<<eval=FALSE,echo=FALSE>>=
+setwd( "/p/keles/ChenZuo/CSNet/test/" )
+library(MBASIC)
+load( "dat.Rda" )
+@ 
+
+<<eval = TRUE, echo = TRUE, results = hide >>=
+## Step 5: Fit an MBASIC model
+MBASIC.fit <- MBASIC.binary( Y = t( dat$chip ), 
+                            Mu0 = t( Mu0 ), 
+                            fac = conds, 
+                            J=3, 
+                            zeta=0.2, 
+                            maxitr = 100,
+                            burnin = 20,
+                            outfile=NULL,
+                            out=NULL, 
+                            init.mod = NULL,
+                            struct = NULL,
+                            family="negbin",
+                            tol = 1e-4,
+                            nsig = 2 )
+@ 
+
+\subsection{The ``MBASICFit" Class}
+
+The outputs of both ``MBASIC.binary" and ``MBASIC.pipeline" functions are of S-4 class ``MBASICFit". 
+
+<<eval=TRUE,echo=TRUE,results=verbatim>>=
+showClass( "MBASICFit" )
+@ 
+
+Slot ``Theta" is a matrix for the estimated state, where each row corresponds to an experimental condition, and each column corresponds to a locus. Each entry is the probability for the locus to be un-binding at the corresponding state.
+
+<<eval=TRUE,echo=TRUE,results=verbatim>>=
+dim( MBASIC.fit@Theta )
+rownames( MBASIC.fit@Theta )
+head( MBASIC.fit@Theta[ 1, ] )
+@ 
+
+Slot ``Z" is a matrix for the posterior probablity of each locus to belong to each cluster. The rows correspond to the loci and the columns correspond to the clusters.
+
+<<eval = TRUE, echo = TRUE, results = verbatim >>=
+dim( MBASIC.fit@Z )
+head( MBASIC.fit@Z )
+@ 
+
+Slot ``b" is a vector for the probability of each locus not to belong to any cluster. 
+
+<<eval = TRUE, echo = TRUE, results = verbatim >>=
+length( MBASIC.fit@b )
+head( MBASIC.fit@b )
+@ 
+
+Slot ``W" is a matrix for the probability of loci in each group to be unenriched at each condition.
+
+<<eval = TRUE, echo = TRUE, results = verbatim >>=
+rownames( MBASIC.fit@W )
+dim( MBASIC.fit@W )
+head( MBASIC.fit@W )
+@ 
+
+\subsection{Advanced Model Initialization}
+
+An important argument that is accessible by the ``MBASIC.binary" function but not ``MBASIC.pipeline" is ``init.mod". This argument allows the user to pass a ``MBASICFit" object, whose values are used to initialize the parameters in this function. It can be useful in two conditions:
+
+\begin{enumerate}
+\item The model fitted by a previous call of function ``MBASIC.binary" has not yet converged, and the user wishes to increase the number of iterations;
+\item The user wants to fit a MBASIC model with a larger number of clusters (``J")  from a previously fitted model;
+\item The user wants to fit a MBASIC model with a different structural constraints (``struct") from a previously fitted model.
+\end{enumerate}
+
+In both cases, ``MBASIC.binary" uses the results from ``init.mod" before starting its iterations. This is significantly time saving than restarting the model fitting from scratch. However, this argument is dangerous if the user passes along a fitted model using different data sources or model structures. To avoid that, the user need to check that the arguments used to get ``init.mod" and in the current ``MBASIC.binary" must be consistent following rules below ( which currently cannot be checked by our codes ):
+
+\begin{enumerate}
+\item ``Y", ``Mu0", ``fac", ``family", ``nsig" must be the same;
+\item ``J" for the ``MBASIC.binary" function must be larger than or equal to the value used in ``init.mod".
+\end{enumerate}
+    
+<<eval = FALSE, echo = TRUE, results = hide>>=
+## Fit a MBASIC model with 4 clusters
+MBASIC.binary( Y = t( dat$chip ),  Mu0 = t( Mu0 ), 
+              fac = conds,  J=4,  zeta=0.2, 
+              maxitr = 100, burnin = 20,
+              init.mod = MBASIC.fit,
+              struct = NULL, family="negbin",
+              tol = 1e-4,  nsig = 2 )
+
+## Fit a MBASIC model with more iterations
+MBASIC.binary( Y = t( dat$chip ),  Mu0 = t( Mu0 ), 
+              fac = conds,  J=3,  zeta=0.2, 
+              maxitr = 200, burnin = 20,
+              init.mod = MBASIC.fit,
+              struct = NULL, family="negbin",
+              tol = 1e-4,  nsig = 2 )
+@ 
+
+\section{General Functionalities}
+
+The \texttt{MBASIC} package also provides additional functions to simulate and fit general MBASIC models with $S\geq 2$ states.
+
+\subsection{Simulation for General MBASIC Models}
+
+Function ``MBASIC.sim" simulates data with ``I" units with ``J" clusters. The ``S" argument specifies the number of different states, and ``zeta" is the proportion of unclustered units. ``fac" specifies the condition for each experiment. The ``xi" argument relates to the magnitude of the simulated data. Its detailed description is included in our manual.
+
+<<eval = TRUE, echo = TRUE, results = verbatim>>=
+## Simulate data across I=1000 units with J=3 clusters
+## There are S=3 states
+dat.sim <- MBASIC.sim( xi = 2, family = "lognormal", 
+                      I = 1000, fac = rep( 1:10, each = 2 ),
+                      J = 3, S = 3, zeta = 0.1 )
+@ 
+
+The ``MBASIC.sim" function returns a list object. The ``Y" field contains the simulated data matrix at each unit (column) for each experiment (row). The ``Theta" field is the matrix for the states for each unit (column) and each experimental condition (column). The ``W" field is a matrix with dimensions KS $\times$ J, where the (S(k-1)+s,j)-th entry is the probability that units in the j-th cluster have state s under the k-th condition.
+
+<<eval = TRUE, echo = TRUE, results = verbatim>>=
+names( dat.sim )
+dim( dat.sim$Y )
+dim( dat.sim$W )
+dim( dat.sim$Theta )
+@ 
+
+\subsection{Fitting General MBASIC Models}
+
+The general MBASIC model is fitted by the function ``MBASIC". The arguments here are similar to the ``MBASIC.binary" function. The arguments that are not common to both functions are::
+
+\begin{center}
+\begin{tabular}{cccc}
+  \hline
+  Argument & Meaning & ``MBASIC.binary" & ``MBASIC" \\
+  \hline
+  ``nsig" & Number of signal components for the binding state. & Y & N \\
+  ``Mu0" & Background means. & Y & N \\
+  ``S" & Number of states. & N & Y \\
+  ``method" & Fitting method. & N & Y\\
+  ``para" & True parameters. & N & Y \\
+  \hline
+\end{tabular}
+\end{center}
+  
+The ``method" argument specifies the fitting algorithm to be used. Currently, thre algorithms are provided. ``em" is the nested E-M algorithm that is also used by ``MBASIC.binary"; ``2em" and ``naive" are benchmark methods. Both ``2em" and ``naive" fit the model in two phases. In Phase 1 they estimate the state space matrix, and in Phase 2 ``2em" uses a mixture model for clustering the units while ``naive" uses hierarchical clustering.
+
+The ``para" argument allows users to pass the true model parameters into the model. In the following codes we pass the simulated list object ``dat.sim". In that case, the output of the model contains a few slots that calculate the estimation error:
+
+\begin{itemize}
+\item \textit{ARI}: Adjusted Rand Index;
+\item \textit{W.err}: The mean squared error in matrix W;
+\item \textit{Theta.err}: The mean squared error in state estimation;
+\item \textit{MisClassRate}: The mis-classification rate.
+\end{itemize}
+  
+For more details of the algorithms, as well as these metrics to assess model fitting, users may refer to \cite{zuo14}.
+
+<<eval=TRUE, echo = TRUE, results = hide>>=
+dat.sim.fit <- MBASIC( Y = dat.sim$Y, S = 3, 
+                      fac = rep( 1:10, each = 2), 
+                      J = 3, maxitr = 3, 
+                      para = dat.sim, family = "lognormal", 
+                      method = "em", 
+                      zeta = 0.1, tol = 1e-04)
+
+dat.sim.fit@ARI
+dat.sim.fit@W.err
+dat.sim.fit@Theta.err
+dat.sim.fit@MisClassRate
+@ 
+
+\subsection{Degenerate MBASIC Models}
+
+In a degenerate MBASIC model, the states for each unit under each condition are directly observed. ``MBASIC.sim.state" and ``MBASIC.state" functions allows users to simulate and fit such models. The usage of these functions are similar to functions ``MBASIC.sim" and ``MBASIC".
+
+``MBASIC.sim.state" simulates data from a degenerate MBASIC model. Most arguments are similar to ``MBASIC.sim". ``MBASIC.sim.state" does not need arguments ``fac" and ``family", but it needs the ``K" argument, specifying the number of experimental conditions.
+
+<<eval=FALSE,echo=TRUE,results=hide>>=
+state.sim <- MBASIC.sim.state( I = 1000, K = 10,
+                              J = 4, S = 3,
+                              zeta = 0.1)
+@ 
+
+``MBASIC.state" fits a degenerate MBASIC model. Compared to function ``MBASIC", it does not need arguments ``Y" and ``family". Instead, it needs the argument ``Theta" to pass the observed states.
+
+<<eval=FALSE,echo=TRUE,results=hide>>=
+state.sim.fit <- MBASIC.state( Theta = state.sim$Theta, J = 4,
+                              method = "2em", zeta = 0.1,
+                              maxitr = 100, tol = 1e-04 )
+@ 
+
+\section{Session Information}
+
+<<12,eval=TRUE,echo=FALSE,results=verbatim,cache=FALSE>>=
+print(sessionInfo())
+@ 
+
+<<final,eval=TRUE,echo=FALSE,results=hide>>=
+setwd( mydir )
+@ 
+
+\bibliographystyle{apalike}
+%\bibliographystyle{natbib}
+
+\bibliography{cssmRef}
+
+\end{document}

@@ -1,0 +1,99 @@
+\name{MBASIC.pipeline}
+\alias{MBASIC.pipeline}
+\title{The pipeline for fitting a MBASIC model for sequencing data.}
+\usage{
+MBASIC.pipeline(chipfile, inputfile, input.suffix, target, format, fragLen,
+  pairedEnd, unique, m.prefix, m.suffix, gc.prefix, gc.suffix, fac, struct, J,
+  family, burnin = 20, maxitr = 100, tol = 1e-04, nsig = 2, datafile)
+}
+\arguments{
+  \item{chipfile}{A string vector for the ChIP files.}
+
+  \item{inputfile}{A string vector for the matching input
+  files. The length must be the same as 'chipfile'.}
+
+  \item{input.suffix}{A string for the suffix of input
+  files. If NULL, 'inputfile' will be treated as the full
+  names of the input files. Otherwise, all inputfiles with
+  the initial 'inputfile' and this suffix will be merged.}
+
+  \item{target}{A GenomicRanges object for the target
+  intervals where the reads are mapped.}
+
+  \item{format}{A string specifying the type of the file.
+  Currently two file types are allowed: "BAM" or "BED".
+  Default: "BAM".}
+
+  \item{fragLen}{Either a single value or a 2-column matrix
+  of the fragment lengths for the chip and input files.
+  Default: 150.}
+
+  \item{pairedEnd}{Either a boolean value or a 2-column
+  boolean matrix for whether each file is a paired-end data
+  set. Currently this function only allows "BAM" files for
+  paired-end data. Default: FALSE.}
+
+  \item{unique}{A boolean value for whether only reads with
+  distinct genomic coordinates or strands are mapped.
+  Default: TRUE.}
+
+  \item{m.prefix}{A string for the prefix of the
+  mappability files.}
+
+  \item{m.suffix}{A string for the suffix of the
+  mappability files. See details for more information.
+  Default: NULL.}
+
+  \item{gc.prefix}{A string for the prefix of the GC
+  files.}
+
+  \item{gc.suffix}{A string for the suffix of the GC files.
+  See details for more information. Default: NULL.}
+
+  \item{fac}{A vector for the experimental conditions
+  corresponding to the ChIP files.}
+
+  \item{struct}{A matrix indicating the levels of the
+  signal matrix.}
+
+  \item{J}{The number of clusters to be identified.}
+
+  \item{family}{The distribution of family to be used.
+  Either "lognormal" or "negbin". See details for more
+  information.}
+
+  \item{burnin}{An integer value for the number of
+  iterations in initialization. Default: 20.}
+
+  \item{maxitr}{The maximum number of iterations in the E-M
+  algorithm. Default: 100.}
+
+  \item{tol}{Tolerance for error in checking the E-M
+  algorithm's convergence. Default: 1e-04.}
+
+  \item{nsig}{The number of mixture components for the
+  distribution of the signal state.}
+
+  \item{datafile}{The file location to save the data
+  matrix.}
+}
+\value{
+A 'MBASICFit' class object.
+}
+\description{
+The pipeline for fitting a MBASIC model for sequencing
+data.
+}
+\examples{
+\dontrun{
+## This is the example in our vignette
+target <- generateSyntheticData( dir = "syntheticData" )
+tbl <- ChIPInputMatch( dir = paste( "syntheticData/", c( "chip", "input" ), sep = "" ),suffix = ".bed", depth = 5 )
+conds <- paste( tbl$cell, tbl$factor, sep = "." )
+MBASIC.fit <- MBASIC.pipeline( chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, format = "BED", fragLen = 150, pairedEnd = FALSE, unique = TRUE, m.prefix = "syntheticData/mgc/", m.suffix = "_M.txt", gc.prefix = "syntheticData/mgc/", gc.suffix = "_GC.txt", fac = conds, struct = NULL, J = 3, family = "negbin", burnin = 20, maxitr = 100, tol = 1e-4, nsig = 2, datafile = NULL )
+}
+}
+\author{
+Chandler Zuo \email{zuo@stat.wisc.edu}
+}
+
