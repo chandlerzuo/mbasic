@@ -29,4 +29,4 @@ MBASIC will be available at Bioconductor. Currently you can download the develop
 REFERENCES
 ----------
 
-Chandler Zuo and Sunduz Keles (2014). "An empirical Bayesian framework for state-space matrix inference and clustering". **To appear**.
+Chandler Zuo and Sunduz Keles (2014). "An empirical Bayesian framework for state-space matrix inference and clustering". *To appear*.
