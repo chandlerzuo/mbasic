@@ -1,7 +1,7 @@
 MBASIC
 ======
 
-Overview
+OVERVIEW
 --------
 
 MBASIC ( *Matrix-formed Bayesian Analysis for State-space Inference and Clustering* ) package is a statistical framework for integrative analysis of many experiments where observations are collected over a set of units. The MBASIC framework allows for simultaneous projection of the observations onto a discrete state space and clustering the units based on their state-space profiles. 
