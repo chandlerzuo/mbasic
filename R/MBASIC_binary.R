@@ -30,7 +30,7 @@
 #' fit <- MBASIC.binary( t( dat$Y ), Mu0 = t( dat$Mu0 ), fac = rep( 1:5, each = 2 ), J=3, struct = NULL, family="lognormal" )
 #' }
 #' @export
-MBASIC.binary <- function( Y, Mu0, fac, J=NULL, zeta=0.2, maxitr = 100, burnin = 20, outfile=NULL, out=NULL, init.mod = NULL, struct = NULL, family="lognormal", tol = 1e-4, nsig = 1 ){
+MBASIC.binary <- function( Y, Mu0, fac, J=NULL, zeta=0.2, maxitr = 100, burnin = 20, outfile=NULL, out=NULL, init.mod = NULL, struct = NULL, family="lognormal", tol = 1e-4, nsig = 1, min.count = 5 ){
   
     write.out( out, "starting..." )
     ## prespecified
@@ -51,7 +51,7 @@ MBASIC.binary <- function( Y, Mu0, fac, J=NULL, zeta=0.2, maxitr = 100, burnin =
 
     if( !is.null( init.mod ) & class( init.mod ) != "MBASICFit" )
       stop( "Error: init.mod must be an object of class 'MBASICFit'." )
-    
+
     ## design matrix D is K by N
     D <- matrix( 0, nrow = K, ncol = length( fac ) )
     for( k in 1:K ){
@@ -79,13 +79,11 @@ MBASIC.binary <- function( Y, Mu0, fac, J=NULL, zeta=0.2, maxitr = 100, burnin =
 
     lambda <- logit( 1 - zeta )
 
-
     ## normalize the Mu0
-    for( i in seq_len( nrow( Y ) ) )
-      if( family == "lognormal" )
-        Mu0[ i, ] <- Mu0[ i, ] * sum( log( Y[ i, ] + 1 ) ) / sum( Mu0[ i, ] )
-      else
-        Mu0[ i, ] <- Mu0[ i, ] * sum( Y[ i, ] ) / sum( Mu0[ i, ] )
+    if( family == "lognormal" )
+      Mu0 <- Mu0 * rep( apply( log( Y + 1 ), 1, mean ) / apply( Mu0, 1, mean ), ncol( Mu0 ) )
+    else
+      Mu0 <- Mu0 * rep( apply( Y, 1, mean ) / apply( Mu0, 1, mean ), ncol( Mu0 ) )
     
     if( is.null( init.mod ) ){
       ## initialize
@@ -147,7 +145,7 @@ MBASIC.binary <- function( Y, Mu0, fac, J=NULL, zeta=0.2, maxitr = 100, burnin =
           if( family == "lognormal" ){
             tmpF <- -( log( Y + 1 ) - Mu1 ) ^ 2 / 2 / Sigma1
           } else {
-            tmpF <- log( dnbinom( Y - 1 , mu = Mu1 -1 , size = Sigma1 ) )
+            tmpF <- log( dnbinom( Y - min.count , mu = Mu1 - min.count , size = Sigma1 ) )
           }
           tmpF[ tmpF == -Inf ] <- min( tmpF[ tmpF > -Inf ], na.rm = TRUE )
           tmpF[ tmpF >= 5 ] <- 5
@@ -195,15 +193,15 @@ MBASIC.binary <- function( Y, Mu0, fac, J=NULL, zeta=0.2, maxitr = 100, burnin =
             for( s in seq_len( nsig ) ){
                 ProbTheta <- crossprod( D, ProbMat[ , s * I + seq_len( I ) ] )
                 m0 <- apply( ProbTheta, 1, sum )
-                m1 <- apply( ( Y -1 ) * ProbTheta, 1, sum ) / m0
-                m2 <- apply( ( Y -1 ) * ( Y -1 ) * ProbTheta, 1, sum ) / m0
+                m1 <- apply( ( Y - min.count ) * ProbTheta, 1, sum ) / m0
+                m2 <- apply( ( Y - min.count ) * ( Y - min.count ) * ProbTheta, 1, sum ) / m0
                 m1[ m1 < 0 ] <- 0
-                mu1[ , s ] <- m1 +1
-                sigma1[ , s ] <- m1  * m1 / ( m2 - m1 * m1 - m1 )
+                mu1[ , s ] <- m1 + min.count
+                sigma1[ , s ] <- m1 * m1 / ( m2 - m1 * m1 - m1 )
                 sigma1[ sigma1[ , s] <= 0, s ] <- 100
             }
         }
-
+        
         p <- t( matrix( apply( matrix( t( ProbMat ), nrow = I ), 2, sum ), nrow = nsig + 1 ) )
         p <- p / apply( p, 1, sum )
 
@@ -211,7 +209,7 @@ MBASIC.binary <- function( Y, Mu0, fac, J=NULL, zeta=0.2, maxitr = 100, burnin =
         if( family == "negbin" ){
             lower.b <- lower.b + 1
         }
-        if( family != "negbin" )
+        if( family != "negbin" )## changed for using empirical Mu0
           mu1 <- ( mu1 < lower.b ) * lower.b + ( mu1 >= lower.b ) * mu1
         for( s in seq_len( nsig )[ -1 ] )
           mu1[ mu1[ , s ] <= mu1[ , s-1 ], s ] <- mu1[ mu1[ , s ] <= mu1[ , s-1], s-1 ] + 1
@@ -337,7 +335,7 @@ MBASIC.binary <- function( Y, Mu0, fac, J=NULL, zeta=0.2, maxitr = 100, burnin =
         Sigma1 <- matrix( rep( sigma1[ , s ], I ), nrow = N )
         Mu1 <- matrix( rep( mu1[ , s ], I ), nrow = N )
         if( family == "negbin" ){
-          PDF[ , idx ] <- logdensity( Y -1 , Mu1 -1 , Sigma1, family )
+          PDF[ , idx ] <- logdensity( Y - min.count , Mu1 - min.count , Sigma1, family )
         } else {
           PDF[ , idx ] <- logdensity( Y, Mu1, Sigma1, family )
         }
@@ -394,15 +392,15 @@ MBASIC.binary <- function( Y, Mu0, fac, J=NULL, zeta=0.2, maxitr = 100, burnin =
 
           ## estimate for mu1
           ProbTheta <- crossprod( D, ProbMat[ , seq_len( I ) + I * ( s ) ] )
-          F1 <- apply( ( Y -1 ) * ProbTheta, 1, sum )
+          F1 <- apply( ( Y - min.count ) * ProbTheta, 1, sum )
           F2 <- apply( ProbTheta, 1, sum )
           m1 <-  F1 / F2
           m1[ m1 < 0 ] <- 0
-          mu1[ ,s ] <- m1 +1
+          mu1[ , s ] <- m1 + min.count
 
           ## estimate sigma1
 
-          F3 <- apply( ( Y -1 ) * ( Y -1 ) * ProbTheta, 1, sum )
+          F3 <- apply( ( Y - min.count ) * ( Y - min.count ) * ProbTheta, 1, sum )
           vari <- F3 / F2 - m1 * m1
           sigma1[ ,s ] <- m1 / ( vari / m1 - 1 )
           sigma1[ sigma1[ ,s ] <= 0, s ] <- 100
@@ -481,9 +479,9 @@ MBASIC.binary <- function( Y, Mu0, fac, J=NULL, zeta=0.2, maxitr = 100, burnin =
                 Z = predZ,
                 Theta = bestTheta,
                 zeta = bestzeta,
-                aic = - 2 * max( alllik ) + 2 * numpar,
-                bic = - 2 * max( alllik ) + log( N * I ) * numpar,
-                aicc = -2 * max( alllik ) + 2 * numpar + 2 * numpar * ( numpar + 1 ) / ( N * I - numpar - 1 ),
+                aic = - 2 * tail( alllik, 1 ) + 2 * numpar,
+                bic = - 2 * tail( alllik, 1 ) + log( N * I ) * numpar,
+                aicc = -2 * tail( alllik, 1 ) + 2 * numpar + 2 * numpar * ( numpar + 1 ) / ( N * I - numpar - 1 ),
                 alllik = alllik,
                 e = e,
                 mu1 = mu1,
@@ -512,9 +510,9 @@ MBASIC.binary <- function( Y, Mu0, fac, J=NULL, zeta=0.2, maxitr = 100, burnin =
         V = bestV,
         Z = predZ,
         b = bestb,
-        aic = - 2 * max( alllik ) + 2 * numpar,
-        bic = - 2 * max( alllik ) + log( N * I ) * numpar,
-        aicc = -2 * max( alllik ) + 2 * numpar + 2 * numpar * ( numpar + 1 ) / ( N * I - numpar - 1 ),
+        aic = - 2 * tail( alllik, 1 ) + 2 * numpar,
+        bic = - 2 * tail( alllik, 1 ) + log( N * I ) * numpar,
+        aicc = -2 * tail( alllik, 1 ) + 2 * numpar + 2 * numpar * ( numpar + 1 ) / ( N * I - numpar - 1 ),
         lik = tail( alllik, 1 ),
         alllik = alllik,
         zeta = bestzeta,

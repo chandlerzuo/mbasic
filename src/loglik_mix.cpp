@@ -17,6 +17,8 @@ SEXP loglik_mix( SEXP _W, SEXP _p, SEXP _zeta, SEXP _probz, SEXP _PDF, SEXP _V )
 	double loglik = 0;
 	int i, j, k, s;
 
+	double dbl_min = exp( - 64 );
+
 	for( i = 0; i < I; i ++ ){
 		double exp1 = log( zeta );
 		for( k = 0; k < K; k ++ ){
@@ -32,6 +34,8 @@ SEXP loglik_mix( SEXP _W, SEXP _p, SEXP _zeta, SEXP _probz, SEXP _PDF, SEXP _V )
 				else
 					tmp += ( 1 - p( i ) ) * V( k, s ) * exp( PDF( k, i + (s+1) * I ) - maxexp );					
 			}
+			if( tmp < dbl_min )
+				tmp = dbl_min;
 			exp1 += maxexp + log( tmp );
 		}
 		double tmp_exp[J];
@@ -50,6 +54,8 @@ SEXP loglik_mix( SEXP _W, SEXP _p, SEXP _zeta, SEXP _probz, SEXP _PDF, SEXP _V )
 					else
 						tmp += ( 1 - W( k, j ) ) * V( k, s ) * exp( PDF( k, i + ( s + 1 ) * I ) - maxexp );
 				}
+				if( tmp < dbl_min )
+					tmp = dbl_min;
 				tmp_exp[ j ] += maxexp + log( tmp );
 			}
 		}

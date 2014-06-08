@@ -102,6 +102,13 @@ orderCluster <- function( W, struct ){
   return( ret )
 }
 
+#' @name write.out
+#' @title Write the message to an output file.
+#' @description Write the message to an output buffer.
+#' @param out Either the file name, or NULL. If NULL, the message is written to the standard output.
+#' @param msg The string for the message to be written.
+#' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
+#' @export
 write.out <- function( out, msg ){
     if( !is.null( out ) ){
   	if( is.na( out ) )
