@@ -7,7 +7,7 @@
 \usepackage{color}
 %\usepackage{natbib}
 
-\title{MBASIC: Matrix-formed Bayesian Analysis for State-space Inference and Clustering}
+\title{MBASIC: Matrix Based Analysis for State-space Inference and Clustering}
 
 \author{Chandler Zuo\footnote{Department of Statistics, 1300 University Avenue, Madison, WI, 53706, USA.}  \\ 
 S\"und\"uz Kele\c{s}\footnote{Departments of Statistics and of  Biostatistics and Medical Informatics, 1300 University Avenue, Madison, WI, 53706, USA.}}
@@ -22,7 +22,7 @@ S\"und\"uz Kele\c{s}\footnote{Departments of Statistics and of  Biostatistics an
 \section{Introduction}
 
 This document provides an introduction to the power analysis of ChIP-seq data with
-the \texttt{MBASIC} package. This \texttt{R} package implements \textbf{MBASIC} which stands for \textbf{M}atrix-formed \textbf{B}ayesian \textbf{A}nalysis for \textbf{S}tate-space \textbf{I}nference and \textbf{C}lustering in \cite{zuo14}. \textbf{MBASIC} provides a Bayesian framework for clustering units based on their infered states over a set of experimental conditions.
+the \texttt{MBASIC} package. This \texttt{R} package implements \textbf{MBASIC} which stands for \textbf{M}atrix \textbf{B}ased \textbf{A}nalysis for \textbf{S}tate-space \textbf{I}nference and \textbf{C}lustering in \cite{zuo14}. \textbf{MBASIC} provides a hierarchical framework for clustering units based on their infered states over a set of experimental conditions.
 
 \texttt{MBASIC} is especially useful for integrative analysis for ChIP-seq experiments. In this case, a set of prespecified loci is clustered based on their activities over celltypes and transcription factors. We build a pipeline in the \texttt{MBASIC} package and will focus on this pipeline in this vignette. We will introduce the general functionalities for the \textbf{MBASIC} model at the end of the vignette.
 
