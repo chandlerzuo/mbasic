@@ -48,7 +48,7 @@ The \texttt{MBASIC} framework consists of five major steps:
 rm( list = ls() )
 mydir <- getwd()
 options( width = 50 )
-setwd( "/p/keles/ChenZuo/CSNet/test/" )
+setwd( "/u/z/u/zuo/test/" )
 @ 
 
 To illustrate Step 1 we first generate a set of synthetic data.
