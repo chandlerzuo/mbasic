@@ -1,11 +1,13 @@
 #include "mcmc.h"
 
+//this file is in development
+
 SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _W, SEXP _P, SEXP _Mu, SEXP _Sigma, SEXP _D, SEXP _alpha, SEXP _betaw, SEXP _betap, SEXP _xi, SEXP _tau, SEXP _omega, SEXP _nu, SEXP _zeta, SEXP _Gamma, SEXP _Y) {
 
   // The following values are updated in MCMC iterations
   NumericVector b(_b); // length I
   NumericVector States(_States); // length I
-  NumericMatrix Theta(_Theta); // I by KS
+  NumericMatrix Theta(_Theta); // I by K
   NumericMatrix W(_W); // KS by I + 1
   NumericMatrix P(_P); // I by S
   NumericMatrix Mu(_Mu); // N by S
@@ -82,7 +84,9 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _W, SEXP _P, SEXP _Mu, SEXP 
         P(i, s) = _LOW;
       double tmpsum = 0;
       for(k = 0; k < K; k ++) {
-        tmpsum += Theta(i, (s - 1) * K + k);
+	      if(Theta(i, k) == s) {
+		      tmpsum ++;
+	      }
       }
       prob1 += tmpsum * log(P(i, s));
     }
@@ -91,11 +95,10 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _W, SEXP _P, SEXP _Mu, SEXP 
     // log probability of drawing 0
 
     double prob0 = 0;
-    for(s = 0; s < S; s ++) {
-      for(k = 0; k < K; k ++) {
-        prob0 += Theta(i, (s - 1) * K + k) * log(W(k + (s - 1) * K, States[i]));
-      }
+    for(k = 0; k < K; k ++) {
+	    prob0 += log(W(k + (Theta(i, k) - 1) * K, States[i]));
     }
+
     prob0 += log(1 - zeta);
 
     // draw sample
@@ -118,9 +121,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _W, SEXP _P, SEXP _Mu, SEXP 
       }
       probz[j] = log(n_j);
       for(k = 0; k < K; k ++) {
-        for(s = 0; s < S; s ++) {
-          probz[j] += Theta(i, (s - 1) * K + k) * (1 - b(i)) * log(W((s - 1) * K + k, j));
-        }
+	      probz[j] += (1 - b(i)) * log(W((Theta(i, k) - 1) * K + k, j));
       }
     }
 
@@ -159,7 +160,11 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _W, SEXP _P, SEXP _Mu, SEXP 
     for(k = 0; k < K; k ++) {
       double tmpGamma[S + 1];
       for(s = 0; s < S; s ++) {
-        tmpGamma[s] = rgamma(betaw + (1 - b(i)) * Theta(i, (k - 1) * S + k), 1);
+	      if(s == Theta(i, k)) {
+		      tmpGamma[s] = rgamma(betaw + (1 - b[i]), 1);
+	      } else {
+		      tmpGamma[s] = rgamma(betaw);
+	      }
         tmpGamma[S] += tmpGamma[s];
       }
       for(s = 0; s < S; s ++) {
@@ -194,6 +199,9 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _W, SEXP _P, SEXP _Mu, SEXP 
     //Use new labels for each unit
     for(i = 0; i < I; i ++) {
       States[i] = NewLabel[States[i]];
+      for(k = 0; k < K; k ++) {
+	      Theta(i, k) = NewLabel[Theta(i, k)];
+      }
     }
 
     //Clean columns in W
@@ -204,6 +212,47 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _W, SEXP _P, SEXP _Mu, SEXP 
       for(s = 0; s < S; s ++)
         W((s - 1) * K + k, newJ + 1) = 0;
 
+    J = newJ;
+    
+
+  }
+
+  // Sample for W
+  for(j = 0; j < J; j ++) {
+	  for(k = 0; k < K; k ++) {
+		  double betaRates[S], randGamma[S + 1];
+		  for(i = 0; i < I; i ++) {
+			  if(j == States[i] && b[i] == 0) {
+				  betaRates[Theta(i, k)] ++
+			  }
+		  }
+		  for(s = 0; s < S; s ++) {
+			  betaRates[s] += betaw;
+			  randGamma[s] = R::rgamma(betaRates[s], 1);
+			  randGamma[S] += randGamma[s];
+		  }
+		  for(s = 0; s < S; s ++) {
+			  W(j, (s - 1) * K + k) = randGamma[s] / randGamma[S];
+		  }
+	  }
+  }
+
+  // update for P
+  for(i = 0; i < I; i ++) {
+	  double betaRates[S], randGamma[S + 1];
+	  for(k = 0; k < K; k ++) {
+		  if(b[i] == 1) {
+			  betaRates[Theta(i, k)] ++;
+		  }
+	  }
+	  for(s = 0; s < S; s ++) {
+		  betaRates[s] += betap;
+		  randGamma[s] = R::rgamma(betaRates[s], 1);
+		  randGamma[S] += randGamma[s];
+	  }
+	  for(s = 0; s < S; s ++) {
+		  P(i, s) = randGamma[s] / randGamma[S];
+	  }
   }
 
   Rcpp::List ret = Rcpp::List::create(
