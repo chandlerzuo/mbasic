@@ -37,7 +37,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _W, SEXP _P, SEXP _Mu, SEXP 
 	double _LOW = 1e-10;
 	
 	// iterators
-	int i, j, k, s;//, likid;
+	int i, j, k, s, n;//, likid;
 	
 	int ClusterSize[I + 1];
 
@@ -183,10 +183,10 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _W, SEXP _P, SEXP _Mu, SEXP 
 		// switch cluster labels if the cluster size changes
 		if(ClusterSize[oldState] == 0) {
 			if(selectj == J) {
-				if(ClusterSize[selectj] != 1) 
-					printf("Error: new cluster size is not 1, J = %d, selectj = %d.", J, selectj);
+			  if(ClusterSize[selectj] != 1) 
+				  printf("Error: new cluster size is not 1, J = %d, selectj = %d.", J, selectj);
 				States[i] == oldState;
-				W(_, oldStates)  = W(_, selectj);
+				W(_, oldState)  = W(_, selectj);
 			} else {
 				for(i = 0; i < I; i ++) {
 					if(States[i] == J - 1) {
@@ -284,7 +284,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _W, SEXP _P, SEXP _Mu, SEXP 
 			double productTerm, squareTerm, varTerm;
 			for(i = 0; i < I; i ++) {
 				productTerm += Gamma(i, (s - 1) * K + k) * log(Y(i, n) + 1);
-				squareTerm += Gamma(i, (s - 1) * K + k) ^ 2;
+				squareTerm += Gamma(i, (s - 1) * K + k) * Gamma(i, (s - 1) * K + k);
 				varTerm += (log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, (s - 1) * K + k)) ^ 2;
 			}
 			Mu(n, s) = R::rnorm((tau * productTerm + xi * Sigma(n, s)) / (tau * squareTerm + Sigma(n, s)), Sigma(n, s) * tau / (tau * squareTerm + Sigma(n, s)));
