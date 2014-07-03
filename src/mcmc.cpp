@@ -144,9 +144,9 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _W, SEXP _P, SEXP _Mu, SEXP 
 		}
 		
 		double cum_probz[J + 2];
-		cum_prob[0] = 0;
+		cum_probz[0] = 0;
 		for(j = 0; j < J + 1; j ++ ) {
-			cum_probz[j + 1] = cumprobz[j] + exp(probz[j] - maxexp);
+			cum_probz[j + 1] = cum_probz[j] + exp(probz[j] - max_exp);
 		}
 		
 		double tmp = R::runif(0, cum_probz[J + 1]);
@@ -164,10 +164,10 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _W, SEXP _P, SEXP _Mu, SEXP 
 			for(k = 0; k < K; k ++) {
 				double tmpGamma[S + 1];
 				for(s = 0; s < S; s ++) {
-					if(s == Theta(i, k)) {
-						tmpGamma[s] = rgamma(betaw + (1 - b[i]), 1);
+					if(s == Theta(i, k) && b[i] == 0) {
+					  tmpGamma[s] = R::rgamma(betaw + 1, 1);
 					} else {
-						tmpGamma[s] = rgamma(betaw);
+					  tmpGamma[s] = R::rgamma(betaw, 1);
 					}
 					tmpGamma[S] += tmpGamma[s];
 				}
@@ -185,7 +185,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _W, SEXP _P, SEXP _Mu, SEXP 
 			if(selectj == J) {
 			  if(ClusterSize[selectj] != 1) 
 				  printf("Error: new cluster size is not 1, J = %d, selectj = %d.", J, selectj);
-				States[i] == oldState;
+				States[i] = oldState;
 				W(_, oldState)  = W(_, selectj);
 			} else {
 				for(i = 0; i < I; i ++) {
@@ -285,10 +285,10 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _W, SEXP _P, SEXP _Mu, SEXP 
 			for(i = 0; i < I; i ++) {
 				productTerm += Gamma(i, (s - 1) * K + k) * log(Y(i, n) + 1);
 				squareTerm += Gamma(i, (s - 1) * K + k) * Gamma(i, (s - 1) * K + k);
-				varTerm += (log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, (s - 1) * K + k)) ^ 2;
+				varTerm += (log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, (s - 1) * K + k)) * (log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, (s - 1) * K + k)) ;
 			}
 			Mu(n, s) = R::rnorm((tau * productTerm + xi * Sigma(n, s)) / (tau * squareTerm + Sigma(n, s)), Sigma(n, s) * tau / (tau * squareTerm + Sigma(n, s)));
-			Sigma(n, s) = 1 / rgamma(omega + 1 + I / 2,
+			Sigma(n, s) = 1 / R::rgamma(omega + 1 + I / 2,
 						 nu + varTerm / 2);
 		}
 	}
