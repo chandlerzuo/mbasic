@@ -8,8 +8,8 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	NumericVector b(_b); // length I
 	IntegerVector States(_States); // length I
 	IntegerMatrix Theta(_Theta); // I by K
-	NumericMatrix W(_W); // KS by I + 1
-	NumericMatrix P(_P); // I by S
+	//NumericMatrix W(_W); // KS by I + 1
+	//NumericMatrix P(_P); // I by S
 	NumericMatrix Mu(_Mu); // N by S
 	NumericMatrix Sigma(_Sigma); // N by S
 	IntegerVector D(_D); // Length N, valued in {0, 1, ..., K-1}
@@ -29,11 +29,15 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	NumericMatrix Y(_Y); // I by N
 	
 	// extract the dimensions
-	int I = P.nrow();
-	int S = P.ncol();
-	int K = W.nrow();
+	int I = b.size();
+	int S = Mu.ncol();
+	int K = Theta.ncol();
 	int N = D.size();
 	
+	// The following will be computed
+	NumericMatrix W(K * S, I + 1);
+	NumericMatrix P(I, S);
+
 	double _LOW = 1e-10;
 	
 	// iterators
