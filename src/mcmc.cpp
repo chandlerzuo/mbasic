@@ -12,7 +12,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _W, SEXP _P, SEXP _Mu, SEXP 
 	NumericMatrix P(_P); // I by S
 	NumericMatrix Mu(_Mu); // N by S
 	NumericMatrix Sigma(_Sigma); // N by S
-	IntegerMatrix D(_D); // K by N
+	IntegerVector D(_D); // Length N, valued in {0, 1, ..., K-1}
 	double zeta = as<double>(_zeta); 
 	
 	// The following values are piror parameters and are fixed
@@ -32,7 +32,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _W, SEXP _P, SEXP _Mu, SEXP 
 	int I = P.nrow();
 	int S = P.ncol();
 	int K = W.nrow();
-	int N = D.ncol();
+	int N = D.size();
 	
 	double _LOW = 1e-10;
 	
@@ -60,7 +60,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _W, SEXP _P, SEXP _Mu, SEXP 
 			for(s = 0; s < S; s ++) {
 				logF(i, (s - 1) * K + k) = 0; // initialize
 				for(n = 0; n < N; n ++) {
-					if(D(k, n) == 1) {
+					if(D[n] == k) {
 						double tmp = R::dnorm(log(Y(i, n) + 1), Mu(n, s) * Gamma(i, (s - 1) * N + n), Sigma(n, s), 0);
 						if(tmp < _LOW) {
 							tmp = _LOW;
