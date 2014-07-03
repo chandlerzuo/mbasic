@@ -275,6 +275,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 					maxLogProb = logProb[s];
 			}
 			double cumProb[S + 1];
+			cumProb[0] = 0;
 			for(s = 0; s < S; s ++) {
 				cumProb[s + 1] = cumProb[s] + exp(logProb[s] - maxLogProb);
 			}
@@ -285,7 +286,10 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 			}
 			Theta(i, k) = s;
 			if(s == S) 
-				printf("Error: sampling state can not be S, i = %d, k = %d.", i, k);
+			  printf("Error: sampling state can not be S, i = %d, k = %d, rndVar = %3.3f.\n", i, k, rndVar);
+			for(s = 0; s < S + 1; s ++) {
+			  printf("Cumprob[s] = %3.3f\t", cumProb[s]);
+			}
 		}
 	}
 
