@@ -15,6 +15,6 @@
  * on Rcpp-devel for a misuse of RcppExport
  */
 using namespace Rcpp;
-RcppExport SEXP mcmc(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP) ;
+RcppExport SEXP mcmc(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP) ;
 
 #endif

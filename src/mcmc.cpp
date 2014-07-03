@@ -2,7 +2,7 @@
 
 //this file is in development
 
-SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _W, SEXP _P, SEXP _Mu, SEXP _Sigma, SEXP _D, SEXP _alpha, SEXP _betaw, SEXP _betap, SEXP _xi, SEXP _tau, SEXP _omega, SEXP _nu, SEXP _zeta, SEXP _Gamma, SEXP _Y) {
+SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, SEXP _alpha, SEXP _betaw, SEXP _betap, SEXP _xi, SEXP _tau, SEXP _omega, SEXP _nu, SEXP _zeta, SEXP _Gamma, SEXP _Y) {
 
 	// The following values are updated in MCMC iterations
 	NumericVector b(_b); // length I
@@ -58,20 +58,65 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _W, SEXP _P, SEXP _Mu, SEXP 
 	for(i = 0; i < I; i ++) {
 		for(k = 0; k < K; k ++) {
 			for(s = 0; s < S; s ++) {
-				logF(i, (s - 1) * K + k) = 0; // initialize
+				logF(i, s * K + k) = 0; // initialize
 				for(n = 0; n < N; n ++) {
 					if(D[n] == k) {
-						double tmp = R::dnorm(log(Y(i, n) + 1), Mu(n, s) * Gamma(i, (s - 1) * N + n), Sigma(n, s), 0);
+						double tmp = R::dnorm(log(Y(i, n) + 1), Mu(n, s) * Gamma(i, s * N + n), Sigma(n, s), 0);
 						if(tmp < _LOW) {
 							tmp = _LOW;
 						}
-						logF(i, (s - 1) * K + k) += log(tmp);
+						logF(i, s * K + k) += log(tmp);
 					}
 				}
 			}
 		}
 	}
 	
+	// Update W
+	for(j = 0; j < J; j ++) {
+		for(k = 0; k < K; k ++) {
+			double betaRates[S], randGamma[S + 1];
+			for(i = 0; i < I; i ++) {
+				if(j == States[i] && b[i] == 0) {
+					betaRates[Theta(i, k)] ++;
+				}
+			}
+			for(s = 0; s < S; s ++) {
+				betaRates[s] += betaw;
+				randGamma[s] = R::rgamma(betaRates[s], 1);
+				randGamma[S] += randGamma[s];
+			}
+			for(s = 0; s < S; s ++) {
+				W(s * K + k, j) = randGamma[s] / randGamma[S];
+				if(W(s * K + k, j) < _LOW) {
+				  W(s * K + k, j) = _LOW;
+				}
+			}
+		}
+	}
+	
+	// update for P
+	for(i = 0; i < I; i ++) {
+		double betaRates[S], randGamma[S + 1];
+		for(k = 0; k < K; k ++) {
+			if(b[i] == 1) {
+				betaRates[Theta(i, k)] ++;
+			}
+		}
+		for(s = 0; s < S; s ++) {
+			betaRates[s] += betap;
+			randGamma[s] = R::rgamma(betaRates[s], 1);
+			randGamma[S] += randGamma[s];
+		}
+		for(s = 0; s < S; s ++) {
+			P(i, s) = randGamma[s] / randGamma[S];
+			if(P(i, s) < _LOW) {
+			  P(i, s) = _LOW;
+			}
+		}
+	}
+       
+
 	// Sample for b
 	
 	if(zeta < _LOW) {
@@ -172,7 +217,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _W, SEXP _P, SEXP _Mu, SEXP 
 					tmpGamma[S] += tmpGamma[s];
 				}
 				for(s = 0; s < S; s ++) {
-					neww[(s - 1) * K + k] = tmpGamma[s] / tmpGamma[S];
+					neww[s * K + k] = tmpGamma[s] / tmpGamma[S];
 				}
 			}
 		
@@ -208,52 +253,14 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _W, SEXP _P, SEXP _Mu, SEXP 
 
 	}
 	
-	// Sample for W
-	for(j = 0; j < J; j ++) {
-		for(k = 0; k < K; k ++) {
-			double betaRates[S], randGamma[S + 1];
-			for(i = 0; i < I; i ++) {
-				if(j == States[i] && b[i] == 0) {
-					betaRates[Theta(i, k)] ++;
-				}
-			}
-			for(s = 0; s < S; s ++) {
-				betaRates[s] += betaw;
-				randGamma[s] = R::rgamma(betaRates[s], 1);
-				randGamma[S] += randGamma[s];
-			}
-			for(s = 0; s < S; s ++) {
-				W((s - 1) * K + k, j) = randGamma[s] / randGamma[S];
-			}
-		}
-	}
-	
-	// update for P
-	for(i = 0; i < I; i ++) {
-		double betaRates[S], randGamma[S + 1];
-		for(k = 0; k < K; k ++) {
-			if(b[i] == 1) {
-				betaRates[Theta(i, k)] ++;
-			}
-		}
-		for(s = 0; s < S; s ++) {
-			betaRates[s] += betap;
-			randGamma[s] = R::rgamma(betaRates[s], 1);
-			randGamma[S] += randGamma[s];
-		}
-		for(s = 0; s < S; s ++) {
-			P(i, s) = randGamma[s] / randGamma[S];
-		}
-	}
-	
 	// update for Theta
 	for(i = 0; i < I; i ++) {
 		for(k = 0; k < K; k ++) {
 			double logProb[S];
 			for(s = 0; s < S; s ++) {
-				logProb[s] = logF(i, (s - 1) * K + k);
+				logProb[s] = logF(i, s * K + k);
 				if(b[i] == 0) {
-					logProb[s] += log(W((s - 1) * K + k, States[i]));
+					logProb[s] += log(W(s * K + k, States[i]));
 				} else {
 					logProb[s] += log(P(i, s));
 			  }
@@ -283,9 +290,9 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _W, SEXP _P, SEXP _Mu, SEXP 
 		for(s = 0; s < S; s ++) {
 			double productTerm, squareTerm, varTerm;
 			for(i = 0; i < I; i ++) {
-				productTerm += Gamma(i, (s - 1) * K + k) * log(Y(i, n) + 1);
-				squareTerm += Gamma(i, (s - 1) * K + k) * Gamma(i, (s - 1) * K + k);
-				varTerm += (log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, (s - 1) * K + k)) * (log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, (s - 1) * K + k)) ;
+				productTerm += Gamma(i, s * K + k) * log(Y(i, n) + 1);
+				squareTerm += Gamma(i, s * K + k) * Gamma(i, s * K + k);
+				varTerm += (log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * K + k)) * (log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * K + k)) ;
 			}
 			Mu(n, s) = R::rnorm((tau * productTerm + xi * Sigma(n, s)) / (tau * squareTerm + Sigma(n, s)), Sigma(n, s) * tau / (tau * squareTerm + Sigma(n, s)));
 			Sigma(n, s) = 1 / R::rgamma(omega + 1 + I / 2,
