@@ -235,24 +235,28 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 		// switch cluster labels if the cluster size changes
 		if(ClusterSize[oldState] == 0) {
 			if(selectj == J) {
-			  if(ClusterSize[selectj] != 1) 
-				  printf("Error: new cluster size is not 1, J = %d, selectj = %d.", J, selectj);
+				if(ClusterSize[selectj] != 1) 
+					printf("Error: new cluster size is not 1, J = %d, selectj = %d.\n", J, selectj);
 				States[i] = oldState;
 				W(_, oldState)  = W(_, selectj);
+				ClusterSize[oldState] = ClusterSize[selectj];
+				ClusterSize[selectj] = 0;
 			} else {
 				for(i = 0; i < I; i ++) {
 					if(States[i] == J - 1) {
 						States[i] = oldState;
 						if(States[i] > J - 1) {
-							printf("Error: some cluster label are larger than J - 1, i = %d.", i);
+							printf("Error: some cluster label are larger than J - 1, i = %d.\n", i);
 						}
 					}
 				}
 				W(_, oldState) = W(_, J - 1);
-				J--;
 				for(i = 0; i < K * S; i ++) {
-					W(i, j) = 0;
+					W(i, J - 1) = 0;
 				}
+				ClusterSize[oldState] = ClusterSize[J - 1];
+				ClusterSize[J - 1] = 0;
+				J--;
 			}
 		} else if(selectj == J) {
 			J ++;
