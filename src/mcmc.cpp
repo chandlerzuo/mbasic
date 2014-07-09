@@ -235,7 +235,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 		
 			W(_, J) = neww;
 		}
-		printf("Old State = %d, new state = %d, old state cluster size = %d, new cluster size = %d.\n", oldState, selectj, ClusterSize[oldState], ClusterSize[selectj]);
+		//		printf("Old State = %d, new state = %d, old state cluster size = %d, new cluster size = %d.\n", oldState, selectj, ClusterSize[oldState], ClusterSize[selectj]);
 
 		// switch cluster labels if the cluster size changes
 		if(ClusterSize[oldState] == 0) {
