@@ -75,6 +75,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 			}
 		}
 	}
+	printf("Finished computing the density matrix\n");
 	
 	// Update W
 	for(j = 0; j < J; j ++) {
@@ -98,6 +99,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 			}
 		}
 	}
+	printf("Finished updating W\n");
 	
 	// update for P
 	for(i = 0; i < I; i ++) {
@@ -119,7 +121,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 			}
 		}
 	}
-       
+	printf("Finished updating P\n");
 
 	// Sample for b
 	
@@ -160,7 +162,8 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 		else
 			b(i) = R::rbinom(1, exp(prob1 - prob0) / (1 + exp(prob1 - prob0)));
 	}
-	
+	printf("Finished updating b\n");
+
 	// Sample for States
 	for(i = 0; i < I; i ++) {
 		double probz[J + 1];
@@ -256,6 +259,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 		}
 
 	}
+	printf("Finished updating States\n");
 	
 	// update for Theta
 	for(i = 0; i < I; i ++) {
@@ -285,13 +289,17 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 				s--;
 			}
 			Theta(i, k) = s;
-			if(s == S) 
-			  printf("Error: sampling state can not be S, i = %d, k = %d, rndVar = %3.3f.\n", i, k, rndVar);
-			for(s = 0; s < S + 1; s ++) {
-			  printf("Cumprob[s] = %3.3f\t", cumProb[s]);
+			if(s == S) {
+				printf("Error: sampling state can not be S, i = %d, k = %d, rndVar = %3.3f.\n", i, k, rndVar);
+				for(s = 0; s < S + 1; s ++) {
+					printf("Cumprob[s] = %3.3f\t", cumProb[s]);
+				}
+				printf("\n");
 			}
 		}
 	}
+
+	printf("Finished updating Theta\n");
 
 	// update for mu and sigma
 	for(n = 0; n < N; n ++) {
@@ -308,6 +316,8 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 		}
 	}
 	
+	printf("Finished updating mu and sigma\n");
+
 	// update zeta
 	zeta = 0;
 	for(i = 0; i < I; i ++) {
