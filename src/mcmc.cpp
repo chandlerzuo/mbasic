@@ -45,7 +45,12 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	
 	int ClusterSize[I + 1];
 
+	for(i = 0; i < I + 1; i ++) {
+		ClusterSize[i] = 0;
+	}
+
 	// Compute J
+
 	int J = 0;
 	for(i = 0; i < I; i ++) {
 		if(J < States[i]) {
