@@ -41,7 +41,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	double _LOW = 1e-10;
 	
 	// iterators
-	int i, j, k, s, n;//, likid;
+	int i, j, k = 0, s, n;//, likid;
 	
 	int ClusterSize[I + 1];
 
@@ -230,13 +230,13 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 		
 			W(_, J) = neww;
 		}
-		
+		printf("Old State = %d, new state = %d, old state cluster size = %d, new cluster size = %d.\n", oldState, selectj, ClusterSize[oldState], ClusterSize[selectj]);
 
 		// switch cluster labels if the cluster size changes
 		if(ClusterSize[oldState] == 0) {
 			if(selectj == J) {
 				if(ClusterSize[selectj] != 1) 
-					printf("Error: new cluster size is not 1, J = %d, selectj = %d.\n", J, selectj);
+					printf("Error: new cluster size is not 1, J = %d, selectj = %d, oldState = %d\n", J, selectj, oldState);
 				States[i] = oldState;
 				W(_, oldState)  = W(_, selectj);
 				ClusterSize[oldState] = ClusterSize[selectj];
@@ -308,7 +308,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	// update for mu and sigma
 	for(n = 0; n < N; n ++) {
 		for(s = 0; s < S; s ++) {
-			double productTerm, squareTerm, varTerm;
+			double productTerm = 0, squareTerm = 0, varTerm = 0;
 			for(i = 0; i < I; i ++) {
 				productTerm += Gamma(i, s * K + k) * log(Y(i, n) + 1);
 				squareTerm += Gamma(i, s * K + k) * Gamma(i, s * K + k);
