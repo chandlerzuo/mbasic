@@ -171,6 +171,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 
          // Sample for States
          for(i = 0; i < I; i ++) {
+           printf("i=%d\n", i);
                  double probz[J + 1];
                  // probability of choosing a existing sample
                  ClusterSize[States[i]] --;
