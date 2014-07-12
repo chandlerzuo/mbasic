@@ -41,7 +41,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	double _LOW = 1e-10;
 
 	// iterators
-	int i, j, k = 0, s, n;//, likid;
+	int i, j, k = 0, s, n, i1;//, likid;
 
 	int ClusterSize[I + 1];
 
