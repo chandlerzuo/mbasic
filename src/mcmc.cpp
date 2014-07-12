@@ -265,6 +265,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
                                  ClusterSize[J - 1] = 0;
                                  J--;
                          }
+                         printf("Cluster %d is relabeled as %d, total number of clusters %d\n", selectj, oldState, J);
                  } else if(selectj == J) {
                          J ++;
                  }
