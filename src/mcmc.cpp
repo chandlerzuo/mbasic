@@ -185,6 +185,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
                          for(k = 0; k < K; k ++) {
                                  probz[j] += (1 - b(i)) * log(W((Theta(i, k) - 1) * K + k, j));
                          }
+                         printf("probz[%d]=%lf\t", j, probz[j]);
                  }
 
                  // create a new sample
@@ -193,6 +194,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
                  if(b(i) == 0) {
                          probz[J] -= log(S) * K;
                  }
+                 printf("probz[%d]=%lf\n", J, probz[J]);
 
                  double max_exp = probz[0];
                  for(j = 1; j < J + 1; j ++) {
