@@ -213,6 +213,10 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
                          selectj --;
                  }
 
+                 if(selectj > J) {
+                   printf("Error: select j = %d, J = %d\n", selectj, J);
+                 }
+
                  States[i] = selectj;
                  ClusterSize[selectj] ++;
 
