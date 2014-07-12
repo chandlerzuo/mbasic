@@ -258,8 +258,8 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
                                          }
                                  }
                                  W(_, oldState) = W(_, J - 1);
-                                 for(i = 0; i < K * S; i ++) {
-                                         W(i, J - 1) = 0;
+                                 for(i1 = 0; i1 < K * S; i1 ++) {
+                                         W(i1, J - 1) = 0;
                                  }
                                  ClusterSize[oldState] = ClusterSize[J - 1];
                                  ClusterSize[J - 1] = 0;
