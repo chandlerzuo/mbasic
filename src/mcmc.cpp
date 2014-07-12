@@ -248,11 +248,11 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
                                  ClusterSize[oldState] = ClusterSize[selectj];
                                  ClusterSize[selectj] = 0;
                          } else {
-                                 for(i = 0; i < I; i ++) {
-                                         if(States[i] == J - 1) {
-                                                 States[i] = oldState;
-                                                 if(States[i] > J - 1) {
-                                                   printf("Error: some cluster label are larger than J - 1, i = %d, State = %d\n", i, States[i]);
+                                 for(i1 = 0; i1 < I; i1 ++) {
+                                         if(States[i1] == J - 1) {
+                                                 States[i1] = oldState;
+                                                 if(States[i1] > J - 1) {
+                                                   printf("Error: some cluster label are larger than J - 1, i = %d, State = %d\n", i1, States[i1]);
                                                    return(wrap(oldState));
                                                  }
                                          }
