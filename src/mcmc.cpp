@@ -214,7 +214,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
                  }
 
                  if(selectj > J) {
-                   printf("Error: select j = %d, J = %d\n", selectj, J);
+                   printf("Error: select j = %d, J = %d\n, cum_probz[selectj] = %lf, tmp = %lf", selectj, J, cum_probz[selectj], tmp);
                  }
 
                  States[i] = selectj;
