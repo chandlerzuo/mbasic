@@ -252,7 +252,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
                                                  States[i] = oldState;
                                                  if(States[i] > J - 1) {
                                                    printf("Error: some cluster label are larger than J - 1, i = %d, State = %d\n", i, States[i]);
-                                                   return;
+                                                   return(-1);
                                                  }
                                          }
                                  }
