@@ -184,9 +184,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
                          probz[j] = log(n_j);
                          for(k = 0; k < K; k ++) {
                                  probz[j] += (1 - b(i)) * log(W(Theta(i, k) * K + k, j));
-				 if(j == J - 1) {
-				   printf("probz[%d] = %lf\t, W(%d, %d)=%lf, Theta = %d\n", j, probz[j], Theta(i, k) * K + k, j, W(Theta(i, k) * K + k, j), Theta(i, k));
-				 }
+				 //				 if(j == J - 1) printf("probz[%d] = %lf\t, W(%d, %d)=%lf, Theta = %d\n", j, probz[j], Theta(i, k) * K + k, j, W(Theta(i, k) * K + k, j), Theta(i, k));
                          }
                  }
 
@@ -238,6 +236,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
                                          } else {
                                            tmpGamma[s] = R::rgamma(betaw, 1);
                                          }
+					 printf("beta = %lf, s = %d, k = %d, tmpGamma = %lf\n", betaw, s, k, tmpGamma[s]);
                                          tmpGamma[S] += tmpGamma[s];
                                  }
                                  for(s = 0; s < S; s ++) {
