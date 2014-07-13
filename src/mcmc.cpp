@@ -156,7 +156,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 
                  double prob0 = 0;
                  for(k = 0; k < K; k ++) {
-                         prob0 += log(W(k + (Theta(i, k) - 1) * K, States[i]));
+                         prob0 += log(W(k + Theta(i, k) * K, States[i]));
                  }
 
                  prob0 += log(1 - zeta);
@@ -172,7 +172,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
          // Sample for States
          for(i = 0; i < I; i ++) {
            printf("i=%d\n", i);
-                 double probz[J + 1];
+	   double probz[J + 1];
                  // probability of choosing a existing sample
                  ClusterSize[States[i]] --;
                  int oldState = States[i];
@@ -184,8 +184,10 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
                          probz[j] = log(n_j);
                          for(k = 0; k < K; k ++) {
                                  probz[j] += (1 - b(i)) * log(W(Theta(i, k) * K + k, j));
+				 if(j == J - 1) {
+				   printf("probz[%d] = %lf\t, W=%lf\n", probz[j], W(Theta(i, k) * K + k, j));
+				 }
                          }
-                         printf("probz[%d]=%lf\t", j, probz[j]);
                  }
 
                  // create a new sample
