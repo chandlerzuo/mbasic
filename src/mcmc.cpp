@@ -229,6 +229,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
                          // sample the new w
                          NumericVector neww(K * S);
                          for(k = 0; k < K; k ++) {
+			   printf("i = %d, k = %d :", i, k);
                                  double tmpGamma[S + 1];
                                  for(s = 0; s < S; s ++) {
                                          if(s == Theta(i, k) && b[i] == 0) {
@@ -236,7 +237,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
                                          } else {
                                            tmpGamma[s] = R::rgamma(betaw, 1);
                                          }
-					 printf("beta = %lf, s = %d, k = %d, tmpGamma = %lf\n", betaw, s, k, tmpGamma[s]);
+					 printf("beta = %lf, s = %d, k = %d, tmpGamma = %lf\t", betaw, s, k, tmpGamma[s]);
                                          tmpGamma[S] += tmpGamma[s];
                                  }
                                  for(s = 0; s < S; s ++) {
@@ -250,6 +251,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 				   }
 				   printf("neww[%d] = %lf\t", s * K + k, neww[s * K + k]);
                                  }
+				 printf("\n");
                          }
 			 
 			 printf("\n");
