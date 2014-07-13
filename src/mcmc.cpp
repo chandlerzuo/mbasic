@@ -86,11 +86,15 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	for(j = 0; j < J; j ++) {
 		for(k = 0; k < K; k ++) {
 			double betaRates[S], randGamma[S + 1];
+			for(s = 0; s < S; s ++) {
+			  betaRates[s] = 0;
+			}
 			for(i = 0; i < I; i ++) {
 				if(j == States[i] && b[i] == 0) {
 					betaRates[Theta(i, k)] ++;
 				}
 			}
+			randGamma[S] = 0;
 			for(s = 0; s < S; s ++) {
 				betaRates[s] += betaw;
 				randGamma[s] = R::rgamma(betaRates[s], 1);
@@ -109,11 +113,15 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	// update for P
 	for(i = 0; i < I; i ++) {
 		double betaRates[S], randGamma[S + 1];
+		for(s = 0; s < S; s ++) {
+		  betaRates[s] = 0;
+		}
 		for(k = 0; k < K; k ++) {
 			if(b[i] == 1) {
 				betaRates[Theta(i, k)] ++;
 			}
 		}
+		randGamma[S] = 0;
 		for(s = 0; s < S; s ++) {
 			betaRates[s] += betap;
 			randGamma[s] = R::rgamma(betaRates[s], 1);
@@ -194,7 +202,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
                  if(b(i) == 0) {
                          probz[J] -= log(S) * K;
                  }
-                 printf("probz[%d]=%lf\n", J, probz[J]);
+                 //printf("probz[%d]=%lf\n", J, probz[J]);
 
                  double max_exp = probz[0];
                  for(j = 1; j < J + 1; j ++) {
@@ -229,7 +237,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
                          // sample the new w
                          NumericVector neww(K * S);
                          for(k = 0; k < K; k ++) {
-			   printf("i = %d, k = %d :", i, k);
+			   //printf("i = %d, k = %d :", i, k);
                                  double tmpGamma[S + 1];
 				 tmpGamma[S] = 0;
                                  for(s = 0; s < S; s ++) {
@@ -238,7 +246,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
                                          } else {
                                            tmpGamma[s] = R::rgamma(betaw, 1);
                                          }
-					 printf("beta = %lf, s = %d, k = %d, tmpGamma = %lf\t", betaw, s, k, tmpGamma[s]);
+					 //printf("beta = %lf, s = %d, k = %d, tmpGamma = %lf\t", betaw, s, k, tmpGamma[s]);
                                          tmpGamma[S] += tmpGamma[s];
                                  }
                                  for(s = 0; s < S; s ++) {
@@ -250,17 +258,17 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 				   if(neww[s * K + k] < _LOW) {
 				     neww[s * K + k] = _LOW;
 				   }
-				   printf("neww[%d] = %lf\t", s * K + k, neww[s * K + k]);
+				   //printf("neww[%d] = %lf\t", s * K + k, neww[s * K + k]);
                                  }
-				 printf("\n");
+				 //printf("\n");
                          }
 			 
-			 printf("\n");
+			 //printf("\n");
                          W(_, J) = neww;
 			 for(i1 = 0; i1 < S * K; i1 ++) {
-			   printf("W(%d, %d) = %lf\t", i1, J, W(i1, J));
+			   //printf("W(%d, %d) = %lf\t", i1, J, W(i1, J));
 			 }
-			 printf("\n");
+			 //printf("\n");
                  }
                  printf("i = %d, Old State = %d, new state = %d, old state cluster size = %d, new cluster size = %d.\n", i, oldState, selectj, ClusterSize[oldState], ClusterSize[selectj]);
 
