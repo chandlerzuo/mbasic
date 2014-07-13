@@ -231,6 +231,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
                          for(k = 0; k < K; k ++) {
 			   printf("i = %d, k = %d :", i, k);
                                  double tmpGamma[S + 1];
+				 tmpGamma[S] = 0;
                                  for(s = 0; s < S; s ++) {
                                          if(s == Theta(i, k) && b[i] == 0) {
                                            tmpGamma[s] = R::rgamma(betaw + 1, 1);
