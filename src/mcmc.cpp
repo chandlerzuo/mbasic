@@ -255,7 +255,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 			 
 			 printf("\n");
                          W(_, J) = neww;
-			 for(i1 = 0; i1 < (S + 1) * (K + 1); i1 ++) {
+			 for(i1 = 0; i1 < S * K; i1 ++) {
 			   printf("W(%d, %d) = %lf\t", i1, J, W(i1, J));
 			 }
 			 printf("\n");
