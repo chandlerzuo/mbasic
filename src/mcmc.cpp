@@ -241,10 +241,14 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
                                          tmpGamma[S] += tmpGamma[s];
                                  }
                                  for(s = 0; s < S; s ++) {
-                                         neww[s * K + k] = tmpGamma[s] / tmpGamma[S];
-                                         if(neww[s * K + k] < _LOW) {
-                                           neww[s * K + k] = _LOW;
-                                         }
+				   if(tmpGamma[S] < _LOW) {
+				     neww[s * K + k] = _LOW;
+				   } else {
+				     neww[s * K + k] = tmpGamma[s] / tmpGamma[S];
+				   }
+				   if(neww[s * K + k] < _LOW) {
+				     neww[s * K + k] = _LOW;
+				   }
                                  }
                          }
 
