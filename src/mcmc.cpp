@@ -185,7 +185,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
                          for(k = 0; k < K; k ++) {
                                  probz[j] += (1 - b(i)) * log(W(Theta(i, k) * K + k, j));
 				 if(j == J - 1) {
-				   printf("probz[%d] = %lf\t, W=%lf\n", j, probz[j], W(Theta(i, k) * K + k, j));
+				   printf("probz[%d] = %lf\t, W(%d, %d)=%lf, Theta = %d\n", j, probz[j], Theta(i, k) * K + k, j, W(Theta(i, k) * K + k, j), Theta(i, k));
 				 }
                          }
                  }
