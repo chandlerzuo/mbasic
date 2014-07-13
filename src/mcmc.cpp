@@ -249,10 +249,16 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 				   if(neww[s * K + k] < _LOW) {
 				     neww[s * K + k] = _LOW;
 				   }
+				   printf("neww[%d] = %lf\t", s * K + k, neww[s * K + k]);
                                  }
                          }
-
+			 
+			 printf("\n");
                          W(_, J) = neww;
+			 for(i1 = 0; i1 < (S + 1) * (K + 1); i1 ++) {
+			   printf("W(%d, %d) = %lf\t", i1, J, W(i1, J));
+			 }
+			 printf("\n");
                  }
                  printf("i = %d, Old State = %d, new state = %d, old state cluster size = %d, new cluster size = %d.\n", i, oldState, selectj, ClusterSize[oldState], ClusterSize[selectj]);
 
