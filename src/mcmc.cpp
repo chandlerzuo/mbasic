@@ -378,7 +378,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
   
   // compute the posterior log-likelihood
   // f part
-  double logPostLogLik = 0;
+  double logPostLik = 0;
   for(i = 0; i < I; i ++) {
     for(k = 0; k < K; k ++) {
       for(s = 0; s < S; s ++) {
@@ -393,29 +393,29 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	  }
 	}
 	if(Theta(i, k) == s) {
-	  logPostLogLik += logF(i, s * K + k);
+	  logPostLik += logF(i, s * K + k);
 	  if(b[i] == 1) {
-	    logPostLogLik += log(P(i, s));
+	    logPostLik += log(P(i, s));
 	  } else {
-	    logPostLogLik += log(W(States[i], s * K + k));
+	    logPostLik += log(W(States[i], s * K + k));
 	  }
 	}
       }
     }
     if(b[i] == 1)
-      logPostLogLik += log(zeta);
+      logPostLik += log(zeta);
     else
-      logPostLogLik += log(1 - zeta);
+      logPostLik += log(1 - zeta);
   }
   
   for(i = 0; i < I; i ++) 
     for(s = 0; s < S; s ++)
-      logPostLogLik += (betap - 1) * log(P(i, s));
+      logPostLik += (betap - 1) * log(P(i, s));
   
   for(j = 0; j < J; j ++)
     for(k = 0; k < K; k ++)
       for(s = 0; s < S; s ++)
-	logPostLogLik += (betaw - 1) * log(W(j, K * s + k));
+	logPostLik += (betaw - 1) * log(W(j, K * s + k));
   
   for(n = 0; n < N; n ++)
     for(s = 0; s < S; s ++) {
@@ -423,19 +423,19 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
       double tmp = R::dnorm(Mu(n, s), xi, tau, 0);
       if(tmp < _LOW)
 	tmp = _LOW;
-      logPostLogLik += log(tmp);
+      logPostLik += log(tmp);
       // prior density of Sigma
       
-      logPostLogLik -= nu / Sigma(n, s);
-      logPostLogLik -= (omega + 1 ) * Sigma(n, s);
+      logPostLik -= nu / Sigma(n, s);
+      logPostLik -= (omega + 1 ) * Sigma(n, s);
       
     }
 
   for(j = 0; j < J; j ++) 
     for(int t = 1; t < ClusterSize[j]; t ++) 
-      logPostLogLik += log(t);
+      logPostLik += log(t);
   
-  logPostLogLik += (J - 1) * log(alpha);
+  logPostLik += (J - 1) * log(alpha);
   
   Rcpp::List ret = Rcpp::List::create(
 				      Rcpp::Named("Theta") = Theta,
@@ -446,7 +446,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 				      Rcpp::Named("Mu") = Mu,
 				      Rcpp::Named("Sigma") = Sigma,
 				      Rcpp::Named("zeta") = zeta,
-				      Rcpp::Named("logPostLogLik") = logPostLogLik
+				      Rcpp::Named("logPostLik") = logPostLik
 				      //,Rcpp::Named("oldlik") = oldlik
 				      );
   return( ret );
