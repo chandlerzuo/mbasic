@@ -408,14 +408,14 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
       logPostLogLik += log(1 - zeta);
   }
   
-  for(i = 0; i < I; i ++) {
-    logPostLogLik += (betap - 1) * log(P(i, s));
-  }
+  for(i = 0; i < I; i ++) 
+    for(s = 0; s < S; s ++)
+      logPostLogLik += (betap - 1) * log(P(i, s));
   
   for(j = 0; j < J; j ++)
     for(k = 0; k < K; k ++)
       for(s = 0; s < S; s ++)
-	logPostLogLik ++ (betaw - 1) * log(W(j, K * s + k));
+	logPostLogLik += (betaw - 1) * log(W(j, K * s + k));
   
   for(n = 0; n < N; n ++)
     for(s = 0; s < S; s ++) {
