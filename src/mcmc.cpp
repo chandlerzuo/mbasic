@@ -179,7 +179,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
   
   // Sample for States
   for(i = 0; i < I; i ++) {
-    printf("i=%d\n", i);
+    //printf("i=%d\n", i);
     double probz[J + 1];
     // probability of choosing a existing sample
     ClusterSize[States[i]] --;
@@ -270,7 +270,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
       }
       //printf("\n");
     }
-    printf("i = %d, Old State = %d, new state = %d, old state cluster size = %d, new cluster size = %d.\n", i, oldState, selectj, ClusterSize[oldState], ClusterSize[selectj]);
+    //printf("i = %d, Old State = %d, new state = %d, old state cluster size = %d, new cluster size = %d.\n", i, oldState, selectj, ClusterSize[oldState], ClusterSize[selectj]);
     
     // switch cluster labels if the cluster size changes
     if(ClusterSize[oldState] == 0) {
@@ -281,7 +281,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	W(_, oldState)  = W(_, selectj);
 	ClusterSize[oldState] = ClusterSize[selectj];
 	ClusterSize[selectj] = 0;
-	printf("Cluster %d is relabeled as %d, total number of clusters %d\n", selectj, oldState, J);
+	//printf("Cluster %d is relabeled as %d, total number of clusters %d\n", selectj, oldState, J);
       } else {
 	for(i1 = 0; i1 < I; i1 ++) {
 	  if(States[i1] == J - 1) {
@@ -299,11 +299,11 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	ClusterSize[oldState] = ClusterSize[J - 1];
 	ClusterSize[J - 1] = 0;
 	J--;
-	printf("Cluster %d is relabeled as %d, total number of clusters %d\n", J-1, oldState, J);
+	//printf("Cluster %d is relabeled as %d, total number of clusters %d\n", J-1, oldState, J);
       }
     } else if(selectj == J) {
       J ++;
-      printf("Total number of cluster increase by 1, as %d\n", J);
+      //printf("Total number of cluster increase by 1, as %d\n", J);
     }
     
   }
