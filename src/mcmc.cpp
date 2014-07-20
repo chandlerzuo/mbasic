@@ -446,7 +446,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 				      Rcpp::Named("Mu") = Mu,
 				      Rcpp::Named("Sigma") = Sigma,
 				      Rcpp::Named("zeta") = zeta,
-				      Rcpp::Named("logPostLikelihood") = logPostLogLik
+				      Rcpp::Named("logPostLogLik") = logPostLogLik
 				      //,Rcpp::Named("oldlik") = oldlik
 				      );
   return( ret );
