@@ -394,10 +394,13 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	}
 	if(Theta(i, k) == s) {
 	  logPostLik += logF(i, s * K + k);
+	  printf("logF(i = %d, s = %d, k = %d) = %lf\n", i, s, k, logF(i, s * K + k));
 	  if(b[i] == 1) {
 	    logPostLik += log(P(i, s));
+	    printf("log(P(i = %d, s = %d)) = %lf", i, s, log(P(i,s)));
 	  } else {
 	    logPostLik += log(W(States[i], s * K + k));
+	    printf("log(W(j = %d, s = %d, k = %d)) = %lf", States[i], s, k, log(W(States[i], s * K + k)));
 	  }
 	}
       }
@@ -407,6 +410,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
     else
       logPostLik += log(1 - zeta);
   }
+  printf("After f part, logLik = %lf\n", logPostLik);
   
   for(i = 0; i < I; i ++) 
     for(s = 0; s < S; s ++)
