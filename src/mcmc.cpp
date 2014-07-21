@@ -394,7 +394,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	}
 	if(Theta(i, k) == s) {
 	  logPostLik += logF(i, s * K + k);
-	  printf("logF(i = %d, s = %d, k = %d) = %lf\n", i, s, k, logF(i, s * K + k));
+	  // printf("logF(i = %d, s = %d, k = %d) = %lf\n", i, s, k, logF(i, s * K + k));
 	  if(b[i] == 1) {
 	    logPostLik += log(P(i, s));
 	    if(P(i, s) < _LOW) {
@@ -414,18 +414,18 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
     else
       logPostLik += log(1 - zeta);
   }
-  printf("After f part, logLik = %lf\n", logPostLik);
+  // printf("After f part, logLik = %lf\n", logPostLik);
   
   for(i = 0; i < I; i ++) 
     for(s = 0; s < S; s ++)
       logPostLik += (betap - 1) * log(P(i, s));
-  printf("logLik = %lf\n", logPostLik);
+  // printf("logLik = %lf\n", logPostLik);
 
   for(j = 0; j < J; j ++)
     for(k = 0; k < K; k ++)
       for(s = 0; s < S; s ++)
-	logPostLik += (betaw - 1) * log(W(j, K * s + k));
-  printf("logLik = %lf\n", logPostLik);
+	logPostLik += (betaw - 1) * log(W(K * s + k, j));
+  // printf("logLik = %lf\n", logPostLik);
   
   for(n = 0; n < N; n ++)
     for(s = 0; s < S; s ++) {
@@ -440,16 +440,15 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
       logPostLik -= (omega + 1 ) * Sigma(n, s);
       
     }
-  printf("logLik = %lf\n", logPostLik);
+  printf("Before Gamma function, logLik = %lf\n", logPostLik);
 
   for(j = 0; j < J; j ++) 
     for(int t = 1; t < ClusterSize[j]; t ++) 
       logPostLik += log(t);
   
-  printf("logLik = %lf\n", logPostLik);
+  printf("After Gamma function, logLik = %lf\n", logPostLik);
   logPostLik += (J - 1) * log(alpha);
   
-  printf("logLik = %lf\n", logPostLik);
   Rcpp::List ret = Rcpp::List::create(
 				      Rcpp::Named("Theta") = Theta,
 				      Rcpp::Named("States") = States,
