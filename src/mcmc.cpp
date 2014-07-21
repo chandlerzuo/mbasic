@@ -100,6 +100,9 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	randGamma[s] = R::rgamma(betaRates[s], 1);
 	randGamma[S] += randGamma[s];
       }
+      if(randGamma[S] < _LOW) {
+        randGamma[S] = _LOW;
+      }
       for(s = 0; s < S; s ++) {
 	W(s * K + k, j) = randGamma[s] / randGamma[S];
 	if(W(s * K + k, j) < _LOW) {
@@ -116,8 +119,8 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
     for(s = 0; s < S; s ++) {
       betaRates[s] = 0;
     }
-    for(k = 0; k < K; k ++) {
-      if(b[i] == 1) {
+    if(b[i] == 1) {
+      for(k = 0; k < K; k ++) {
 	betaRates[Theta(i, k)] ++;
       }
     }
@@ -127,6 +130,9 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
       randGamma[s] = R::rgamma(betaRates[s], 1);
       randGamma[S] += randGamma[s];
     }
+    if(randGamma[S] < _LOW) {
+      randGamma[S] = _LOW;
+    }
     for(s = 0; s < S; s ++) {
       P(i, s) = randGamma[s] / randGamma[S];
       if(P(i, s) < _LOW) {
@@ -135,15 +141,15 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
     }
   }
   printf("Finished updating P\n");
-  
+
   // Sample for b
-  
+
   if(zeta < _LOW) {
     zeta = _LOW;
   } else if(zeta > 1 - _LOW) {
     zeta = 1 - _LOW;
   }
-  
+
   for(i = 0; i < I; i ++) {
     // log probability of drawing 1
     double prob1 = 0;
@@ -159,16 +165,16 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
       prob1 += tmpsum * log(P(i, s));
     }
     prob1 += log(zeta);
-    
+
     // log probability of drawing 0
-    
+
     double prob0 = 0;
     for(k = 0; k < K; k ++) {
       prob0 += log(W(k + Theta(i, k) * K, States[i]));
     }
-    
+
     prob0 += log(1 - zeta);
-    
+
     // draw sample
     if(prob1 > prob0)
       b(i) = R::rbinom(1, 1 / (1 + exp(prob0 - prob1)));
@@ -176,7 +182,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
       b(i) = R::rbinom(1, exp(prob1 - prob0) / (1 + exp(prob1 - prob0)));
   }
   printf("Finished updating b\n");
-  
+
   // Sample for States
   for(i = 0; i < I; i ++) {
     //printf("i=%d\n", i);
@@ -305,10 +311,10 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
       J ++;
       //printf("Total number of cluster increase by 1, as %d\n", J);
     }
-    
+
   }
   printf("Finished updating States\n");
-  
+
   // update for Theta
   for(i = 0; i < I; i ++) {
     for(k = 0; k < K; k ++) {
@@ -378,7 +384,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
   
   // compute the posterior log-likelihood
   // f part
-  double logPostLik = 0;
+  double logPostLik = 0, logLikP = 0, logLikW = 0;
   for(i = 0; i < I; i ++) {
     for(k = 0; k < K; k ++) {
       for(s = 0; s < S; s ++) {
@@ -396,12 +402,12 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	  logPostLik += logF(i, s * K + k);
 	  // printf("logF(i = %d, s = %d, k = %d) = %lf\n", i, s, k, logF(i, s * K + k));
 	  if(b[i] == 1) {
-	    logPostLik += log(P(i, s));
+	    logLikP += log(P(i, s));
 	    if(P(i, s) < _LOW) {
 	      printf("Error: log(P(i = %d, s = %d)) = %lf\n", i, s, log(P(i,s)));
 	    }
 	  } else {
-	    logPostLik += log(W(s * K + k, States[i]));
+	    logLikW += log(W(s * K + k, States[i]));
 	    if(W(s * K + k, States[i]) < _LOW) {
 	      printf("Error: log(W(j = %d, s = %d, k = %d)) = %lf\n", States[i], s, k, log(W(s * K + k, States[i])));
 	    }
@@ -414,9 +420,12 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
     else
       logPostLik += log(1 - zeta);
   }
-  // printf("After f part, logLik = %lf\n", logPostLik);
-  
-  for(i = 0; i < I; i ++) 
+  printf("f part, logLik = %lf\n", logPostLik);
+  printf("Theta part, logLik = %lf\n", logLikP + logLikW);
+
+  logPostLik += logLikP + logLikW;
+
+  for(i = 0; i < I; i ++)
     for(s = 0; s < S; s ++)
       logPostLik += (betap - 1) * log(P(i, s));
   // printf("logLik = %lf\n", logPostLik);
@@ -425,8 +434,8 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
     for(k = 0; k < K; k ++)
       for(s = 0; s < S; s ++)
 	logPostLik += (betaw - 1) * log(W(K * s + k, j));
-  // printf("logLik = %lf\n", logPostLik);
-  
+   printf("After prior for P and W, logLik = %lf\n", logPostLik);
+
   for(n = 0; n < N; n ++)
     for(s = 0; s < S; s ++) {
       // prior density of Mu
@@ -435,20 +444,18 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	tmp = _LOW;
       logPostLik += log(tmp);
       // prior density of Sigma
-      
       logPostLik -= nu / Sigma(n, s);
       logPostLik -= (omega + 1 ) * Sigma(n, s);
-      
     }
   printf("Before Gamma function, logLik = %lf\n", logPostLik);
 
-  for(j = 0; j < J; j ++) 
-    for(int t = 1; t < ClusterSize[j]; t ++) 
+  for(j = 0; j < J; j ++)
+    for(int t = 1; t < ClusterSize[j]; t ++)
       logPostLik += log(t);
-  
+
   printf("After Gamma function, logLik = %lf\n", logPostLik);
   logPostLik += (J - 1) * log(alpha);
-  
+
   Rcpp::List ret = Rcpp::List::create(
 				      Rcpp::Named("Theta") = Theta,
 				      Rcpp::Named("States") = States,
@@ -462,5 +469,5 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 				      //,Rcpp::Named("oldlik") = oldlik
 				      );
   return( ret );
-  
+
 }
