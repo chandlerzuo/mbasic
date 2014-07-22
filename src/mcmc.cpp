@@ -366,7 +366,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
     for(s = 0; s < S; s ++) {
       double productTerm = 0, squareTerm = 0, varTerm = 0, nI = 0;
       for(i = 0; i < I; i ++) {
-	if(Theta(i, k) == s) {
+	if(Theta(i, D[n]) == s) {
 	  nI ++;
 	  productTerm += Gamma(i, s * N + n) * log(Y(i, n) + 1);
 	  squareTerm += Gamma(i, s * N + n) * Gamma(i, s * N + n);
