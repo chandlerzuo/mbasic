@@ -13,8 +13,8 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
   NumericMatrix Mu(_Mu); // N by S
   NumericMatrix Sigma(_Sigma); // N by S
   IntegerVector D(_D); // Length N, valued in {0, 1, ..., K-1}
-  double zeta = as<double>(_zeta); 
-  
+  double zeta = as<double>(_zeta);
+
   // The following values are piror parameters and are fixed
   double alpha = as<double>(_alpha);
   double betaw = as<double>(_betaw);
@@ -23,34 +23,34 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
   double tau = as<double>(_tau);
   double omega = as<double>(_omega);
   double nu = as<double>(_nu);
-  
+
   // The following is the external information.
   NumericMatrix Gamma(_Gamma); // I by N * S
   NumericMatrix Y(_Y); // I by N
-  
+
   // extract the dimensions
   int I = b.size();
   int S = Mu.ncol();
   int K = Theta.ncol();
   int N = D.size();
-  
+
   // The following will be computed
   NumericMatrix W(K * S, I + 1);
   NumericMatrix P(I, S);
-  
+
   double _LOW = 1e-10;
-  
+
   // iterators
   int i, j, k = 0, s, n, i1;//, likid;
-  
+
   int ClusterSize[I + 1];
-  
+
   for(i = 0; i < I + 1; i ++) {
     ClusterSize[i] = 0;
   }
-  
+
   // Compute J
-  
+
   int J = 0;
   for(i = 0; i < I; i ++) {
     if(J < States[i]) {
@@ -59,10 +59,10 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
     ClusterSize[States[i]] ++;
   }
   J ++;
-  
+
   // Compute the density matrix
   NumericMatrix logF(I, K * S);
-  
+
   // compute the density matrix
   for(i = 0; i < I; i ++) {
     for(k = 0; k < K; k ++) {
@@ -81,7 +81,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
     }
   }
   printf("Finished computing the density matrix\n");
-  
+
   // Update W
   for(j = 0; j < J; j ++) {
     for(k = 0; k < K; k ++) {
@@ -112,7 +112,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
     }
   }
   printf("Finished updating W\n");
-  
+
   // update for P
   for(i = 0; i < I; i ++) {
     double betaRates[S], randGamma[S + 1];
@@ -201,7 +201,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	//				 if(j == J - 1) printf("probz[%d] = %lf\t, W(%d, %d)=%lf, Theta = %d\n", j, probz[j], Theta(i, k) * K + k, j, W(Theta(i, k) * K + k, j), Theta(i, k));
       }
     }
-    
+
     // create a new sample
     probz[J] = log(alpha);
     //notice: only calculate the Gamma functions if b_i = 0;
@@ -209,36 +209,36 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
       probz[J] -= log(S) * K;
     }
     //printf("probz[%d]=%lf\n", J, probz[J]);
-    
+
     double max_exp = probz[0];
     for(j = 1; j < J + 1; j ++) {
       if(max_exp < probz[j]) {
 	max_exp = probz[j];
       }
     }
-    
+
     double cum_probz[J + 2];
     cum_probz[0] = 0;
     for(j = 0; j < J + 1; j ++ ) {
       cum_probz[j + 1] = cum_probz[j] + exp(probz[j] - max_exp);
     }
-    
+
     double tmp = R::runif(0, cum_probz[J + 1]);
     int selectj = J + 1;
     while(tmp <= cum_probz[selectj]) {
       selectj --;
     }
-    
+
     if(selectj > J) {
       printf("Error: select j = %d, J = %d\n, cum_probz[selectj] = %lf, tmp = %lf", selectj, J, cum_probz[selectj], tmp);
       for(j = 0; j < J + 1; j ++) {
 	printf("probz = %lf, cum_probz = %lf\n", probz[j] - max_exp, cum_probz[j + 1]);
       }
     }
-    
+
     States[i] = selectj;
     ClusterSize[selectj] ++;
-    
+
     if(selectj == J) {
       // sample the new w
       NumericVector neww(K * S);
@@ -268,7 +268,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	}
 	//printf("\n");
       }
- 
+
       //printf("\n");
       W(_, J) = neww;
       for(i1 = 0; i1 < S * K; i1 ++) {
@@ -281,7 +281,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
     // switch cluster labels if the cluster size changes
     if(ClusterSize[oldState] == 0) {
       if(selectj == J) {
-	if(ClusterSize[selectj] != 1) 
+	if(ClusterSize[selectj] != 1)
 	  printf("Error: new cluster size is not 1, J = %d, selectj = %d, oldState = %d\n", J, selectj, oldState);
 	States[i] = oldState;
 	W(_, oldState)  = W(_, selectj);
@@ -347,7 +347,12 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	printf("Error: sampling state can not be S, i = %d, k = %d, rndVar = %3.3f.\n", i, k, rndVar);
 	for(s = 0; s < S + 1; s ++) {
 	  printf("Cumprob[%d] = %3.3f\t", s, cumProb[s]);
-          printf("logProb[%d] = %3.3f\t", s, logProb[s]);
+          if(s < S) {
+            printf("logProb[%d] = %3.3f\t", s, logProb[s]);
+            printf("logF(i=%d, s=%d, k=%d) = %lf\t", i, s, k, logF(i, s * K + k));
+            printf("W(s = %d, k = %d, j = %d) = %lf\t", s, k, States[i], W(s * K + k, States[i]));
+            printf("P(s = %d, i = %d) = %lf\t", s, i, P(i, s));
+          }
 	}
 	printf("\n");
       }
@@ -373,16 +378,16 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 				  nu + varTerm / 2);
     }
   }
-  
+
   printf("Finished updating mu and sigma\n");
-  
+
   // update zeta
   zeta = 0;
   for(i = 0; i < I; i ++) {
     zeta += b[i];
   }
   zeta /= I;
-  
+
   // compute the posterior log-likelihood
   // f part
   double logPostLik = 0, logLikP = 0, logLikW = 0;
