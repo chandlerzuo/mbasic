@@ -268,7 +268,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	}
 	//printf("\n");
       }
-      
+ 
       //printf("\n");
       W(_, J) = neww;
       for(i1 = 0; i1 < S * K; i1 ++) {
@@ -277,7 +277,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
       //printf("\n");
     }
     //printf("i = %d, Old State = %d, new state = %d, old state cluster size = %d, new cluster size = %d.\n", i, oldState, selectj, ClusterSize[oldState], ClusterSize[selectj]);
-    
+
     // switch cluster labels if the cluster size changes
     if(ClusterSize[oldState] == 0) {
       if(selectj == J) {
@@ -346,15 +346,16 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
       if(s == S) {
 	printf("Error: sampling state can not be S, i = %d, k = %d, rndVar = %3.3f.\n", i, k, rndVar);
 	for(s = 0; s < S + 1; s ++) {
-	  printf("Cumprob[s] = %3.3f\t", cumProb[s]);
+	  printf("Cumprob[%d] = %3.3f\t", s, cumProb[s]);
+          printf("logProb[%d] = %3.3f\t", s, logProb[s]);
 	}
 	printf("\n");
       }
     }
   }
-  
+
   printf("Finished updating Theta\n");
-  
+
   // update for mu and sigma
   for(n = 0; n < N; n ++) {
     for(s = 0; s < S; s ++) {
