@@ -174,7 +174,7 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
 
     States[i] = newState;
     ClusterSize[newState] ++;
-    if(mintmp > lambda) {
+    if(mintmp >= lambda) {
       // a new cluster is formed
       if(J != newState) {
         printf("Error: new state is not J = %d.", J);
