@@ -142,7 +142,7 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
   }
   loss += lambda * (J - 1);
   
-  printf("After b, loss function = %3.3f", loss);
+  //  printf("After b, loss function = %3.3f", loss);
 
   // update Theta
   for(i = 0; i < I; i ++) {
@@ -197,7 +197,7 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
   }
   loss += lambda * (J - 1);
   
-  printf("After Theta, loss function = %3.3f", loss);
+  // printf("After Theta, loss function = %3.3f", loss);
 
   //update clusters
   for(i = 0; i < I; i ++) {
@@ -278,7 +278,7 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
   }
   loss += lambda * (J - 1);
   
-  printf("After z, loss function = %3.3f", loss);
+  // printf("After z, loss function = %3.3f", loss);
 
   // update mu
   for(n = 0; n < N; n ++) {
@@ -321,7 +321,7 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
   }
   loss += lambda * (J - 1);
   
-  printf("Loss function = %3.3f, number of clusters = %d\n", loss, J);
+  // printf("Loss function = %3.3f, number of clusters = %d\n", loss, J);
 
   Rcpp::List ret = Rcpp::List::create(
 				      Rcpp::Named("Theta") = Theta,
