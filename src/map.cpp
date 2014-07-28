@@ -35,6 +35,7 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
 
   // iterators
   int i, j, k = 0, s, n, i1;//, likid;
+  double loss;
 
   int ClusterSize[I + 1];
 
@@ -116,7 +117,7 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
       b[i] = 0;
   }
 
-  double loss = 0;
+  loss = 0;
   for(i = 0; i < I; i ++) {
     for(n = 0; n < N; n ++) {
       k = D[n];
@@ -171,7 +172,7 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
     }
   }
 
-  double loss = 0;
+  loss = 0;
   for(i = 0; i < I; i ++) {
     for(n = 0; n < N; n ++) {
       k = D[n];
@@ -252,7 +253,7 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
     }
   }
 
-  double loss = 0;
+  loss = 0;
   for(i = 0; i < I; i ++) {
     for(n = 0; n < N; n ++) {
       k = D[n];
@@ -293,7 +294,7 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
 
   // calculate the loss function
 
-  double loss = 0;
+  loss = 0;
   for(i = 0; i < I; i ++) {
     for(n = 0; n < N; n ++) {
       k = D[n];
