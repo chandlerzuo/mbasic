@@ -68,7 +68,7 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
       }
       W(k, j) = 0;
       for(s = 1; s < S; s ++) {
-	if(tmp[W(k, j)] > tmp[s]) {
+	if(tmp[W(k, j)] < tmp[s]) {
 	  W(k, j) = s;
 	}
       }
