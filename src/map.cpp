@@ -116,6 +116,33 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
       b[i] = 0;
   }
 
+  double loss = 0;
+  for(i = 0; i < I; i ++) {
+    for(n = 0; n < N; n ++) {
+      k = D[n];
+      s = Theta(i, k);
+      loss += (log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n)) *
+	(log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n));
+    }
+    
+    if(b[i] == 1) {
+      for(k = 0; k < K; k ++) {
+	if(Theta(i, k) != P[i]) {
+	  loss += lambdap;
+	}
+      }
+    } else {
+      for(k = 0; k < K; k ++) {
+	if(W(k, States[i]) != Theta(i, k)) {
+	  loss += lambdaw;
+	}
+      }
+    }
+  }
+  loss += lambda * (J - 1);
+  
+  printf("After b, loss function = %3.3f", loss);
+
   // update Theta
   for(i = 0; i < I; i ++) {
     for(k = 0; k < K; k ++) {
@@ -144,6 +171,32 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
     }
   }
 
+  double loss = 0;
+  for(i = 0; i < I; i ++) {
+    for(n = 0; n < N; n ++) {
+      k = D[n];
+      s = Theta(i, k);
+      loss += (log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n)) *
+	(log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n));
+    }
+    
+    if(b[i] == 1) {
+      for(k = 0; k < K; k ++) {
+	if(Theta(i, k) != P[i]) {
+	  loss += lambdap;
+	}
+      }
+    } else {
+      for(k = 0; k < K; k ++) {
+	if(W(k, States[i]) != Theta(i, k)) {
+	  loss += lambdaw;
+	}
+      }
+    }
+  }
+  loss += lambda * (J - 1);
+  
+  printf("After Theta, loss function = %3.3f", loss);
 
   //update clusters
   for(i = 0; i < I; i ++) {
@@ -198,6 +251,33 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
       J --;
     }
   }
+
+  double loss = 0;
+  for(i = 0; i < I; i ++) {
+    for(n = 0; n < N; n ++) {
+      k = D[n];
+      s = Theta(i, k);
+      loss += (log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n)) *
+	(log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n));
+    }
+    
+    if(b[i] == 1) {
+      for(k = 0; k < K; k ++) {
+	if(Theta(i, k) != P[i]) {
+	  loss += lambdap;
+	}
+      }
+    } else {
+      for(k = 0; k < K; k ++) {
+	if(W(k, States[i]) != Theta(i, k)) {
+	  loss += lambdaw;
+	}
+      }
+    }
+  }
+  loss += lambda * (J - 1);
+  
+  printf("After z, loss function = %3.3f", loss);
 
   // update mu
   for(n = 0; n < N; n ++) {
