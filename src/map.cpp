@@ -219,9 +219,9 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, SE
       k = D[n];
       s = Theta(i, k);
       loss += (log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n)) *
-	(log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n))
+	(log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n));
     }
-
+    
     if(b[i] == 1) {
       for(k = 0; k < K; k ++) {
 	if(Theta(i, k) != P[i]) {
@@ -237,7 +237,7 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, SE
     }
   }
   loss += lambda * (J - 1);
-
+  
   Rcpp::List ret = Rcpp::List::create(
 				      Rcpp::Named("Theta") = Theta,
 				      Rcpp::Named("States") = States,
