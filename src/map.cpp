@@ -2,37 +2,52 @@
 
 //this file is in development
 
-SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, SEXP _Gamma, SEXP _Y,
+SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D, SEXP _Gamma, SEXP _Y,
           SEXP _lambdap, SEXP _lambdaw, SEXP _lambda) {
 
   // The following values are 1updated in MCMC iterations
   NumericVector b(_b); // length I
+  printf("test\n");
   IntegerVector States(_States); // length I
+  printf("test\n");
   IntegerMatrix Theta(_Theta); // I by K
+  printf("test\n");
   //NumericMatrix W(_W); // KS by I + 1
   //NumericMatrix P(_P); // I by S
   NumericMatrix Mu(_Mu); // N by S
-  NumericMatrix Sigma(_Sigma); // N by S
+  printf("test\n");
   IntegerVector D(_D); // Length N, valued in {0, 1, ..., K-1}
+  printf("test\n");
   double lambda = as<double>(_lambda);
+  printf("test\n");
 
   // The following values are piror parameters and are fixed
   double lambdap = as<double>(_lambdap);
+  printf("test\n");
   double lambdaw = as<double>(_lambdaw);
+  printf("test\n");
 
   // The following is the external information.
   NumericMatrix Gamma(_Gamma); // I by N * S
+  printf("test\n");
   NumericMatrix Y(_Y); // I by N
+  printf("test\n");
 
   // extract the dimensions
   int I = b.size();
+  printf("test\n");
   int S = Mu.ncol();
+  printf("test\n");
   int K = Theta.ncol();
+  printf("test\n");
   int N = D.size();
+  printf("test\n");
 
   // The following will be computed
   IntegerMatrix W(K, I + 1);
+  printf("test\n");
   IntegerVector P(I);
+  printf("test\n");
 
   // iterators
   int i, j, k = 0, s, n;//, likid;
@@ -238,6 +253,8 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, SE
   }
   loss += lambda * (J - 1);
   
+  printf("Loss function = %3.3f, number of clusters = %d\n", loss, J);
+
   Rcpp::List ret = Rcpp::List::create(
 				      Rcpp::Named("Theta") = Theta,
 				      Rcpp::Named("States") = States,
