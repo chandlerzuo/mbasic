@@ -2,7 +2,7 @@
 
 //this file is in development
 
-SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, SEXP _alpha, SEXP _betaw, SEXP _betap, SEXP _xi, SEXP _tau, SEXP _omega, SEXP _nu, SEXP _zeta, SEXP _Gamma, SEXP _Y,
+SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, SEXP _Gamma, SEXP _Y,
           SEXP _lambdap, SEXP _lambdaw, SEXP _lambda) {
 
   // The following values are 1updated in MCMC iterations
@@ -14,17 +14,9 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, SE
   NumericMatrix Mu(_Mu); // N by S
   NumericMatrix Sigma(_Sigma); // N by S
   IntegerVector D(_D); // Length N, valued in {0, 1, ..., K-1}
-  double zeta = as<double>(_zeta);
   double lambda = as<double>(_lambda);
 
   // The following values are piror parameters and are fixed
-  double alpha = as<double>(_alpha);
-  double betaw = as<double>(_betaw);
-  double betap = as<double>(_betap);
-  double xi = as<double>(_xi);
-  double tau = as<double>(_tau);
-  double omega = as<double>(_omega);
-  double nu = as<double>(_nu);
   double lambdap = as<double>(_lambdap);
   double lambdaw = as<double>(_lambdaw);
 
@@ -42,10 +34,8 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, SE
   IntegerMatrix W(K, I + 1);
   IntegerVector P(I);
 
-  double _LOW = 1e-10;
-
   // iterators
-  int i, j, k = 0, s, n, i1;//, likid;
+  int i, j, k = 0, s, n;//, likid;
 
   int ClusterSize[I + 1];
 
@@ -222,6 +212,31 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, SE
   }
 
   // calculate the loss function
+
+  double loss = 0;
+  for(i = 0; i < I; i ++) {
+    for(n = 0; n < N; n ++) {
+      k = D[n];
+      s = Theta(i, k);
+      loss += (log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n)) *
+	(log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n))
+    }
+
+    if(b[i] == 1) {
+      for(k = 0; k < K; k ++) {
+	if(Theta(i, k) != P[i]) {
+	  loss += lambdap;
+	}
+      }
+    } else {
+      for(k = 0; k < K; k ++) {
+	if(W(k, States[i]) != Theta(i, k)) {
+	  loss += lambdaw;
+	}
+      }
+    }
+  }
+  loss += lambda * (J - 1);
 
   Rcpp::List ret = Rcpp::List::create(
 				      Rcpp::Named("Theta") = Theta,
