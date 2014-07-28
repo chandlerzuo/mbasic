@@ -34,7 +34,7 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
   IntegerVector P(I);
 
   // iterators
-  int i, j, k = 0, s, n;//, likid;
+  int i, j, k = 0, s, n, i1;//, likid;
 
   int ClusterSize[I + 1];
 
@@ -189,9 +189,9 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
       for(k = 0; k < K; k ++) {
         W(k, J - 1) = 0;
       }
-      for(i = 0; i < I; i ++) {
-        if(States[i] == J - 1)
-          States[i] = oldState;
+      for(i1 = 0; i1 < I; i1 ++) {
+        if(States[i1] == J - 1)
+          States[i1] = oldState;
       }
       ClusterSize[oldState] = ClusterSize[J - 1];
       ClusterSize[J - 1] = 0;
