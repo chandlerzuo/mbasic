@@ -285,8 +285,10 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
     for(s = 0; s < S; s ++) {
       double denom = 0, numer = 0;
       for(i = 0; i < I; i ++) {
-        numer += log(Y(i, n) + 1);
-        denom += Gamma(i, n + s * N);
+	if(Theta(i, D[n]) == s) {
+	  numer += log(Y(i, n) + 1);
+	  denom += Gamma(i, n + s * N);
+	}
       }
       Mu(n, s) = numer / denom;
     }
