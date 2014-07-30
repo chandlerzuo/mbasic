@@ -122,8 +122,8 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
     for(n = 0; n < N; n ++) {
       k = D[n];
       s = Theta(i, k);
-      loss += (log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n)) *
-	(log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n));
+      loss += (Y(i, n) - Mu(n, s) * Gamma(i, s * N + n)) *
+	(Y(i, n) - Mu(n, s) * Gamma(i, s * N + n));
     }
     
     if(b[i] == 1) {
@@ -154,7 +154,7 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
         //
         for(n = 0; n < N; n ++) {
           if(D[n] == k) {
-            tmp[s] += (log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n)) * (log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n));
+            tmp[s] += (Y(i, n) - Mu(n, s) * Gamma(i, s * N + n)) * (Y(i, n) - Mu(n, s) * Gamma(i, s * N + n));
           }
         }
         if(s != P[i] && b[i] == 1)
@@ -177,8 +177,8 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
     for(n = 0; n < N; n ++) {
       k = D[n];
       s = Theta(i, k);
-      loss += (log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n)) *
-	(log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n));
+      loss += (Y(i, n) - Mu(n, s) * Gamma(i, s * N + n)) *
+	(Y(i, n) - Mu(n, s) * Gamma(i, s * N + n));
     }
     
     if(b[i] == 1) {
@@ -258,10 +258,10 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
     for(n = 0; n < N; n ++) {
       k = D[n];
       s = Theta(i, k);
-      loss += (log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n)) *
-	(log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n));
+      loss += (Y(i, n) - Mu(n, s) * Gamma(i, s * N + n)) *
+	(Y(i, n) - Mu(n, s) * Gamma(i, s * N + n));
     }
-    
+
     if(b[i] == 1) {
       for(k = 0; k < K; k ++) {
 	if(Theta(i, k) != P[i]) {
@@ -286,7 +286,7 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
       double denom = 0, numer = 0;
       for(i = 0; i < I; i ++) {
 	if(Theta(i, D[n]) == s) {
-	  numer += log(Y(i, n) + 1);
+	  numer += Y(i, n);
 	  denom += Gamma(i, n + s * N);
 	}
       }
@@ -301,10 +301,10 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
     for(n = 0; n < N; n ++) {
       k = D[n];
       s = Theta(i, k);
-      loss += (log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n)) *
-	(log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n));
+      loss += (Y(i, n) - Mu(n, s) * Gamma(i, s * N + n)) *
+	(Y(i, n) - Mu(n, s) * Gamma(i, s * N + n));
     }
-    
+
     if(b[i] == 1) {
       for(k = 0; k < K; k ++) {
 	if(Theta(i, k) != P[i]) {
@@ -320,7 +320,7 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
     }
   }
   loss += lambda * (J - 1);
-  
+
   // printf("Loss function = %3.3f, number of clusters = %d\n", loss, J);
 
   Rcpp::List ret = Rcpp::List::create(

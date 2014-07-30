@@ -70,7 +70,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	logF(i, s * K + k) = 0; // initialize
 	for(n = 0; n < N; n ++) {
 	  if(D[n] == k) {
-	    double tmp = R::dnorm(log(Y(i, n) + 1), Mu(n, s) * Gamma(i, s * N + n), Sigma(n, s), 0);
+	    double tmp = R::dnorm(Y(i, n), Mu(n, s) * Gamma(i, s * N + n), Sigma(n, s), 0);
 	    if(tmp < _LOW) {
 	      tmp = _LOW;
 	    }
@@ -368,9 +368,9 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
       for(i = 0; i < I; i ++) {
 	if(Theta(i, D[n]) == s) {
 	  nI ++;
-	  productTerm += Gamma(i, s * N + n) * log(Y(i, n) + 1);
+	  productTerm += Gamma(i, s * N + n) * Y(i, n);
 	  squareTerm += Gamma(i, s * N + n) * Gamma(i, s * N + n);
-	  varTerm += (log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n)) * (log(Y(i, n) + 1) - Mu(n, s) * Gamma(i, s * N + n)) ;
+	  varTerm += (Y(i, n) - Mu(n, s) * Gamma(i, s * N + n)) * (Y(i, n) - Mu(n, s) * Gamma(i, s * N + n)) ;
 	}
       }
       Mu(n, s) = R::rnorm((tau * productTerm + xi * Sigma(n, s)) / (tau * squareTerm + Sigma(n, s)), Sigma(n, s) * tau / (tau * squareTerm + Sigma(n, s)));
@@ -397,7 +397,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	logF(i, s * K + k) = 0; // initialize
 	for(n = 0; n < N; n ++) {
 	  if(D[n] == k) {
-	    double tmp = R::dnorm(log(Y(i, n) + 1), Mu(n, s) * Gamma(i, s * N + n), Sigma(n, s), 0);
+	    double tmp = R::dnorm(Y(i, n), Mu(n, s) * Gamma(i, s * N + n), Sigma(n, s), 0);
 	    if(tmp < _LOW) {
 	      tmp = _LOW;
 	    }
