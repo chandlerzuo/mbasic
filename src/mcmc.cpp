@@ -370,12 +370,14 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	  nI ++;
 	  productTerm += Gamma(i, s * N + n) * Y(i, n);
 	  squareTerm += Gamma(i, s * N + n) * Gamma(i, s * N + n);
-	  varTerm += (Y(i, n) - Mu(n, s) * Gamma(i, s * N + n)) * (Y(i, n) - Mu(n, s) * Gamma(i, s * N + n)) ;
+	  varTerm += (Y(i, n) - Mu(n, s) * Gamma(i, s * N + n)) * (Y(i, n) - Mu(n, s) * Gamma(i, s * N + n));
 	}
       }
-      Mu(n, s) = R::rnorm((tau * productTerm + xi * Sigma(n, s)) / (tau * squareTerm + Sigma(n, s)), Sigma(n, s) * tau / (tau * squareTerm + Sigma(n, s)));
+      Mu(n, s) = R::rnorm((tau * productTerm + xi * Sigma(n, s)) /
+                          (tau * squareTerm + Sigma(n, s)), Sigma(n, s) *
+                          tau / (tau * squareTerm + Sigma(n, s)));
       Sigma(n, s) = 1 / R::rgamma(omega + 1 + nI / 2,
-				  nu + varTerm / 2);
+				  1 / (1 / nu + varTerm / 2));
     }
   }
 
