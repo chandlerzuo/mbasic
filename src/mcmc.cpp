@@ -376,7 +376,7 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
       Mu(n, s) = R::rnorm((tau * productTerm + xi * Sigma(n, s)) /
                           (tau * squareTerm + Sigma(n, s)), Sigma(n, s) *
                           tau / (tau * squareTerm + Sigma(n, s)));
-      Sigma(n, s) = 1 / R::rgamma(omega + 1 + nI / 2,
+      Sigma(n, s) = 1 / R::rgamma(omega + nI / 2,
 				  1 / (1 / nu + varTerm / 2));
     }
   }
@@ -452,8 +452,9 @@ SEXP mcmc( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _Sigma, SEXP _D, S
 	tmp = _LOW;
       logPostLik += log(tmp);
       // prior density of Sigma
-      logPostLik -= nu / Sigma(n, s);
-      logPostLik -= (omega + 1 ) * Sigma(n, s);
+      // Be careful! I am too bad at this.
+      logPostLik -= 1 / nu / Sigma(n, s);
+      logPostLik += (omega + 1 ) * log(Sigma(n, s));
     }
   printf("Before Gamma function, logLik = %lf\n", logPostLik);
 
