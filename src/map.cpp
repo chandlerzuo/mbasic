@@ -30,12 +30,14 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
   int N = D.size();
 
   // The following will be computed
-  IntegerMatrix W(K, I + 1);
-  IntegerVector P(I);
+  NumericMatrix W(K * S, I + 1);
+  NumericMatrix P(I, S);
 
   // iterators
   int i, j, k = 0, s, n, i1;//, likid;
   double loss;
+
+  double _LOW = 1e-10;
 
   int ClusterSize[I + 1];
 
@@ -57,38 +59,40 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
   // Update W
   for(j = 0; j < J; j ++) {
     for(k = 0; k < K; k ++) {
-      double tmp[S];
+      double tmp[S + 1];
+      tmp[S] = 0;
       for(s = 0; s < S; s ++) {
-	tmp[s] = 0;
+	tmp[s] = _LOW;
+	tmp[S] += tmp[s];
+	W(s * K + k, j) = 0;
       }
       for(i = 0; i < I; i ++) {
 	if(b[i] == 0 && States[i] == j) {
 	  tmp[Theta(i, k)] ++;
+	  tmp[S] ++;
 	}
       }
-      W(k, j) = 0;
       for(s = 1; s < S; s ++) {
-	if(tmp[W(k, j)] < tmp[s]) {
-	  W(k, j) = s;
-	}
+	      W(s * K + k, j) = tmp[s] / tmp[S];
       }
     }
   }
 
   // update P
   for(i = 0; i < I; i ++) {
-    double tmp[S];
+    double tmp[S + 1];
+    tmp[S] = 0;
     for(s = 0; s < S; s++) {
-      tmp[s] = 0;
+      tmp[s] = _LOW;
+      tmp[S] += _LOW;
+      P(i, s) = 0;
     }
     for(k = 0; k < K; k ++) {
       tmp[Theta(i, k)] ++;
+      tmp[S] ++;
     }
-    P[i] = 0;
-    for(s = 1; s < S; s ++) {
-      if(tmp[P[i]] < tmp[s]) {
-        P[i] = s;
-      }
+    for(s = 0; s < S; s ++) {
+	    P(i, s) = tmp[s] / tmp[S];
     }
   }
 
@@ -96,19 +100,19 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
   for(i = 0; i < I; i ++) {
     double tmp = 0;
     for(k = 0; k < K; k ++) {
-      if(Theta(i, k) != P[i]) {
-        tmp += lambdap;
-      }
+	    for(s = 0; s < S; s ++) {
+		    tmp += 2 * lambdap * (1 - P(i, Theta(i, k)));
+	    }
     }
 
-    for(j = 0; j < J; j ++) {
-      if(States[i] == j) {
-        for(k = 0; k < K; k ++) {
-          if(W(k, j) != Theta(i, k)) {
-            tmp -= lambdaw;
-          }
-        }
-      }
+    for(k = 0; k < K; k ++) {
+	    for(s = 0; s < S; s ++) {
+		    if(Theta(i, k) != s) {
+			    tmp -= lambdaw * W(s * K + k, States[i]);
+		    } else {
+			    tmp -= lambdaw * (1 - W(s * K + k, States[i]));
+		    }
+	    }
     }
 
     if(tmp < 0)
@@ -116,33 +120,6 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
     else
       b[i] = 0;
   }
-
-  loss = 0;
-  for(i = 0; i < I; i ++) {
-    for(n = 0; n < N; n ++) {
-      k = D[n];
-      s = Theta(i, k);
-      loss += (Y(i, n) - Mu(n, s) * Gamma(i, s * N + n)) *
-	(Y(i, n) - Mu(n, s) * Gamma(i, s * N + n));
-    }
-    
-    if(b[i] == 1) {
-      for(k = 0; k < K; k ++) {
-	if(Theta(i, k) != P[i]) {
-	  loss += lambdap;
-	}
-      }
-    } else {
-      for(k = 0; k < K; k ++) {
-	if(W(k, States[i]) != Theta(i, k)) {
-	  loss += lambdaw;
-	}
-      }
-    }
-  }
-  loss += lambda * (J - 1);
-  
-  //  printf("After b, loss function = %3.3f", loss);
 
   // update Theta
   for(i = 0; i < I; i ++) {
@@ -157,11 +134,11 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
             tmp[s] += (Y(i, n) - Mu(n, s) * Gamma(i, s * N + n)) * (Y(i, n) - Mu(n, s) * Gamma(i, s * N + n));
           }
         }
-        if(s != P[i] && b[i] == 1)
-          tmp[s] += lambdap;
-        if(b[i] == 0 && s != W(k, States[i])) {
-          tmp[s] += lambdaw;
-        }
+        if(b[i] == 1) {
+		tmp[s] += 2 * lambdap * (1 - P(i, Theta(i, k)));
+	} else {
+		tmp[s] += 2 * lambdaw * (1 - W(Theta(i, k) * K + k, States[i]));
+	}
       }
       // Assign new values
       Theta(i, k) = 0;
@@ -171,33 +148,6 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
       }
     }
   }
-
-  loss = 0;
-  for(i = 0; i < I; i ++) {
-    for(n = 0; n < N; n ++) {
-      k = D[n];
-      s = Theta(i, k);
-      loss += (Y(i, n) - Mu(n, s) * Gamma(i, s * N + n)) *
-	(Y(i, n) - Mu(n, s) * Gamma(i, s * N + n));
-    }
-    
-    if(b[i] == 1) {
-      for(k = 0; k < K; k ++) {
-	if(Theta(i, k) != P[i]) {
-	  loss += lambdap;
-	}
-      }
-    } else {
-      for(k = 0; k < K; k ++) {
-	if(W(k, States[i]) != Theta(i, k)) {
-	  loss += lambdaw;
-	}
-      }
-    }
-  }
-  loss += lambda * (J - 1);
-  
-  // printf("After Theta, loss function = %3.3f", loss);
 
   //update clusters
   for(i = 0; i < I; i ++) {
@@ -212,12 +162,8 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
     int newState = J;
     for(j = 0; j < J; j ++) {
       tmp[j] = 0;
-      if(b[i] == 0) {
-        for(k = 0; k < K; k ++) {
-          if(Theta(i, k) != W(k, j)) {
-            tmp[j] ++;
-          }
-        }
+      for(k = 0; k < K; k ++) {
+	      tmp[j] += 2 * (1 - W(Theta(i, k) * K + k, States[i])) * lambdaw;
       }
       // assign the minimum cost
       if(tmp[j] < mintmp) {
@@ -235,12 +181,20 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
         exit(1);
       }
       J ++;
-      W(_, newState) = Theta(i, _);
+      for(s = 0; s < S; s ++) {
+	      for(k = 0; k < K; k ++) {
+		      if(Theta(i, k) != s) {
+			      W(s * K + k, J) = _LOW;
+		      } else {
+			      W(s * K + k, J) = 1 - (S - 1) * _LOW;
+		      }
+	      }
+      }
     }
     if(ClusterSize[oldState] == 0) {
       // an old cluster should be removed
       W(_, oldState) = W(_, J - 1);
-      for(k = 0; k < K; k ++) {
+      for(k = 0; k < K * S; k ++) {
         W(k, J - 1) = 0;
       }
       for(i1 = 0; i1 < I; i1 ++) {
@@ -252,33 +206,6 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
       J --;
     }
   }
-
-  loss = 0;
-  for(i = 0; i < I; i ++) {
-    for(n = 0; n < N; n ++) {
-      k = D[n];
-      s = Theta(i, k);
-      loss += (Y(i, n) - Mu(n, s) * Gamma(i, s * N + n)) *
-	(Y(i, n) - Mu(n, s) * Gamma(i, s * N + n));
-    }
-
-    if(b[i] == 1) {
-      for(k = 0; k < K; k ++) {
-	if(Theta(i, k) != P[i]) {
-	  loss += lambdap;
-	}
-      }
-    } else {
-      for(k = 0; k < K; k ++) {
-	if(W(k, States[i]) != Theta(i, k)) {
-	  loss += lambdaw;
-	}
-      }
-    }
-  }
-  loss += lambda * (J - 1);
-  
-  // printf("After z, loss function = %3.3f", loss);
 
   // update mu
   for(n = 0; n < N; n ++) {
@@ -307,15 +234,11 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
 
     if(b[i] == 1) {
       for(k = 0; k < K; k ++) {
-	if(Theta(i, k) != P[i]) {
-	  loss += lambdap;
-	}
+	      loss += 2 * lambdap * (1 - P(i, Theta(i, k)));
       }
     } else {
       for(k = 0; k < K; k ++) {
-	if(W(k, States[i]) != Theta(i, k)) {
-	  loss += lambdaw;
-	}
+	      loss += 2 * (1 - W(Theta(i, k) * K + k, States[i])) * lambdaw;
       }
     }
   }
