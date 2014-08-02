@@ -121,6 +121,29 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
       b[i] = 0;
   }
 
+  loss = 0;
+  for(i = 0; i < I; i ++) {
+    for(n = 0; n < N; n ++) {
+      k = D[n];
+      s = Theta(i, k);
+      loss += (Y(i, n) - Mu(n, s) * Gamma(i, s * N + n)) *
+	(Y(i, n) - Mu(n, s) * Gamma(i, s * N + n));
+    }
+
+    if(b[i] == 1) {
+      for(k = 0; k < K; k ++) {
+	      loss += 2 * lambdap * (1 - P(i, Theta(i, k)));
+      }
+    } else {
+      for(k = 0; k < K; k ++) {
+	      loss += 2 * (1 - W(Theta(i, k) * K + k, States[i])) * lambdaw;
+      }
+    }
+  }
+  loss += lambda * (J - 1);
+
+  printf("b, Loss function = %3.3f, number of clusters = %d\n", loss, J);
+
   // update Theta
   for(i = 0; i < I; i ++) {
     for(k = 0; k < K; k ++) {
@@ -148,6 +171,29 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
       }
     }
   }
+
+  loss = 0;
+  for(i = 0; i < I; i ++) {
+    for(n = 0; n < N; n ++) {
+      k = D[n];
+      s = Theta(i, k);
+      loss += (Y(i, n) - Mu(n, s) * Gamma(i, s * N + n)) *
+	(Y(i, n) - Mu(n, s) * Gamma(i, s * N + n));
+    }
+
+    if(b[i] == 1) {
+      for(k = 0; k < K; k ++) {
+	      loss += 2 * lambdap * (1 - P(i, Theta(i, k)));
+      }
+    } else {
+      for(k = 0; k < K; k ++) {
+	      loss += 2 * (1 - W(Theta(i, k) * K + k, States[i])) * lambdaw;
+      }
+    }
+  }
+  loss += lambda * (J - 1);
+
+  printf("theta, Loss function = %3.3f, number of clusters = %d\n", loss, J);
 
   //update clusters
   for(i = 0; i < I; i ++) {
@@ -207,6 +253,29 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
     }
   }
 
+  loss = 0;
+  for(i = 0; i < I; i ++) {
+    for(n = 0; n < N; n ++) {
+      k = D[n];
+      s = Theta(i, k);
+      loss += (Y(i, n) - Mu(n, s) * Gamma(i, s * N + n)) *
+	(Y(i, n) - Mu(n, s) * Gamma(i, s * N + n));
+    }
+
+    if(b[i] == 1) {
+      for(k = 0; k < K; k ++) {
+	      loss += 2 * lambdap * (1 - P(i, Theta(i, k)));
+      }
+    } else {
+      for(k = 0; k < K; k ++) {
+	      loss += 2 * (1 - W(Theta(i, k) * K + k, States[i])) * lambdaw;
+      }
+    }
+  }
+  loss += lambda * (J - 1);
+
+  printf("z, Loss function = %3.3f, number of clusters = %d\n", loss, J);
+
   // update mu
   for(n = 0; n < N; n ++) {
     for(s = 0; s < S; s ++) {
@@ -244,7 +313,7 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
   }
   loss += lambda * (J - 1);
 
-  // printf("Loss function = %3.3f, number of clusters = %d\n", loss, J);
+  printf("Loss function = %3.3f, number of clusters = %d\n", loss, J);
 
   Rcpp::List ret = Rcpp::List::create(
 				      Rcpp::Named("Theta") = Theta,
