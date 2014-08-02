@@ -150,9 +150,9 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
           }
         }
         if(b[i] == 1) {
-		tmp[s] += 2 * lambdap * (1 - P(i, Theta(i, k)));
+		tmp[s] += 2 * lambdap * (1 - P(i, s));
 	} else {
-		tmp[s] += 2 * lambdaw * (1 - W(Theta(i, k) * K + k, States[i]));
+		tmp[s] += 2 * lambdaw * (1 - W(s * K + k, States[i]));
 	}
       }
       // Assign new values
@@ -201,7 +201,7 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
     for(j = 0; j < J; j ++) {
       tmp[j] = 0;
       for(k = 0; k < K; k ++) {
-	      tmp[j] += 2 * (1 - W(Theta(i, k) * K + k, States[i])) * lambdaw;
+	      tmp[j] += 2 * (1 - W(Theta(i, k) * K + k, j)) * lambdaw;
       }
       // assign the minimum cost
       if(tmp[j] < mintmp) {
