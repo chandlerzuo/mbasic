@@ -104,9 +104,9 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
     }
 
     for(k = 0; k < K; k ++) {
-	    tmp -= 2 * lambdaw * (1 - W(Theta(i, k) * K + k, States[i]);
+	    tmp -= 2 * lambdaw * (1 - W(Theta(i, k) * K + k, States[i]));
     }
-
+		    
     if(tmp < 0)
       b[i] = 1;
     else
