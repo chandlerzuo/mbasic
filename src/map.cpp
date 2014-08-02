@@ -218,7 +218,6 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
         printf("Error: new state is not J = %d.", J);
         exit(1);
       }
-      J ++;
       for(s = 0; s < S; s ++) {
 	      for(k = 0; k < K; k ++) {
 		      if(Theta(i, k) != s) {
@@ -228,6 +227,7 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
 		      }
 	      }
       }
+      J ++;
     }
     if(ClusterSize[oldState] == 0) {
       // an old cluster should be removed
