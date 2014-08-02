@@ -72,7 +72,7 @@ SEXP map( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
 	  tmp[S] ++;
 	}
       }
-      for(s = 1; s < S; s ++) {
+      for(s = 0; s < S; s ++) {
 	      W(s * K + k, j) = tmp[s] / tmp[S];
       }
     }
