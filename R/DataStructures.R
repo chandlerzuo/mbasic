@@ -55,6 +55,6 @@ setClass("MBASICFit",
            W.err = "numeric",
            MisClassRate = "numeric",
            Iter = "numeric",
-           AssociationMatrix = "numeric"
+           AssociationMatrix = "matrix"
            )
          )
