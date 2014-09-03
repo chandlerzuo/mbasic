@@ -128,7 +128,7 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
       b = ret$b,
       alllik = allloss,
       Mu = ret$Mu,
-      converged = converged,
+      converged = (itr <= maxitr),
       Z = Z,
       AssociationMatrix = associationMatrix,
       Iter = itr
