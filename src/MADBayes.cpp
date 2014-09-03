@@ -134,7 +134,7 @@ SEXP MADBayes( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
   }
   loss += lambda * (J - 1);
 
-  printf("b, Loss function = %3.3f, number of clusters = %d\n", loss, J);
+  //printf("b, Loss function = %3.3f, number of clusters = %d\n", loss, J);
 
   // update Theta
   for(i = 0; i < I; i ++) {
@@ -185,7 +185,7 @@ SEXP MADBayes( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
   }
   loss += lambda * (J - 1);
 
-  printf("theta, Loss function = %3.3f, number of clusters = %d\n", loss, J);
+  //printf("theta, Loss function = %3.3f, number of clusters = %d\n", loss, J);
 
   //update clusters
   for(i = 0; i < I; i ++) {
@@ -266,7 +266,7 @@ SEXP MADBayes( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
   }
   loss += lambda * (J - 1);
 
-  printf("z, Loss function = %3.3f, number of clusters = %d\n", loss, J);
+  //printf("z, Loss function = %3.3f, number of clusters = %d\n", loss, J);
 
   // update mu
   for(n = 0; n < N; n ++) {
@@ -305,7 +305,7 @@ SEXP MADBayes( SEXP _b, SEXP _States, SEXP _Theta, SEXP _Mu, SEXP _D,
   }
   loss += lambda * (J - 1);
 
-  printf("Loss function = %3.3f, number of clusters = %d\n", loss, J);
+  //printf("Loss function = %3.3f, number of clusters = %d\n", loss, J);
 
   Rcpp::List ret = Rcpp::List::create(
 				      Rcpp::Named("Theta") = Theta,
