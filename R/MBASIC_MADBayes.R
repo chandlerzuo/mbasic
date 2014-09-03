@@ -163,8 +163,8 @@ MBASIC.MADBayes.full <- function(Y, Mu0, fac, lambdap = 15, lambdaw = 0.5, lambd
     set.seed(i + Sys.time())
     bestFit <-
       MBASIC.MADBayes(Y, Mu0, fac, lambdap = lambdap, lambdaw = lambdaw, lambda = lambda, maxitr = maxitr, S = S, tol = tol, zeta = zeta, verbose = FALSE)
-    allLoss <- tail(bestFit$Loss, 1)
-    allIter <- bestFit$Iter
+    allLoss <- tail(bestFit@alllik, 1)
+    allIter <- bestFit@Iter
     for(i in seq(as.integer(nfits / ncore))[-1]) {
       fit <-
         MBASIC.MADBayes(Y, Mu0, fac, lambdap = lambdap, lambdaw = lambdaw, lambda = lambda, maxitr = maxitr, S = S, tol = tol, zeta = zeta, verbose = FALSE)
