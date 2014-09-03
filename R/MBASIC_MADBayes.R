@@ -1,4 +1,23 @@
-MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 5, maxitr = 100, S = 2, tol = 0.01, zeta = 0.1) {
+#' @name MBASIC.MADBayes
+#' @title MAD-Bayes method to fit the MBASIC model.
+#' @param Y An N by I matrix containing the data from N experiments across I observation units (loci).
+#' @param Mu0 An N by I matrix for the prior estimated mean for the background state, for N experiments across the I observation units (loci).
+#' @param fac A vector of length N denoting the experimental condition for each replicate.
+#' @param lambdap,lambdaw,lambda Tuning parameters.
+#' @param family The distribution of family to be used. Either "lognormal" or "negbin". See details for more information.
+#' @param maxitr The maximum number of iterations in the E-M algorithm. Default: 100.
+#' @param tol Tolerance for error in checking the E-M algorithm's convergence. Default: 1e-04.
+#' @param S The number of different states.
+#' @param zeta The initial value of the proportion of unclustered units. Default: 0.2.
+#' @param verbose Boolean variable for whether the model fitting messages are printed.
+#' @details
+#' TODO.
+#' @useDynLib MBASIC
+#' @return A list object.
+#' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
+#' @export
+MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 5, maxitr = 100, S = 2, tol = 0.01, zeta = 0.1,
+                            verbose = TRUE) {
 
   ## Initialize
   ## prespecified
@@ -44,7 +63,8 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
     }
   }
   ## Initialize cluster
-  message("Initialize clusters...")
+  if(verbose)
+    message("Initialize clusters...")
   J <- max(c(as.integer(sqrt(I) / 4), 2))
   if(FALSE) {
     d <- dist( Theta, method = "manhattan" )
@@ -72,12 +92,13 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
   t0 <- Sys.time()
   mixed <- FALSE
   outliers <- rep(0, I)
-  message("start iteration...")
+  if(verbose)
+    message("start iteration...")
   for(itr in seq(maxitr)) {
     ret <- .Call("MADBayes", ret$b, ret$States, ret$Theta, ret$Mu, D, Gamma, Y, lambdap, lambdaw, lambda, package = "MBASIC")
     allloss <- c(allloss, ret$loss)
     allnclusters <- c(allnclusters, max(ret$States) + 1)
-    if(itr %% 10 == 0) {
+    if(verbose & itr %% 10 == 0) {
       message(Sys.time() - t0, " have passed, number of iterations = ", itr)
     }
     if(length(unique(ret$States)) != max(ret$States) + 1)
@@ -107,6 +128,25 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
 
 }
 
+#' @name MBASIC.MADBayes.full
+#' @title MAD-Bayes method to fit the MBASIC model.
+#' @param Y An N by I matrix containing the data from N experiments across I observation units (loci).
+#' @param Mu0 An N by I matrix for the prior estimated mean for the background state, for N experiments across the I observation units (loci).
+#' @param fac A vector of length N denoting the experimental condition for each replicate.
+#' @param lambdap,lambdaw,lambda Tuning parameters.
+#' @param family The distribution of family to be used. Either "lognormal" or "negbin". See details for more information.
+#' @param maxitr The maximum number of iterations in the E-M algorithm. Default: 100.
+#' @param tol Tolerance for error in checking the E-M algorithm's convergence. Default: 1e-04.
+#' @param S The number of different states.
+#' @param zeta The initial value of the proportion of unclustered units. Default: 0.2.
+#' @param ncore The number of CPUs to be used for parallelization.
+#' @param nfits The number of random restarts of the model.
+#' @details
+#' TODO.
+#' @useDynLib MBASIC
+#' @return A list object.
+#' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
+#' @export
 MBASIC.MADBayes.full <- function(Y, Mu0, fac, lambdap = 15, lambdaw = 0.5, lambda = 20, maxitr = 100, S = 2, tol = 0.01, zeta = 0.1,
                             ncore = 8, nfits = 1000) {
   require(doMC)
@@ -114,12 +154,12 @@ MBASIC.MADBayes.full <- function(Y, Mu0, fac, lambdap = 15, lambdaw = 0.5, lambd
   results <- foreach(i = seq(ncore)) %dopar% {
     set.seed(i + Sys.time())
     bestFit <-
-      MBASIC.MADBayes(Y, Mu0, fac, lambdap = lambdap, lambdaw = lambdaw, lambda = lambda, maxitr = maxitr, S = S, tol = tol, zeta = zeta)
+      MBASIC.MADBayes(Y, Mu0, fac, lambdap = lambdap, lambdaw = lambdaw, lambda = lambda, maxitr = maxitr, S = S, tol = tol, zeta = zeta, verbose = FALSE)
     allLoss <- tail(bestFit$Loss, 1)
     allIter <- bestFit$Iter
     for(i in seq(as.integer(nfits / ncore))[-1]) {
       fit <-
-        MBASIC.MADBayes(Y, Mu0, fac, lambdap = lambdap, lambdaw = lambdaw, lambda = lambda, maxitr = maxitr, S = S, tol = tol, zeta = zeta)
+        MBASIC.MADBayes(Y, Mu0, fac, lambdap = lambdap, lambdaw = lambdaw, lambda = lambda, maxitr = maxitr, S = S, tol = tol, zeta = zeta, verbose = FALSE)
       if(tail(fit$Loss, 1) < tail(bestFit$Loss, 1)) {
         bestFit <- fit
       }
