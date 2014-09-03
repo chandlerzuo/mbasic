@@ -4,7 +4,8 @@
 \usage{
 MBASIC.binary(Y, Mu0, fac, J = NULL, zeta = 0.2, maxitr = 100,
   burnin = 20, outfile = NULL, out = NULL, init.mod = NULL,
-  struct = NULL, family = "lognormal", tol = 1e-04, nsig = 1)
+  struct = NULL, family = "lognormal", tol = 1e-04, nsig = 1,
+  min.count = 5)
 }
 \arguments{
   \item{Y}{An N by I matrix containing the data from N

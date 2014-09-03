@@ -1,0 +1,51 @@
+\name{MBASIC.MADBayes}
+\alias{MBASIC.MADBayes}
+\title{MAD-Bayes method to fit the MBASIC model.}
+\usage{
+MBASIC.MADBayes(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 5,
+  maxitr = 100, S = 2, tol = 0.01, zeta = 0.1, verbose = TRUE)
+}
+\arguments{
+  \item{Y}{An N by I matrix containing the data from N
+  experiments across I observation units (loci).}
+
+  \item{Mu0}{An N by I matrix for the prior estimated mean
+  for the background state, for N experiments across the I
+  observation units (loci).}
+
+  \item{fac}{A vector of length N denoting the experimental
+  condition for each replicate.}
+
+  \item{lambdap,lambdaw,lambda}{Tuning parameters.}
+
+  \item{family}{The distribution of family to be used.
+  Either "lognormal" or "negbin". See details for more
+  information.}
+
+  \item{maxitr}{The maximum number of iterations in the E-M
+  algorithm. Default: 100.}
+
+  \item{tol}{Tolerance for error in checking the E-M
+  algorithm's convergence. Default: 1e-04.}
+
+  \item{S}{The number of different states.}
+
+  \item{zeta}{The initial value of the proportion of
+  unclustered units. Default: 0.2.}
+
+  \item{verbose}{Boolean variable for whether the model
+  fitting messages are printed.}
+}
+\value{
+A list object.
+}
+\description{
+MAD-Bayes method to fit the MBASIC model.
+}
+\details{
+TODO.
+}
+\author{
+Chandler Zuo \email{zuo@stat.wisc.edu}
+}
+

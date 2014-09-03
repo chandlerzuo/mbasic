@@ -115,16 +115,24 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
     associationMatrix[ret$States == j, ret$States == j] <- 1
   }
 
-  return(list(Loss = allloss,
-              nclusters = allnclusters,
-              Theta = ret$Theta,
-              W = ret$W,
-              P = ret$P,
-              AssociationMatrix = associationMatrix,
-              Mu = ret$Mu,
-              Iter = itr,
-              b = ret$b,
-              States = ret$States))
+  J <- max(ret$States) + 1
+  Z <- matrix(0, nrow = I, ncol = J)
+  Z[cbind(seq(I), ret$States + 1)] <- 1
+
+  allnclusters
+  
+  new("MBASICFit",
+      Theta = t(ret$Theta),
+      W = ret$W[, seq(max(ret$States) + 1)],
+      P = ret$P,
+      b = ret$b,
+      alllik = allloss,
+      Mu = ret$Mu,
+      converged = converged,
+      Z = Z,
+      AssociationMatrix = associationMatrix,
+      Iter = itr
+      )
 
 }
 
@@ -160,11 +168,11 @@ MBASIC.MADBayes.full <- function(Y, Mu0, fac, lambdap = 15, lambdaw = 0.5, lambd
     for(i in seq(as.integer(nfits / ncore))[-1]) {
       fit <-
         MBASIC.MADBayes(Y, Mu0, fac, lambdap = lambdap, lambdaw = lambdaw, lambda = lambda, maxitr = maxitr, S = S, tol = tol, zeta = zeta, verbose = FALSE)
-      if(tail(fit$Loss, 1) < tail(bestFit$Loss, 1)) {
+      if(tail(fit@alllik, 1) < tail(bestFit@alllik, 1)) {
         bestFit <- fit
       }
-      allLoss <- c(allLoss, tail(fit$Loss, 1))
-      allIter <- c(allIter, bestFit$Iter)
+      allLoss <- c(allLoss, tail(fit@alllik, 1))
+      allIter <- c(allIter, bestFit@Iter)
     }
     list(BestFit = bestFit,
          Iter = allIter,
