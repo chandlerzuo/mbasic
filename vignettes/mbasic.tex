@@ -59,17 +59,17 @@ To illustrate Step 1 we first generate a set of synthetic data.
 GRanges with 100 ranges and 0 metadata columns:
         seqnames       ranges strand
            <Rle>    <IRanges>  <Rle>
-    [1]     chr1 [  80,  100]      *
-    [2]     chr1 [ 400,  420]      *
-    [3]     chr1 [ 880,  900]      *
-    [4]     chr1 [1000, 1020]      *
-    [5]     chr1 [1240, 1260]      *
+    [1]     chr1 [1240, 1260]      *
+    [2]     chr1 [1560, 1580]      *
+    [3]     chr1 [2440, 2460]      *
+    [4]     chr1 [2520, 2540]      *
+    [5]     chr1 [3440, 3460]      *
     ...      ...          ...    ...
-   [96]     chr5 [8240, 8260]      *
-   [97]     chr5 [8280, 8300]      *
-   [98]     chr5 [9400, 9420]      *
-   [99]     chr5 [9560, 9580]      *
-  [100]     chr5 [9680, 9700]      *
+   [96]     chr5 [7920, 7940]      *
+   [97]     chr5 [8000, 8020]      *
+   [98]     chr5 [8160, 8180]      *
+   [99]     chr5 [8840, 8860]      *
+  [100]     chr5 [9080, 9100]      *
   ---
   seqlengths:
    chr1 chr2 chr3 chr4 chr5
@@ -92,11 +92,11 @@ Function ``ChIPInputMatch'' assists Step 1. It reads all files with suffix ``.be
 \begin{Soutput}
                                                    chipfile
 1 syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep1.bed
-2 syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep2.bed
-3 syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep1.bed
-4 syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep2.bed
-5 syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep3.bed
-6 syntheticData/chip/wgEncodeLabExpCell1Fac3CtrlAlnRep1.bed
+2 syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep1.bed
+3 syntheticData/chip/wgEncodeLabExpCell1Fac3CtrlAlnRep1.bed
+4 syntheticData/chip/wgEncodeLabExpCell1Fac3CtrlAlnRep2.bed
+5 syntheticData/chip/wgEncodeLabExpCell1Fac4CtrlAlnRep1.bed
+6 syntheticData/chip/wgEncodeLabExpCell1Fac4CtrlAlnRep2.bed
                                          inputfile
 1 syntheticData/input/wgEncodeLabExpCell1InputCtrl
 2 syntheticData/input/wgEncodeLabExpCell1InputCtrl
@@ -106,11 +106,11 @@ Function ``ChIPInputMatch'' assists Step 1. It reads all files with suffix ``.be
 6 syntheticData/input/wgEncodeLabExpCell1InputCtrl
   lab experiment  cell factor control
 1 Lab        Exp Cell1   Fac1    Ctrl
-2 Lab        Exp Cell1   Fac1    Ctrl
-3 Lab        Exp Cell1   Fac2    Ctrl
-4 Lab        Exp Cell1   Fac2    Ctrl
-5 Lab        Exp Cell1   Fac2    Ctrl
-6 Lab        Exp Cell1   Fac3    Ctrl
+2 Lab        Exp Cell1   Fac2    Ctrl
+3 Lab        Exp Cell1   Fac3    Ctrl
+4 Lab        Exp Cell1   Fac3    Ctrl
+5 Lab        Exp Cell1   Fac4    Ctrl
+6 Lab        Exp Cell1   Fac4    Ctrl
 \end{Soutput}
 \end{Schunk}
 
@@ -257,30 +257,42 @@ The outputs of both ``MBASIC.binary" and ``MBASIC.pipeline" functions are of S-4
 Class "MBASICFit" [package "MBASIC"]
 
 Slots:
-                                             
-Name:         Theta            W            V
-Class:       matrix       matrix       matrix
-                                             
-Name:             Z            b          aic
-Class:       matrix      numeric      numeric
-                                             
-Name:           bic         aicc          lik
-Class:      numeric      numeric      numeric
-                                             
-Name:        alllik         zeta           Mu
-Class:      numeric      numeric       matrix
-                                             
-Name:         Sigma       sigma0            e
-Class:       matrix      numeric      numeric
-                                             
-Name:         probz            P    converged
-Class:      numeric       matrix      logical
-                                             
-Name:     Theta.err          ARI        W.err
-Class:      numeric      numeric      numeric
-                   
-Name:  MisClassRate
-Class:      numeric
+                                          
+Name:              Theta                 W
+Class:            matrix            matrix
+                                          
+Name:                  V                 Z
+Class:            matrix            matrix
+                                          
+Name:                  b               aic
+Class:           numeric           numeric
+                                          
+Name:                bic              aicc
+Class:           numeric           numeric
+                                          
+Name:                lik            alllik
+Class:           numeric           numeric
+                                          
+Name:               zeta                Mu
+Class:           numeric            matrix
+                                          
+Name:              Sigma            sigma0
+Class:            matrix           numeric
+                                          
+Name:                  e             probz
+Class:           numeric           numeric
+                                          
+Name:                  P         converged
+Class:            matrix           logical
+                                          
+Name:          Theta.err               ARI
+Class:           numeric           numeric
+                                          
+Name:              W.err      MisClassRate
+Class:           numeric           numeric
+                                          
+Name:               Iter AssociationMatrix
+Class:           numeric            matrix
 \end{Soutput}
 \end{Schunk}
 
@@ -306,8 +318,8 @@ Slot ``Theta" is a matrix for the estimated state, where each row corresponds to
 > head( MBASIC.fit@Theta[ 1, ] )
 \end{Sinput}
 \begin{Soutput}
-[1] 1.00000000 1.00000000 1.00000000 0.11893983
-[5] 1.00000000 0.08438015
+[1] 1.0000000 1.0000000 0.0264743 0.0747183
+[5] 0.3342202 0.6855410
 \end{Soutput}
 \end{Schunk}
 
@@ -324,13 +336,13 @@ Slot ``Z" is a matrix for the posterior probablity of each locus to belong to ea
 > head( MBASIC.fit@Z )
 \end{Sinput}
 \begin{Soutput}
-          [,1]      [,2]      [,3]
-[1,] 0.2102689 0.5740238 0.2157073
-[2,] 0.2102689 0.5740238 0.2157073
-[3,] 0.2102689 0.5740238 0.2157073
-[4,] 0.2101648 0.5742544 0.2155808
-[5,] 0.2102688 0.5740240 0.2157072
-[6,] 0.4506035 0.3993366 0.1500599
+           [,1]       [,2]       [,3]
+[1,] 0.55232080 0.15286059 0.29481861
+[2,] 0.04802313 0.92634301 0.02563386
+[3,] 0.90779977 0.03148188 0.06071835
+[4,] 0.83846286 0.05515705 0.10638009
+[5,] 0.87342251 0.04322003 0.08335745
+[6,] 0.55232080 0.15286059 0.29481861
 \end{Soutput}
 \end{Schunk}
 
@@ -347,8 +359,8 @@ Slot ``b" is a vector for the probability of each locus not to belong to any clu
 > head( MBASIC.fit@b )
 \end{Sinput}
 \begin{Soutput}
-[1] 1.0000000 1.0000000 1.0000000 0.9994259
-[5] 0.9999995 0.6984494
+[1] 1.00000000 0.08705982 0.20600745 0.36045452
+[5] 0.28247669 1.00000000
 \end{Soutput}
 \end{Schunk}
 
@@ -374,13 +386,13 @@ Slot ``W" is a matrix for the probability of loci in each group to be unenriched
 > head( MBASIC.fit@W )
 \end{Sinput}
 \begin{Soutput}
-                   [,1]         [,2]         [,3]
-Cell1.Fac1 0.0000000001 8.034974e-01 1.000000e-10
-Cell1.Fac2 0.9999999999 1.000000e+00 1.000000e+00
-Cell1.Fac3 0.9999999999 2.319580e-07 1.000000e-10
-Cell1.Fac4 0.1073035701 7.970337e-01 1.000000e+00
-Cell1.Fac5 0.9999999999 1.000000e+00 7.477143e-10
-Cell2.Fac1 0.9999999999 6.313526e-01 5.884637e-01
+                [,1]         [,2]         [,3]
+Cell1.Fac1 0.4934644 0.8753111135 0.9999999999
+Cell1.Fac2 0.9733655 0.9999999999 0.0000000001
+Cell1.Fac3 1.0000000 0.0000000001 0.5959018654
+Cell1.Fac4 0.9999702 0.6338252951 0.9999999999
+Cell1.Fac5 0.4506212 0.0000000001 0.9999999999
+Cell2.Fac1 1.0000000 0.9999999999 0.0747887344
 \end{Soutput}
 \end{Schunk}
 
@@ -545,7 +557,7 @@ In a degenerate MBASIC model, the states for each unit under each condition are 
 
 \begin{Schunk}
 \begin{Soutput}
-R version 3.0.2 (2013-09-25)
+R version 3.1.0 (2014-04-10)
 Platform: x86_64-redhat-linux-gnu (64-bit)
 
 locale:
@@ -567,18 +579,18 @@ attached base packages:
 [5] utils     datasets  methods   base     
 
 other attached packages:
- [1] MBASIC_0.99.0        MASS_7.3-29         
+ [1] MBASIC_0.99.0        MASS_7.3-31         
  [3] GenomicRanges_1.14.4 XVector_0.2.0       
  [5] IRanges_1.20.7       BiocGenerics_0.8.0  
  [7] mclust_4.3           Rcpp_0.11.1         
- [9] msm_1.3              gtools_3.3.1        
+ [9] msm_1.4              gtools_3.3.1        
 
 loaded via a namespace (and not attached):
-[1] expm_0.99-1.1    grid_3.0.2      
-[3] lattice_0.20-29  Matrix_1.1-3    
-[5] mvtnorm_0.9-9998 splines_3.0.2   
-[7] stats4_3.0.2     survival_2.37-7 
-[9] tools_3.0.2     
+[1] expm_0.99-1.1    grid_3.1.0      
+[3] lattice_0.20-29  Matrix_1.1-4    
+[5] mvtnorm_0.9-9998 splines_3.1.0   
+[7] stats4_3.1.0     survival_2.37-7 
+[9] tools_3.1.0     
 \end{Soutput}
 \end{Schunk}
 

@@ -1,0 +1,13 @@
+\BOOKMARK [1][-]{section.1}{Introduction}{}% 1
+\BOOKMARK [1][-]{section.2}{MBASIC Pipeline for Sequencing Data}{}% 2
+\BOOKMARK [2][-]{subsection.2.1}{Workflow}{section.2}% 3
+\BOOKMARK [2][-]{subsection.2.2}{Match ChIP and Input Datasets}{section.2}% 4
+\BOOKMARK [2][-]{subsection.2.3}{Pipeline Execution}{section.2}% 5
+\BOOKMARK [2][-]{subsection.2.4}{Stepwise Execution}{section.2}% 6
+\BOOKMARK [2][-]{subsection.2.5}{The ``MBASICFit" Class}{section.2}% 7
+\BOOKMARK [2][-]{subsection.2.6}{Advanced Model Initialization}{section.2}% 8
+\BOOKMARK [1][-]{section.3}{General Functionalities}{}% 9
+\BOOKMARK [2][-]{subsection.3.1}{Simulation for General MBASIC Models}{section.3}% 10
+\BOOKMARK [2][-]{subsection.3.2}{Fitting General MBASIC Models}{section.3}% 11
+\BOOKMARK [2][-]{subsection.3.3}{Degenerate MBASIC Models}{section.3}% 12
+\BOOKMARK [1][-]{section.4}{Session Information}{}% 13
