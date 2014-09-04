@@ -36,6 +36,10 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
   for( k in 1:K ){
     Dmat[ k, fac == unique( fac )[ k ] ] <- 1
   }
+  
+  if(is.null(Mu0)) {
+    Mu0 <- Y - Y + 1
+  }
   ## normalize the Mu0
   Mu0 <- Mu0 * rep( apply( log( Y + 1 ), 1, mean ) / apply(Mu0, 1, mean ), ncol( Mu0 ) )
   Gamma <- t(Mu0)
