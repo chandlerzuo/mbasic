@@ -10,6 +10,7 @@
 #' @param S The number of different states.
 #' @param zeta The initial value of the proportion of unclustered units. Default: 0.2.
 #' @param verbose Boolean variable for whether the model fitting messages are printed.
+#' @param para A list of true paramters.
 #' @details
 #' TODO.
 #' @useDynLib MBASIC
@@ -17,7 +18,7 @@
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @export
 MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 5, maxitr = 100, S = 2, tol = 0.01, zeta = 0.1,
-                            verbose = TRUE) {
+                            verbose = TRUE, para = NULL) {
 
   ## Initialize
   ## prespecified
@@ -172,18 +173,18 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @export
 MBASIC.MADBayes.full <- function(Y, Mu0, fac, lambdap = 15, lambdaw = 0.5, lambda = 20, maxitr = 100, S = 2, tol = 0.01, zeta = 0.1,
-                            ncore = 8, nfits = 1000) {
+                            ncore = 8, nfits = 1000, para = NULL) {
   require(doMC)
   registerDoMC(ncore)
   results <- foreach(i = seq(ncore)) %dopar% {
     set.seed(i + Sys.time())
     bestFit <-
-      MBASIC.MADBayes(Y, Mu0, fac, lambdap = lambdap, lambdaw = lambdaw, lambda = lambda, maxitr = maxitr, S = S, tol = tol, zeta = zeta, verbose = FALSE)
+      MBASIC.MADBayes(Y, Mu0, fac, lambdap = lambdap, lambdaw = lambdaw, lambda = lambda, maxitr = maxitr, S = S, tol = tol, zeta = zeta, verbose = FALSE, para = para)
     allLoss <- tail(bestFit@alllik, 1)
     allIter <- bestFit@Iter
     for(i in seq(as.integer(nfits / ncore))[-1]) {
       fit <-
-        MBASIC.MADBayes(Y, Mu0, fac, lambdap = lambdap, lambdaw = lambdaw, lambda = lambda, maxitr = maxitr, S = S, tol = tol, zeta = zeta, verbose = FALSE)
+        MBASIC.MADBayes(Y, Mu0, fac, lambdap = lambdap, lambdaw = lambdaw, lambda = lambda, maxitr = maxitr, S = S, tol = tol, zeta = zeta, verbose = FALSE, para = para)
       if(tail(fit@alllik, 1) < tail(bestFit@alllik, 1)) {
         bestFit <- fit
       }
