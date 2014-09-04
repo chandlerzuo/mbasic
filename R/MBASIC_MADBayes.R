@@ -120,6 +120,18 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
   Z[cbind(seq(I), ret$States + 1)] <- 1
 
   allnclusters
+
+  Theta.err <- W.err <- ari <- mcr <- NULL
+  if(!is.null(para)) {
+    Theta.err = mean(para$Theta != t(ret$Theta))
+    W.f <- matrix(0, nrow = K * S, ncol = J)
+    for( s in seq_len( S ) )
+      W.f[ s + S * seq( 0, K - 1 ), ] <- W[ seq_len( K ) + K * ( s - 1 ), ]
+    mc <- matchCluster( W.f, para$W, Z, para$Z, rep(0, I), para$non.id)
+    W.err <- mc$W.err
+    ari <- mc$ari
+    mcr <- mc$mcr
+  }
   
   new("MBASICFit",
       Theta = t(ret$Theta),
@@ -131,7 +143,11 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
       converged = (itr <= maxitr),
       Z = Z,
       AssociationMatrix = associationMatrix,
-      Iter = itr
+      Iter = itr,
+      Theta.err = Theta.err,
+      W.err = W.err,
+      ARI = ari,
+      MisClassRate = mcr
       )
 
 }
