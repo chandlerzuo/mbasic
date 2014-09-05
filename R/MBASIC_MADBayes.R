@@ -130,7 +130,7 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
   
   Theta.err <- W.err <- ari <- mcr <- NULL
   if(!is.null(para)) {
-    Theta.err = mean(para$Theta != t(ret$Theta))
+    Theta.err = mean(para$Theta != t(ret$Theta + 1))
     W.f <- matrix(0, nrow = K * S, ncol = J)
     for( s in seq_len( S ) )
       W.f[ s + S * seq( 0, K - 1 ), ] <- W[ seq_len( K ) + K * ( s - 1 ), ]
@@ -141,7 +141,7 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
   }
   
   new("MBASICFit",
-      Theta = t(ret$Theta),
+      Theta = t(ret$Theta) + 1,
       W = W,
       P = ret$P,
       b = ret$b,
