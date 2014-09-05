@@ -126,6 +126,8 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
 
   allnclusters
 
+  W <- ret$W[, seq(max(ret$States) + 1)]
+  
   Theta.err <- W.err <- ari <- mcr <- NULL
   if(!is.null(para)) {
     Theta.err = mean(para$Theta != t(ret$Theta))
@@ -140,7 +142,7 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
   
   new("MBASICFit",
       Theta = t(ret$Theta),
-      W = ret$W[, seq(max(ret$States) + 1)],
+      W = W,
       P = ret$P,
       b = ret$b,
       alllik = allloss,
@@ -199,5 +201,18 @@ MBASIC.MADBayes.full <- function(Y, Mu0, fac, lambdap = 15, lambdaw = 0.5, lambd
          Iter = allIter,
          Loss = allLoss)
   }
-  return(results)
+  bestFit <- results[[1]]$BestFit
+  allIter <- results[[1]]$Iter
+  allLoss <- results[[1]]$Loss
+  for(i in seq(ncore)[-1]) {
+    if(tail(bestFit@alllik, 1) > tail(results[[i]]$BestFit@alllik, 1)) {
+      bestFit <- results[[i]]$BestFit
+    }
+    allIter <- c(allIter, results[[i]]$Iter)
+    allLoss <- c(allLoss, results[[i]]$Loss)
+  }
+  return(list(BestFit = bestFit,
+              Iter = allIter,
+              Loss = allLoss)
+         )
 }
