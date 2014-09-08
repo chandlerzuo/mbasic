@@ -124,8 +124,6 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
   Z <- matrix(0, nrow = I, ncol = J)
   Z[cbind(seq(I), ret$States + 1)] <- 1
 
-  allnclusters
-
   W <- ret$W[, seq(max(ret$States) + 1)]
   
   Theta.err <- W.err <- ari <- mcr <- NULL
@@ -139,6 +137,40 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
     ari <- mc$ari
     mcr <- mc$mcr
   }
+
+  ## Compute the Silhouette score
+  ## Prepare the clusters removing the singletons
+  Theta.cl <- t(ret$Theta[ret$b == 0, ])
+  States.cl <- ret$States[ret$b == 0]
+  ## relabling the cluster labels
+  hashTable <- seq_along(unique(States.cl)) - 1
+  names(hashTable) <- unique(States.cl)
+  States.cl <- hashTable[as.character(States.cl)]
+  if(! prod(sort(c(table(States.cl))) == sort(c(table(ret$States[ret$b == 0]))))) {
+    message("Error in removing dummy state labels.")
+  }
+  storage.mode(Theta.cl) <- storage.mode(States.cl) <- "integer"
+
+  silhouette <- .Call("silhouette", Theta.cl, States.cl, as.integer(J), package = "MBASIC")
+
+  ## Compute the loss of each term
+  Theta.aug <- P.aug <- W.aug <- matrix(0, nrow = K * S, ncol = I)
+  for(s in seq(S)) {
+    Theta.aug[seq(K), ] <- as.integer(t(ret$Theta) == s - 1)
+    P.aug[seq(K), ] <- rep(ret$P[, s], each = K)
+  }
+  W.aug <- tcrossprod(W, Z)
+  loss.p <- mean(abs(Theta.aug - P.aug)[, ret$b == 1])
+  loss.w <- mean(abs(Theta.aug - W.aug)[, ret$b == 0])
+
+  ## compute the loss of data fitting
+  Theta.Y <- ret$Theta %*% Dmat
+  Mu.Y <- Y - Y
+  for(s in seq(S)) {
+    id <- which(Theta.Y == s - 1)
+    Mu.Y[id] <- (Gamma[, seq(N) + N * (s - 1)] * rep(Mu[, s], each = I))[id]
+  }
+  loss.y <- mean((Y - Mu.Y) ^ 2)
   
   new("MBASICFit",
       Theta = t(ret$Theta) + 1,
@@ -154,7 +186,12 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
       Theta.err = Theta.err,
       W.err = W.err,
       ARI = ari,
-      MisClassRate = mcr
+      MisClassRate = mcr,
+      Loss = list(
+        Y = loss.y,
+        W = loss.w,
+        P = loss.p,
+        Silhouette = silhouette)
       )
 
 }

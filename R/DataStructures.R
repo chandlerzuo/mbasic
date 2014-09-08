@@ -24,6 +24,7 @@
 #'\item{W.err}{Mean squared error between the elements of the fitted W matrix in the final model and the true values passed by the 'para' argument.}
 #'\item{MisClassRate}{Mis-classification rate by comparing the fitted clustering and the true clustering passed by the 'para' argument.}
 #'\item{Iter}{Number of iterations taken.}
+#'\Item{Loss}{A list object for different terms of loss function values.}
 #'}
 #'
 #'@examples showClass("MBASICFit")
@@ -55,6 +56,7 @@ setClass("MBASICFit",
            W.err = "numeric",
            MisClassRate = "numeric",
            Iter = "numeric",
-           AssociationMatrix = "matrix"
+           AssociationMatrix = "matrix",
+           Loss = "list"
            )
          )
