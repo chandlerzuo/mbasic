@@ -25,6 +25,7 @@
 #'\item{MisClassRate}{Mis-classification rate by comparing the fitted clustering and the true clustering passed by the 'para' argument.}
 #'\item{Iter}{Number of iterations taken.}
 #'\Item{Loss}{A list object for different terms of loss function values.}
+#'\Item{Struct}{A matrix for the structure constraints for each cluster.}
 #'}
 #'
 #'@examples showClass("MBASICFit")
@@ -57,6 +58,7 @@ setClass("MBASICFit",
            MisClassRate = "numeric",
            Iter = "numeric",
            AssociationMatrix = "matrix",
-           Loss = "list"
+           Loss = "list",
+           Struct = "matrix"
            )
          )

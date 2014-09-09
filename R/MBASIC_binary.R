@@ -294,7 +294,7 @@ MBASIC.binary <- function( Y, Mu0, fac, J=NULL, zeta=0.2, maxitr = 100, burnin =
         W <- init.mod@Theta[ , seq_len( I ) ] %*% ( Z * ( 1 - b ) ) / rep( apply( Z * ( 1 - b), 2, sum ), each = K )
 
       } else {
-        if( init.mod@converged )
+        if(init.mod@converged & prod(struct == init.mod@Struct) == 1)
           return( init.mod ) 
         W <- init.mod@W[ , 1:J ]
         predZ <- Z <- init.mod@Z[, 1:J ]
@@ -522,7 +522,8 @@ MBASIC.binary <- function( Y, Mu0, fac, J=NULL, zeta=0.2, maxitr = 100, burnin =
         e = e,
         probz = probz,
         P = cbind( p, 1 - p ),
-        converged = conv##,
+        converged = conv,
+        Struct = struct##,
 ##        Theta.err = NULL,
 ##        ARI = NULL,
 ##        W.err = NULL,

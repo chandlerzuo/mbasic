@@ -455,7 +455,8 @@ MBASIC <- function( Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL,
       Theta.err = tail( allerr, 1 ),
       ARI = tail( allari, 1 ),
       W.err = tail( W.err, 1 ),
-      MisClassRate = tail( allmisclass, 1 )
+      MisClassRate = tail( allmisclass, 1 ),
+      Struct = struct
       )
 }
 

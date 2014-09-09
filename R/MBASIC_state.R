@@ -206,7 +206,8 @@ MBASIC.state <- function( Theta, J, struct = NULL, method = "2em", zeta = 0.1, m
       converged = conv,
       MisClassRate = mcr,
       W.err = werr,
-      ARI = ari
+      ARI = ari,
+      struct = struct
       )
   
 }
