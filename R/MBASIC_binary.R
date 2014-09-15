@@ -116,6 +116,7 @@ MBASIC.binary <- function( Y, Mu0, fac, J=NULL, zeta=0.2, maxitr = 100, burnin =
       sigma1 <- matrix( sigma1, ncol = nsig, nrow = N )
 
       ## initialize the distribution for each replicate
+      write.out(out, "Initialize the distribution for each replicate")
       p <- cbind( 1 - prior.bind,matrix( prior.bind / nsig, nrow = K, ncol = nsig ) )
       allpar <- c( c( mu1 ), c( sigma1 ), e, sigma0, c( p ) )
       oldpar <- 0
@@ -226,15 +227,24 @@ MBASIC.binary <- function( Y, Mu0, fac, J=NULL, zeta=0.2, maxitr = 100, burnin =
       ## This gives deterministic initialization
 
       ## initialize W, Z, b
-      d <- dist( t( ProbMat[ , seq_len( I ) ] ) )
-      mind <- apply( as.matrix(d), 1, function( x ) min( x[x>0] ) )
+      write.out(out, "Initialize the distance matrix.")
+      distMat <- dist( t( ProbMat[ , seq_len( I ) ] ) )
+      mind <- apply( as.matrix(distMat), 1, function( x ) min( x[x>0] ) )
       thr <- quantile( mind, invlogit( lambda ) )
       id <- which( mind < thr )
       b <- rep(1, I )
       b[id] <- 0
-      d <- dist( t( ProbMat[ seq_len( K ), id ] ) )
-      hcfit <- hclust( d )
-      groups <- cutree( hcfit, k = J )
+      if(FALSE) {
+        write.out(out, "Use hierarchical clustering to generate clusters.")
+        distMat <- dist( t( ProbMat[ seq_len( K ), id ] ) )
+        clustFit <- hclust( distMat )
+        groups <- cutree( clustFit, k = J )
+      }
+      write.out(out, "Use K-means to initialize the clusters.")
+      ## K-means
+      clustFit <- kmeans(t(ProbMat[seq_len(K), id]), centers = J)
+      groups <- clustFit$cluster
+      
       Z <- matrix( 0, nrow = I, ncol = J )
       Z[ cbind( 1:I, sample( 1:J, I, replace = TRUE ) )] <- 1
       Z[ id, ] <- 0

@@ -2,7 +2,7 @@
 #' @title Match the ChIP files with input files.
 #' @param dir A string vector of length 2. The first entry is the ChIP file directory and the second is the input file directory. It is required that ChIP and input files must be in two different directories.
 #' @param depth The maximum depth under the dir paths that the files are stored. Default: 5.
-#' @param suffix A string for the suffix of each file name.
+#' @param suffices A vector of strings for the suffices of each file name.
 #' @details
 #' This function matches the ChIP files with the control files according to their filenames. The file names must follow the ENCODE consortium convention, i.e. the prefix of the file name is wgEncode<lab><experiment_type><cellline><factor><control>Aln[replicate]. Each string in <.> must has one single initial capital letter followed by lower case letters or digits. \cr
 #' @return A data.frame object with the following fields:
@@ -14,11 +14,13 @@
 #' cellline \tab The string for the cellline.\cr
 #' factor \tab The string for the factor.\cr
 #' control \tab The string for the control experiment.\cr
+#' chiptype \tab The file format of the ChIP data.\cr
+#' inputtype \tab The file format of the input data.\cr
 #'}
-#' @examples \dontrun{ ChIPInputMatch( c( "ChIPDataDir/", "inputDataDir/" ), suffix = ".tagAlign", depth = 2 ) }
+#' @examples \dontrun{ ChIPInputMatch( c( "ChIPDataDir/", "inputDataDir/" ), suffices = ".tagAlign", depth = 2 ) }
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @export
-ChIPInputMatch <- function( dir, suffix, depth = 5 ){
+ChIPInputMatch <- function( dir, suffices, depth = 5 ){
   if( length( dir ) != 2 ){
     stop( "Error: the length of dir must be 2.")
   }
@@ -28,52 +30,82 @@ ChIPInputMatch <- function( dir, suffix, depth = 5 ){
   chipdir <- dir[1]
   inputdir <- dir[2]
 
-  chipfilelist <- system( paste( "find ", chipdir, " -maxdepth ", depth, " -name *", suffix, sep = "" ), intern = TRUE )
-  inputfilelist <- system( paste( "find ", inputdir, " -maxdepth ", depth, " -name *", suffix, sep = "" ), intern = TRUE )
+  chiplab <- chipexp <- chipcell <- chipfac <- chipctrl <-
+    inputlab <- inputexp <- inputcell <- inputfac <- inputctrl <- chiptype <- inputtype <-
+      chiplist <- inputlist <- NULL
+  for(suffix in suffices) {
+    chipfilelist <- system( paste( "find ", chipdir, " -maxdepth ", depth, " -name *", suffix, sep = "" ), intern = TRUE)
+    inputfilelist <- system( paste( "find ", inputdir, " -maxdepth ", depth, " -name *", suffix, sep = "" ), intern = TRUE)
+    
+    chippath <- extract( chipfilelist, "", "wgEncode*" )
+    
+    exp1 <- "[A-Z][a-z|0-9]*"
+    chiplab <- c(chiplab, extract( chipfilelist, "*wgEncode", exp1 ))
+    chipexp <- c(chipexp, extract( chipfilelist, paste( "wgEncode", paste( rep( exp1, 1 ), collapse = "" ), sep = "" ), exp1 ))
+    chipcell <- c(chipcell, extract( chipfilelist, paste( "wgEncode", paste( rep( exp1, 2 ), collapse = "" ), sep = "" ), exp1 ))
+    chipfac <- c(chipfac, extract( chipfilelist, paste( "wgEncode", paste( rep( exp1, 3 ), collapse = "" ), sep = "" ), exp1 ))
+    chipctrl <- c(chipctrl, extract( chipfilelist, paste( "wgEncode", paste( rep( exp1, 4 ), collapse = "" ), sep = "" ), exp1 ))
+    chiptype <- c(chiptype, rep(suffix, length(chipfilelist)))
+    
+    inputlab <- c(inputlab, extract( inputfilelist, "*wgEncode", exp1 ))
+    inputexp <- c(inputexp, extract( inputfilelist, paste( "wgEncode", paste( rep( exp1, 1 ), collapse = "" ), sep = "" ), exp1 ))
+    inputcell <- c(inputcell, extract( inputfilelist, paste( "wgEncode", paste( rep( exp1, 2 ), collapse = "" ), sep = "" ), exp1 ))
+    inputfac <- c(inputfac, extract( inputfilelist, paste( "wgEncode", paste( rep( exp1, 3 ), collapse = "" ), sep = "" ), exp1 ))
+    inputctrl <- c(inputctrl, extract( inputfilelist, paste( "wgEncode", paste( rep( exp1, 4 ), collapse = "" ), sep = "" ), exp1 ))
+    inputtype <- c(inputtype, rep(suffix, length(inputfilelist)))
 
-  chippath <- extract( chipfilelist, "", "wgEncode*" )
-
-  exp1 <- "[A-Z][a-z|0-9]*"
-  chiplab <- extract( chipfilelist, "*wgEncode", exp1 )
-  chipexp <- extract( chipfilelist, paste( "wgEncode", paste( rep( exp1, 1 ), collapse = "" ), sep = "" ), exp1 )
-  chipcell <- extract( chipfilelist, paste( "wgEncode", paste( rep( exp1, 2 ), collapse = "" ), sep = "" ), exp1 )
-  chipfac <- extract( chipfilelist, paste( "wgEncode", paste( rep( exp1, 3 ), collapse = "" ), sep = "" ), exp1 )
-  chipctrl <- extract( chipfilelist, paste( "wgEncode", paste( rep( exp1, 4 ), collapse = "" ), sep = "" ), exp1 )
-
-  
-  inputlab <- extract( inputfilelist, "*wgEncode", exp1 )
-  inputexp <- extract( inputfilelist, paste( "wgEncode", paste( rep( exp1, 1 ), collapse = "" ), sep = "" ), exp1 )
-  inputcell <- extract( inputfilelist, paste( "wgEncode", paste( rep( exp1, 2 ), collapse = "" ), sep = "" ), exp1 )
-  inputfac <- extract( inputfilelist, paste( "wgEncode", paste( rep( exp1, 3 ), collapse = "" ), sep = "" ), exp1 )
-  inputctrl <- extract( inputfilelist, paste( "wgEncode", paste( rep( exp1, 4 ), collapse = "" ), sep = "" ), exp1 )
+    chiplist <- c(chiplist, chipfilelist)
+    inputlist <- c(inputlist, inputfilelist)
+  }
 
   ## to extract directories
   strRev <- function( x )
     sapply( strsplit( x, split = "" ), function( str ){ paste( rev( str ), collapse = "" ) } )
+
+  chiptype <- toupper(extract(chiptype, "\\.", "[A-Z|a-z]*"))
+  inputtype <- toupper(extract(inputtype, "\\.", "[A-Z|a-z]*"))
   
-  chipprefix <- strRev( extract( strRev( chipfilelist ), "w*", "/.*" ) )
-  inputprefix <- strRev( extract( strRev( inputfilelist ), "w*", "/.*" ) )
+  chipprefix <- strRev( extract( strRev( chiplist ), "w*", "/.*" ) )
+  inputprefix <- strRev( extract( strRev( inputlist ), "w*", "/.*" ) )
 
   chipconds <- paste( chiplab, chipexp, chipcell, chipctrl, sep = "." )
   inputconds <- paste( inputlab, inputexp, inputcell, inputctrl, sep = "." )
   uniqueconds <- sort( unique( chipconds ) )
   
-  chipfile <- inputfile <- lab <- exper <- cell <- fac <- ctrl <- NULL
+  chipfile <- inputfile <- lab <- exper <- cell <- fac <- ctrl <- ctype <- itype <- NULL
   for( cond in uniqueconds ){
     id.chip <- which( chipconds == cond )
     id.input <- which( inputconds == cond )
-    inputfilehead <- unique( paste( inputprefix, "wgEncode", inputlab, inputexp, inputcell, inputfac, inputctrl, sep = "" )[ id.input ] )
-    if( length( id.chip ) > 0 & length( inputfilehead ) > 0 )
-      for( i in id.chip )
-        for( inputhead in inputfilehead ){
-          chipfile <- c( chipfile, chipfilelist[ i ] )
-          inputfile <- c( inputfile, inputhead )
+    if(length(id.input) > 1)
+      message("Warning:", cond, "has multiple matching input files")
+    inputfilehead <- unique( paste( inputprefix, "wgEncode", inputlab, inputexp, inputcell, inputfac, inputctrl, sep = "" )[ id.input] )
+    if( length( id.chip ) > 0) {
+      for( i in id.chip ) {
+        if(length(inputfilehead) > 0) {
+          for(i.input in seq_along(id.input)){
+            chipfile <- c( chipfile, chiplist[ i ] )
+            inputfile <- c( inputfile, inputfilehead[i.input] )
+            lab <- c( lab, chiplab[ i ] )
+            exper <- c( exper, chipexp[ i ] )
+            cell <- c( cell, chipcell[ i ] )
+            fac <- c( fac, chipfac[ i ] )
+            ctrl <- c( ctrl, chipctrl[ i ] )
+            ctype <- c(ctype, chiptype[i])
+            itype <- c(itype, inputtype[id.input[i.input]])
+          }
+        } else {
+          chipfile <- c( chipfile, chiplist[ i ] )
+          inputfile <- c( inputfile, NA )
           lab <- c( lab, chiplab[ i ] )
           exper <- c( exper, chipexp[ i ] )
           cell <- c( cell, chipcell[ i ] )
           fac <- c( fac, chipfac[ i ] )
           ctrl <- c( ctrl, chipctrl[ i ] )
+          ctype <- c(ctype, chiptype[i])
+          itype <- c(itype, NA)
         }
+      }
+    }
   }
     
   return( data.frame(
@@ -83,7 +115,9 @@ ChIPInputMatch <- function( dir, suffix, depth = 5 ){
                      experiment = exper,
                      cell = cell,
                      factor = fac,
-                     control = ctrl
+                     control = ctrl,
+                     chipformat = ctype,
+                     inputformat = itype
                      )
          )
   
@@ -95,7 +129,8 @@ ChIPInputMatch <- function( dir, suffix, depth = 5 ){
 #' @param inputfile A string vector for the matching input files. The length must be the same as 'chipfile'.
 #' @param input.suffix A string for the suffix of input files.
 #' @param target A GenomicRanges object for the target intervals where the reads are mapped.
-#' @param format A string specifying the type of the file. Currently two file types are allowed: "BAM" or "BED". Default: "BAM".
+#' @param chipformat A vector of strings specifying the type of the ChIP files. Can be a single value if all ChIP files have the same format. Currently two file types are allowed: "BAM" or "BED". Default: "BAM".
+#' @param inputformat A vector of strings specifying the type of the input file. Can be a single string if all input files have the same format. Currently two file types are allowed: "BAM" or "BED". Default: "BAM".
 #' @param fragLen Either a single value or a 2-column matrix of the fragment lengths for the chip and input files.  Default: 150.
 #' @param pairedEnd Either a boolean value or a 2-column boolean matrix for whether each file is a paired-end data set. Currently this function only allows "BAM" files for paired-end data. Default: FALSE.
 #' @param unique A boolean value for whether only reads with distinct genomic coordinates or strands are mapped. Default: TRUE.
@@ -110,14 +145,27 @@ ChIPInputMatch <- function( dir, suffix, depth = 5 ){
 #'}
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @export
-generateReadMatrices <- function( chipfile, inputfile, input.suffix, target, format = "BAM", fragLen = 150, pairedEnd = FALSE, unique = TRUE ){
+generateReadMatrices <- function( chipfile, inputfile, input.suffix, target, chipformat = "BAM", inputformat = "BAM", fragLen = 150, pairedEnd = FALSE, unique = TRUE ){
+  ## Check the arguments
   nfiles <- length( chipfile )
   if( length( inputfile ) != nfiles )
     stop( "Error: number of matching input files must be the same as the number of ChIP files!" )
-  if( ! format %in% c( "BAM", "BED" ) )
-    stop( "Error: only BAM or BED files are allowed." )
-  if( format != "BAM" & sum( pairedEnd ) > 0 )
-    stop( "Error: for paired end data only BAM format is allowed." )
+  if(length(chipformat) == 1)
+    chipformat <- rep(chipformat, nfiles)
+  if(length(inputformat) == 1)
+    inputformat <- rep(inputformat, nfiles)
+  if(length(chipformat) != nfiles)
+    stop("Error: number of ChIP file formats must match the number of ChIP files!")
+  if(length(inputformat) != nfiles)
+    stop("Error: number of input file formats must match the number of input files!")
+  ## Convert strings to upper cases
+  chipformat <- toupper(chipformat)
+  inputformat <- toupper(inputformat)
+  
+  if(prod(c(inputformat, chipformat) %in% c("TAGALIGN", "BAM", "BED", NA)) == 0)
+    stop( "Error: only BAM, BED and TAGALIGN files are allowed." )
+  chipformat[chipformat == "TAGALIGN"] <- "BED"
+  inputformat[inputformat == "TAGALIGN"] <- "BED"
   checkMatrixDim <- function( x ){
     if( !is.matrix( x ) )
       if( length( x ) == 1 )
@@ -137,7 +185,17 @@ generateReadMatrices <- function( chipfile, inputfile, input.suffix, target, for
   if( !is.matrix( pairedEnd ) )
     pairedEnd <- matrix( pairedEnd, nrow = nfiles, ncol = 2 )
 
+  if(sum(pairedEnd[,1] > 0 & chipformat != "BAM") > 0)
+    stop( "Error: for paired-end data only BAM format is allowed." )
+  if(sum(pairedEnd[,2] > 0 & inputformat != "BAM") > 0)
+    stop( "Error: for paired-end data only BAM format is allowed." )
+  
   target <- sort( target )
+
+  inputfile <- as.character(inputfile)
+  chipfile <- as.character(chipfile)
+  inputfile[is.na(inputfile)] <- "NA"
+  chipfile[is.na(chipfile)] <- "NA"
   
   uniquechipcounts <- matrix( 0, nrow = length( target ), ncol = length( unique( chipfile ) ) )
   uniqueinputcounts <- matrix( 0, nrow = length( target), ncol = length( unique( inputfile ) ) )
@@ -147,7 +205,8 @@ generateReadMatrices <- function( chipfile, inputfile, input.suffix, target, for
   names( chipcomputed ) <- colnames( uniquechipcounts ) <- unique( chipfile )
 
   ## process all input files
-  for( file in unique( inputfile ) )
+  uniqueinputcounts[, "NA"] <- inputcomputed["NA"] <- 1
+  for( file in na.omit(unique( inputfile )) )
     if( !inputcomputed[ file ] ){
       ## For input file, must read all replicates
       if( !is.null( input.suffix ) )
@@ -156,7 +215,7 @@ generateReadMatrices <- function( chipfile, inputfile, input.suffix, target, for
         listinputstr <- paste( "ls ", file, sep = "" )
       for( ifile in system( listinputstr, intern = TRUE ) ) {
         message( paste( "processing input file", ifile ) )
-        rds <- readReads( ifile, extended = TRUE, fragLen = fragLen[ which( inputfile == file )[1], 1 ], pairedEnd = pairedEnd[ which( inputfile == file )[1], 1 ], format = format )
+        rds <- readReads( ifile, extended = TRUE, fragLen = fragLen[ which( inputfile == file )[1], 1 ], pairedEnd = pairedEnd[ which( inputfile == file )[1], 1 ], format = inputformat[which(inputfile == file)[1]] )
         if( unique )
           rds <- unique( rds )
         uniqueinputcounts[ , file ] <- uniqueinputcounts[ , file ] + countOverlaps( target, rds )
@@ -169,7 +228,7 @@ generateReadMatrices <- function( chipfile, inputfile, input.suffix, target, for
   for( file in unique( chipfile ) )
     if( !chipcomputed[ file ] ){
       message( paste( "processing chip file", file ) )
-      rds <- readReads( file, extended = TRUE, fragLen = fragLen[ which( chipfile == file )[1], 1 ], pairedEnd = pairedEnd[ which( chipfile == file )[1], 1 ], format = format )
+      rds <- readReads( file, extended = TRUE, fragLen = fragLen[ which( chipfile == file )[1], 1 ], pairedEnd = pairedEnd[ which( chipfile == file )[1], 1 ], format = chipformat[which(chipfile == file)[1]] )
       if( unique )
         rds <- unique( rds )
       uniquechipcounts[ , file ] <- uniquechipcounts[ , file ] + countOverlaps( target, rds )
