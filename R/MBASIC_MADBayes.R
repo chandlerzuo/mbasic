@@ -36,14 +36,17 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
   for( k in 1:K ){
     Dmat[ k, fac == unique( fac )[ k ] ] <- 1
   }
+
+  ## Scale the data from different replicates
+  scaleFactor <- apply(log(Y+1), 1, mean)
   
   if(is.null(Mu0)) {
     Mu0 <- Y - Y + 1
   }
   ## normalize the Mu0
-  Mu0 <- Mu0 * rep( apply( log( Y + 1 ), 1, mean ) / apply(Mu0, 1, mean ), ncol( Mu0 ) )
+  Mu0 <- Mu0 / rep( apply(Mu0, 1, mean ), ncol( Mu0 ) )
   Gamma <- t(Mu0)
-  Y <- t(log(Y+1))
+  Y <- t(log(Y+1) / scaleFactor)
   Gamma <- cbind(Gamma, matrix(0, nrow = nrow(Gamma), ncol = ncol(Gamma) * (S - 1)))
   for(s in seq(S)[-1]) {
     Gamma[, (s - 1) * N + seq(N)] <- rep(apply(Gamma[, seq(N)], 2, mean), each = I)
@@ -178,7 +181,7 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
       P = ret$P,
       b = ret$b,
       alllik = allloss,
-      Mu = ret$Mu,
+      Mu = ret$Mu * scaleFactor,
       converged = (itr <= maxitr),
       Z = Z,
       AssociationMatrix = associationMatrix,
