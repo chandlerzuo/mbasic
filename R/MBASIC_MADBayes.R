@@ -159,8 +159,8 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
   ## Compute the loss of each term
   Theta.aug <- P.aug <- W.aug <- matrix(0, nrow = K * S, ncol = I)
   for(s in seq(S)) {
-    Theta.aug[seq(K), ] <- as.integer(t(ret$Theta) == s - 1)
-    P.aug[seq(K), ] <- rep(ret$P[, s], each = K)
+    Theta.aug[seq(K) + K * (s-1), ] <- as.integer(t(ret$Theta) == s - 1)
+    P.aug[seq(K) + K * (s-1), ] <- rep(ret$P[, s], each = K)
   }
   W.aug <- tcrossprod(W, Z)
   loss.p <- mean(abs(Theta.aug - P.aug)[, ret$b == 1])

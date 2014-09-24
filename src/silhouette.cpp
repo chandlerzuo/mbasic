@@ -53,7 +53,7 @@ SEXP silhouette( SEXP _Theta, SEXP _States, SEXP _J) {
 		
 		if(n_cluster[States[i]] <= 1) {
 			// if the cluster has only one element
-			mean_sil --;
+			// mean_sil --;
 			continue;
 		}
 

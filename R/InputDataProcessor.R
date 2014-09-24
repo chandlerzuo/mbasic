@@ -134,6 +134,7 @@ ChIPInputMatch <- function( dir, suffices, depth = 5 ){
 #' @param fragLen Either a single value or a 2-column matrix of the fragment lengths for the chip and input files.  Default: 150.
 #' @param pairedEnd Either a boolean value or a 2-column boolean matrix for whether each file is a paired-end data set. Currently this function only allows "BAM" files for paired-end data. Default: FALSE.
 #' @param unique A boolean value for whether only reads with distinct genomic coordinates or strands are mapped. Default: TRUE.
+#' @param ncores The number of cores. Default: 1.
 #' @details
 #' This function uses the readGAlignments and readGAlignmentsPaired from the \link{GenomicRanges} package to read BAM files. It uses \link{scan} function to read the "BED" formatted data, assuming that chr, start, end, strand information are in column 1, 2, 3, 6.\cr
 #' For the input files, read counts from all files with the same prefix are added.
@@ -145,8 +146,9 @@ ChIPInputMatch <- function( dir, suffices, depth = 5 ){
 #'}
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @export
-generateReadMatrices <- function( chipfile, inputfile, input.suffix, target, chipformat = "BAM", inputformat = "BAM", fragLen = 150, pairedEnd = FALSE, unique = TRUE ){
+generateReadMatrices <- function( chipfile, inputfile, input.suffix, target, chipformat = "BAM", inputformat = "BAM", fragLen = 150, pairedEnd = FALSE, unique = TRUE, ncores = 1 ){
   ## Check the arguments
+  require(doMC)
   nfiles <- length( chipfile )
   if( length( inputfile ) != nfiles )
     stop( "Error: number of matching input files must be the same as the number of ChIP files!" )
@@ -194,48 +196,51 @@ generateReadMatrices <- function( chipfile, inputfile, input.suffix, target, chi
 
   inputfile <- as.character(inputfile)
   chipfile <- as.character(chipfile)
-  inputfile[is.na(inputfile)] <- "NA"
-  chipfile[is.na(chipfile)] <- "NA"
-  
-  uniquechipcounts <- matrix( 0, nrow = length( target ), ncol = length( unique( chipfile ) ) )
-  uniqueinputcounts <- matrix( 0, nrow = length( target), ncol = length( unique( inputfile ) ) )
-  inputcomputed <- rep( FALSE, length( unique( inputfile ) ) )
-  chipcomputed <- rep( FALSE, length( unique( chipfile ) ) )
-  names( inputcomputed ) <- colnames( uniqueinputcounts ) <- unique( inputfile )
-  names( chipcomputed ) <- colnames( uniquechipcounts ) <- unique( chipfile )
 
+  registerDoMC(ncores)
+  
   ## process all input files
-  uniqueinputcounts[, "NA"] <- inputcomputed["NA"] <- 1
-  for( file in na.omit(unique( inputfile )) )
-    if( !inputcomputed[ file ] ){
+  uniqueInputCounts <- foreach(file = na.omit(unique( inputfile ))) %dopar% {
       ## For input file, must read all replicates
       if( !is.null( input.suffix ) )
-        listinputstr <- paste( "ls ", file, "*", input.suffix, sep = "" )
+          listinputstr <- paste( "ls ", file, "*", input.suffix, sep = "" )
       else
-        listinputstr <- paste( "ls ", file, sep = "" )
+          listinputstr <- paste( "ls ", file, sep = "" )
+      uniqueInputCount <- 0
       for( ifile in system( listinputstr, intern = TRUE ) ) {
-        message( paste( "processing input file", ifile ) )
-        rds <- readReads( ifile, extended = TRUE, fragLen = fragLen[ which( inputfile == file )[1], 1 ], pairedEnd = pairedEnd[ which( inputfile == file )[1], 1 ], format = inputformat[which(inputfile == file)[1]] )
-        if( unique )
-          rds <- unique( rds )
-        uniqueinputcounts[ , file ] <- uniqueinputcounts[ , file ] + countOverlaps( target, rds )
+          message( paste( "processing input file", ifile ) )
+          rds <- readReads( ifile, extended = TRUE, fragLen = fragLen[ which( inputfile == file )[1], 1 ], pairedEnd = pairedEnd[ which( inputfile == file )[1], 1 ], format = inputformat[which(inputfile == file)[1]] )
+          if( unique )
+              rds <- unique( rds )
+          uniqueInputCount <- uniqueInputCount + countOverlaps( target, rds )
       }
-      inputcomputed[ file ] <- TRUE
       gc()
-    }
+      uniqueInputCount
+  }
+
+  uniqueInputCountsWithoutNA <- matrix(unlist(uniqueInputCounts), ncol = length(uniqueInputCounts))
 
   ## process all chip files
-  for( file in unique( chipfile ) )
-    if( !chipcomputed[ file ] ){
+  uniqueChIPCounts <- foreach( file = na.omit(unique( chipfile))) %dopar% {
       message( paste( "processing chip file", file ) )
       rds <- readReads( file, extended = TRUE, fragLen = fragLen[ which( chipfile == file )[1], 1 ], pairedEnd = pairedEnd[ which( chipfile == file )[1], 1 ], format = chipformat[which(chipfile == file)[1]] )
       if( unique )
-        rds <- unique( rds )
-      uniquechipcounts[ , file ] <- uniquechipcounts[ , file ] + countOverlaps( target, rds )
-      chipcomputed[ file ] <- TRUE
+          rds <- unique( rds )
       gc()
-    }
+      countOverlaps( target, rds )
+  }
 
+  uniqueChIPCountsWithoutNA <- matrix(unlist(uniqueChIPCounts), ncol = length(uniqueChIPCounts))
+
+  uniquechipcounts <- matrix( 1, nrow = length( target ), ncol = length( unique( chipfile ) ) )
+  uniqueinputcounts <- matrix( 1, nrow = length( target), ncol = length( unique( inputfile ) ) )
+  inputfile[is.na(inputfile)] <- "NA"
+  chipfile[is.na(chipfile)] <- "NA"
+  colnames( uniqueinputcounts ) <- unique( inputfile )
+  colnames( uniquechipcounts ) <- unique( chipfile )
+  uniqueinputcounts[, colnames(uniqueinputcounts) != "NA"] <- uniqueInputCountsWithoutNA
+  uniquechipcounts[, colnames(uniquechipcounts) != "NA"] <- uniqueChIPCountsWithoutNA
+  
   allchipcounts <- allinputcounts <- matrix( 0, nrow = length( target ), ncol = nfiles )
 
   for( i in seq_len( nfiles ) ){
