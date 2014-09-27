@@ -541,3 +541,138 @@ MBASIC.binary <- function( Y, Mu0, fac, J=NULL, zeta=0.2, maxitr = 100, burnin =
         )
   }
 
+#' @name MBASIC.binary
+#' @title Bayesian clustering model for binary state matrix with prior estimated background means.
+#'
+#' @param Y An N by I matrix containing the data from N experiments across I observation units (loci).
+#' @param Mu0 An N by I matrix for the prior estimated mean for the background state, for N experiments across the I observation units (loci).
+#' @param fac A vector of length N denoting the experimental condition for each replicate.
+#' @param allStruct A list of matrices indicating the levels of the signal matrix.
+#' @param allJ A list for the numbers of clusters for each candidate model.
+#' @param parent.id A vector for the identifier of the parent model for each candidate model. The parent model has a more generalized structure compared to the child model, therefore, its likelihood should be smaller.
+#' @param family The distribution of family to be used. Either "lognormal" or "negbin". See details for more information.
+#' @param burnin An integer value for the number of iterations in initialization. Default: 20.
+#' @param maxitr The maximum number of iterations in the E-M algorithm. Default: 100.
+#' @param tol Tolerance for error in checking the E-M algorithm's convergence. Default: 1e-04.
+#' @param nsig The number of mixture components for the distribution of the signal state.
+#' @param zeta The initial value of the proportion of unclustered units. Default: 0.2.
+#' @param outdir The file directory for writing the intermediate results every 10 E-M iterations. This can be useful when the running time until final convergence is long. Default: NULL ( no intermediate result is saved ).
+#' @param ncores The number of parallel sessions used.
+#' @details
+#' TODO
+#' @useDynLib MBASIC
+#' @return A 'MBASICFit' class object.
+#' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
+#' @examples
+#' \dontrun{
+#' }
+#' @export
+MBASIC.binary.fitall <- function(Y, Mu0, fac, allJ, allStruct,
+                                 zeta = 0.2, maxitr = 1000, burnin = 100, family,
+                                 tol = 1E-4, nsig, min.count, parent.id,
+                                 outdir, ncores = 1) {
+  require(ggplot2)
+  require(doMC)
+  registerDoMC(ncores)
+  
+  if(!file.exists(outdir)) {
+    dir.create(outdir)
+  }
+
+  ## Assignment in Global environment because this is to be exported to clusters
+  allliks <<- NULL
+  if(!is.null(allJ)) {
+    modelIds <- seq_along(allJ)
+  } else {
+    modelIds <- seq(length(allStruct))
+  }
+
+  if(length(parent.id) != length(modelIds)) {
+    stop("Error: the length of 'parent.id' must be the same as the length of 'allJ' and 'allStruct'.")
+  }
+
+  fitOneModel <- function(id) {
+    outfile <- file.path(outdir,
+                         paste("Model_", id, ".Rda", sep = ""))
+    out <- file.path(outdir,
+                     paste("Model_", id, ".out", sep = ""))
+    thisJ <- thisStruct <- NULL
+    if(!is.null(allJ)) {
+      thisJ <- allJ[id]
+    }
+    if(!is.null(allStruct)) {
+      thisStruct <- allStruct[id]
+    }
+    
+    ## determine the parent model
+    parentModel <- NULL
+    parentId <- id
+    if(!is.null(allliks)) {
+      while(parent.id[parentId] > 0) {
+        if(allliks[parent.id[parentId]] >
+           allliks[parentId]) {
+          parentId <- parent.id[parentId]
+        } else {
+          break
+        }
+      }
+    }
+    parentModelFitFile <-
+      file.path(outdir,
+                paste("Model_",
+                      parentId,
+                      ".Rda",
+                      sep = ""))
+    if(file.exists(parentModelFitFile)) {
+      load(parentModelFitFile)
+      write.out(out, paste("Initialized from model", parentId, sep = ""))
+      parentModel <- fit
+    }
+    ## Fit the model
+    fit <- MBASIC.binary(Y = Y,
+                         Mu0 = Mu0,
+                         fac = fac,
+                         J = thisJ,
+                         struct = thisStruct,
+                         zeta = zeta,
+                         maxitr = 100,
+                         burnin = 20,
+                         outfile = outfile,
+                         out = out,
+                         init.mod = parentModel,
+                         family = family,
+                         tol = tol,
+                         nsig = nsig,
+                         min.count = min.count)
+    save(fit, file = outfile)
+    gc()
+    return(c(tail(fit@alllik, 1), fit@bic))
+  }
+  
+  for(i in seq(as.integer(maxitr / 100))) {
+    message("Pass", i)
+    if(FALSE) {
+      clusterExport( cl, c("Y", "Mu0", "fac", "allJ", "allStruct", "zeta", "maxitr", "burnin", "family", "tol", "nsig", "min.count", "parent.id", "outdir", "modelIds", "allliks"))
+      clusterEvalQ( cl, {library(MBASIC)})
+      results <- clusterApplyLB(cl, as.list(modelIds), fitOneModel)
+    }
+
+    results <- foreach(i=modelIds) %dopar% fitOneModel(i)
+    results <- matrix(unlist(results), nrow = 2)
+    allliks <<- results[1, ]
+    allbic <- results[2, ]
+    ## monitor BIC and likelihood
+    try({
+      pdf(file.path(outdir, "FitScore.pdf"))
+      print(ggplot() + geom_line(aes(x = seq_along(parent.id),
+                                     y = allliks)) +
+            xlab("Model") + ylab("Log Likelihood"))
+      print(ggplot() + geom_line(aes(x = seq_along(parent.id),
+                                     y = allbic)) +
+            xlab("Model") + ylab("BIC"))
+      dev.off()
+    })
+    gc()
+  }
+}
+
