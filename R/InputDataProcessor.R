@@ -218,7 +218,10 @@ generateReadMatrices <- function( chipfile, inputfile, input.suffix, target, chi
       uniqueInputCount
   }
 
-  uniqueInputCountsWithoutNA <- matrix(unlist(uniqueInputCounts), ncol = length(uniqueInputCounts))
+  uniqueInputCountsWithoutNA <- NULL
+  if(length(uniqueInputCounts) > 0) {
+      uniqueInputCountsWithoutNA <- matrix(unlist(uniqueInputCounts), ncol = length(uniqueInputCounts))
+  }
 
   ## process all chip files
   uniqueChIPCounts <- foreach( file = na.omit(unique( chipfile))) %dopar% {
@@ -230,16 +233,26 @@ generateReadMatrices <- function( chipfile, inputfile, input.suffix, target, chi
       countOverlaps( target, rds )
   }
 
-  uniqueChIPCountsWithoutNA <- matrix(unlist(uniqueChIPCounts), ncol = length(uniqueChIPCounts))
+  uniqueChIPCountsWithoutNA <- NULL
+  if(length(uniqueChIPCounts) > 0) {
+      uniqueChIPCountsWithoutNA <- matrix(unlist(uniqueChIPCounts), ncol = length(uniqueChIPCounts))
+  }
 
+  ##message(dim(uniqueChIPCountsWithoutNA))
+  ##message(dim(uniqueInputCountsWithoutNA))
+  
   uniquechipcounts <- matrix( 1, nrow = length( target ), ncol = length( unique( chipfile ) ) )
   uniqueinputcounts <- matrix( 1, nrow = length( target), ncol = length( unique( inputfile ) ) )
   inputfile[is.na(inputfile)] <- "NA"
   chipfile[is.na(chipfile)] <- "NA"
   colnames( uniqueinputcounts ) <- unique( inputfile )
   colnames( uniquechipcounts ) <- unique( chipfile )
-  uniqueinputcounts[, colnames(uniqueinputcounts) != "NA"] <- uniqueInputCountsWithoutNA
-  uniquechipcounts[, colnames(uniquechipcounts) != "NA"] <- uniqueChIPCountsWithoutNA
+  if(!is.null(uniqueChIPCountsWithoutNA)) {
+      uniquechipcounts[, colnames(uniquechipcounts) != "NA"] <- uniqueChIPCountsWithoutNA
+  }
+  if(!is.null(uniqueInputCountsWithoutNA)) {
+      uniqueinputcounts[, colnames(uniqueinputcounts) != "NA"] <- uniqueInputCountsWithoutNA
+  }
   
   allchipcounts <- allinputcounts <- matrix( 0, nrow = length( target ), ncol = nfiles )
 
