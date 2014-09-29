@@ -17,15 +17,15 @@
 #' chiptype \tab The file format of the ChIP data.\cr
 #' inputtype \tab The file format of the input data.\cr
 #'}
-#' @examples \dontrun{ ChIPInputMatch( c( "ChIPDataDir/", "inputDataDir/" ), suffices = ".tagAlign", depth = 2 ) }
+#' @examples \dontrun{ ChIPInputMatch(c("ChIPDataDir/", "inputDataDir/"), suffices = ".tagAlign", depth = 2) }
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @export
-ChIPInputMatch <- function( dir, suffices, depth = 5 ){
-  if( length( dir ) != 2 ){
-    stop( "Error: the length of dir must be 2.")
+ChIPInputMatch <- function(dir, suffices, depth = 5) {
+  if(length(dir) != 2) {
+    stop("Error: the length of dir must be 2.")
   }
-  if( dir[1] == dir[2] ){
-    stop( "Error: the ChIP and input files must be in two different directories." )
+  if(dir[1] == dir[2]) {
+    stop("Error: the ChIP and input files must be in two different directories.")
   }
   chipdir <- dir[1]
   inputdir <- dir[2]
@@ -34,24 +34,24 @@ ChIPInputMatch <- function( dir, suffices, depth = 5 ){
     inputlab <- inputexp <- inputcell <- inputfac <- inputctrl <- chiptype <- inputtype <-
       chiplist <- inputlist <- NULL
   for(suffix in suffices) {
-    chipfilelist <- system( paste( "find ", chipdir, " -maxdepth ", depth, " -name *", suffix, sep = "" ), intern = TRUE)
-    inputfilelist <- system( paste( "find ", inputdir, " -maxdepth ", depth, " -name *", suffix, sep = "" ), intern = TRUE)
+    chipfilelist <- system(paste("find ", chipdir, " -maxdepth ", depth, " -name *", suffix, sep = ""), intern = TRUE)
+    inputfilelist <- system(paste("find ", inputdir, " -maxdepth ", depth, " -name *", suffix, sep = ""), intern = TRUE)
     
-    chippath <- extract( chipfilelist, "", "wgEncode*" )
+    chippath <- extract(chipfilelist, "", "wgEncode*")
     
     exp1 <- "[A-Z][a-z|0-9]*"
-    chiplab <- c(chiplab, extract( chipfilelist, "*wgEncode", exp1 ))
-    chipexp <- c(chipexp, extract( chipfilelist, paste( "wgEncode", paste( rep( exp1, 1 ), collapse = "" ), sep = "" ), exp1 ))
-    chipcell <- c(chipcell, extract( chipfilelist, paste( "wgEncode", paste( rep( exp1, 2 ), collapse = "" ), sep = "" ), exp1 ))
-    chipfac <- c(chipfac, extract( chipfilelist, paste( "wgEncode", paste( rep( exp1, 3 ), collapse = "" ), sep = "" ), exp1 ))
-    chipctrl <- c(chipctrl, extract( chipfilelist, paste( "wgEncode", paste( rep( exp1, 4 ), collapse = "" ), sep = "" ), exp1 ))
+    chiplab <- c(chiplab, extract(chipfilelist, "*wgEncode", exp1))
+    chipexp <- c(chipexp, extract(chipfilelist, paste("wgEncode", paste(rep(exp1, 1), collapse = ""), sep = ""), exp1))
+    chipcell <- c(chipcell, extract(chipfilelist, paste("wgEncode", paste(rep(exp1, 2), collapse = ""), sep = ""), exp1))
+    chipfac <- c(chipfac, extract(chipfilelist, paste("wgEncode", paste(rep(exp1, 3), collapse = ""), sep = ""), exp1))
+    chipctrl <- c(chipctrl, extract(chipfilelist, paste("wgEncode", paste(rep(exp1, 4), collapse = ""), sep = ""), exp1))
     chiptype <- c(chiptype, rep(suffix, length(chipfilelist)))
     
-    inputlab <- c(inputlab, extract( inputfilelist, "*wgEncode", exp1 ))
-    inputexp <- c(inputexp, extract( inputfilelist, paste( "wgEncode", paste( rep( exp1, 1 ), collapse = "" ), sep = "" ), exp1 ))
-    inputcell <- c(inputcell, extract( inputfilelist, paste( "wgEncode", paste( rep( exp1, 2 ), collapse = "" ), sep = "" ), exp1 ))
-    inputfac <- c(inputfac, extract( inputfilelist, paste( "wgEncode", paste( rep( exp1, 3 ), collapse = "" ), sep = "" ), exp1 ))
-    inputctrl <- c(inputctrl, extract( inputfilelist, paste( "wgEncode", paste( rep( exp1, 4 ), collapse = "" ), sep = "" ), exp1 ))
+    inputlab <- c(inputlab, extract(inputfilelist, "*wgEncode", exp1))
+    inputexp <- c(inputexp, extract(inputfilelist, paste("wgEncode", paste(rep(exp1, 1), collapse = ""), sep = ""), exp1))
+    inputcell <- c(inputcell, extract(inputfilelist, paste("wgEncode", paste(rep(exp1, 2), collapse = ""), sep = ""), exp1))
+    inputfac <- c(inputfac, extract(inputfilelist, paste("wgEncode", paste(rep(exp1, 3), collapse = ""), sep = ""), exp1))
+    inputctrl <- c(inputctrl, extract(inputfilelist, paste("wgEncode", paste(rep(exp1, 4), collapse = ""), sep = ""), exp1))
     inputtype <- c(inputtype, rep(suffix, length(inputfilelist)))
 
     chiplist <- c(chiplist, chipfilelist)
@@ -59,48 +59,48 @@ ChIPInputMatch <- function( dir, suffices, depth = 5 ){
   }
 
   ## to extract directories
-  strRev <- function( x )
-    sapply( strsplit( x, split = "" ), function( str ){ paste( rev( str ), collapse = "" ) } )
+  strRev <- function(x)
+    sapply(strsplit(x, split = ""), function(str) { paste(rev(str), collapse = "") })
 
   chiptype <- toupper(extract(chiptype, "\\.", "[A-Z|a-z]*"))
   inputtype <- toupper(extract(inputtype, "\\.", "[A-Z|a-z]*"))
   
-  chipprefix <- strRev( extract( strRev( chiplist ), "w*", "/.*" ) )
-  inputprefix <- strRev( extract( strRev( inputlist ), "w*", "/.*" ) )
+  chipprefix <- strRev(extract(strRev(chiplist), "w*", "/.*"))
+  inputprefix <- strRev(extract(strRev(inputlist), "w*", "/.*"))
 
-  chipconds <- paste( chiplab, chipexp, chipcell, chipctrl, sep = "." )
-  inputconds <- paste( inputlab, inputexp, inputcell, inputctrl, sep = "." )
-  uniqueconds <- sort( unique( chipconds ) )
+  chipconds <- paste(chiplab, chipexp, chipcell, chipctrl, sep = ".")
+  inputconds <- paste(inputlab, inputexp, inputcell, inputctrl, sep = ".")
+  uniqueconds <- sort(unique(chipconds))
   
   chipfile <- inputfile <- lab <- exper <- cell <- fac <- ctrl <- ctype <- itype <- NULL
-  for( cond in uniqueconds ){
-    id.chip <- which( chipconds == cond )
-    id.input <- which( inputconds == cond )
+  for(cond in uniqueconds) {
+    id.chip <- which(chipconds == cond)
+    id.input <- which(inputconds == cond)
     if(length(id.input) > 1)
       message("Warning:", cond, "has multiple matching input files")
-    inputfilehead <- unique( paste( inputprefix, "wgEncode", inputlab, inputexp, inputcell, inputfac, inputctrl, sep = "" )[ id.input] )
-    if( length( id.chip ) > 0) {
-      for( i in id.chip ) {
+    inputfilehead <- unique(paste(inputprefix, "wgEncode", inputlab, inputexp, inputcell, inputfac, inputctrl, sep = "")[ id.input])
+    if(length(id.chip) > 0) {
+      for(i in id.chip) {
         if(length(inputfilehead) > 0) {
-          for(i.input in seq_along(id.input)){
-            chipfile <- c( chipfile, chiplist[ i ] )
-            inputfile <- c( inputfile, inputfilehead[i.input] )
-            lab <- c( lab, chiplab[ i ] )
-            exper <- c( exper, chipexp[ i ] )
-            cell <- c( cell, chipcell[ i ] )
-            fac <- c( fac, chipfac[ i ] )
-            ctrl <- c( ctrl, chipctrl[ i ] )
+          for(i.input in seq_along(id.input)) {
+            chipfile <- c(chipfile, chiplist[ i ])
+            inputfile <- c(inputfile, inputfilehead[i.input])
+            lab <- c(lab, chiplab[ i ])
+            exper <- c(exper, chipexp[ i ])
+            cell <- c(cell, chipcell[ i ])
+            fac <- c(fac, chipfac[ i ])
+            ctrl <- c(ctrl, chipctrl[ i ])
             ctype <- c(ctype, chiptype[i])
             itype <- c(itype, inputtype[id.input[i.input]])
           }
         } else {
-          chipfile <- c( chipfile, chiplist[ i ] )
-          inputfile <- c( inputfile, NA )
-          lab <- c( lab, chiplab[ i ] )
-          exper <- c( exper, chipexp[ i ] )
-          cell <- c( cell, chipcell[ i ] )
-          fac <- c( fac, chipfac[ i ] )
-          ctrl <- c( ctrl, chipctrl[ i ] )
+          chipfile <- c(chipfile, chiplist[ i ])
+          inputfile <- c(inputfile, NA)
+          lab <- c(lab, chiplab[ i ])
+          exper <- c(exper, chipexp[ i ])
+          cell <- c(cell, chipcell[ i ])
+          fac <- c(fac, chipfac[ i ])
+          ctrl <- c(ctrl, chipctrl[ i ])
           ctype <- c(ctype, chiptype[i])
           itype <- c(itype, NA)
         }
@@ -108,7 +108,7 @@ ChIPInputMatch <- function( dir, suffices, depth = 5 ){
     }
   }
     
-  return( data.frame(
+  return(data.frame(
                      chipfile = chipfile,
                      inputfile = inputfile,
                      lab = lab,
@@ -118,8 +118,8 @@ ChIPInputMatch <- function( dir, suffices, depth = 5 ){
                      control = ctrl,
                      chipformat = ctype,
                      inputformat = itype
-                     )
-         )
+                  )
+      )
   
 }
 
@@ -141,17 +141,17 @@ ChIPInputMatch <- function( dir, suffices, depth = 5 ){
 #' @return A list of two matrices:
 #' \tabular{ll}{
 #' chip \tab A matrix for the number of mapped reads at each target interval (row) from each ChIP file (column).\cr
-#' input \tab A matrix for the number of mapped reads at each target interval( row) from matching input files for the ChIP file (column).\cr
+#' input \tab A matrix for the number of mapped reads at each target interval(row) from matching input files for the ChIP file (column).\cr
 #' target \tab A GRanges object with sorted elements.\cr
 #'}
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @export
-generateReadMatrices <- function( chipfile, inputfile, input.suffix, target, chipformat = "BAM", inputformat = "BAM", fragLen = 150, pairedEnd = FALSE, unique = TRUE, ncores = 1 ){
+generateReadMatrices <- function(chipfile, inputfile, input.suffix, target, chipformat = "BAM", inputformat = "BAM", fragLen = 150, pairedEnd = FALSE, unique = TRUE, ncores = 1) {
   ## Check the arguments
   require(doMC)
-  nfiles <- length( chipfile )
-  if( length( inputfile ) != nfiles )
-    stop( "Error: number of matching input files must be the same as the number of ChIP files!" )
+  nfiles <- length(chipfile)
+  if(length(inputfile) != nfiles)
+    stop("Error: number of matching input files must be the same as the number of ChIP files!")
   if(length(chipformat) == 1)
     chipformat <- rep(chipformat, nfiles)
   if(length(inputformat) == 1)
@@ -165,34 +165,34 @@ generateReadMatrices <- function( chipfile, inputfile, input.suffix, target, chi
   inputformat <- toupper(inputformat)
   
   if(prod(c(inputformat, chipformat) %in% c("TAGALIGN", "BAM", "BED", NA)) == 0)
-    stop( "Error: only BAM, BED and TAGALIGN files are allowed." )
+    stop("Error: only BAM, BED and TAGALIGN files are allowed.")
   chipformat[chipformat == "TAGALIGN"] <- "BED"
   inputformat[inputformat == "TAGALIGN"] <- "BED"
-  checkMatrixDim <- function( x ){
-    if( !is.matrix( x ) )
-      if( length( x ) == 1 )
-        return( TRUE )
-    if( is.matrix( x ) )
-      if( nrow( x ) == nfiles & ncol( x ) == 2 )
-        return( TRUE )
-    return( FALSE )
+  checkMatrixDim <- function(x) {
+    if(!is.matrix(x))
+      if(length(x) == 1)
+        return(TRUE)
+    if(is.matrix(x))
+      if(nrow(x) == nfiles & ncol(x) == 2)
+        return(TRUE)
+    return(FALSE)
   }
-  if( ! checkMatrixDim( fragLen ) )
-    stop( paste( "Error: fragLen must be either a single value, or a matrix with", nfiles, "rows and 2 columns." ) )
-  if( ! checkMatrixDim( pairedEnd ) )
-    stop( paste( "Error: pairedEnd must be either a single value, or a matrix with", nfiles, "rows and 2 columns." ) )
+  if(! checkMatrixDim(fragLen))
+    stop(paste("Error: fragLen must be either a single value, or a matrix with", nfiles, "rows and 2 columns."))
+  if(! checkMatrixDim(pairedEnd))
+    stop(paste("Error: pairedEnd must be either a single value, or a matrix with", nfiles, "rows and 2 columns."))
 
-  if( !is.matrix( fragLen ) )
-    fragLen <- matrix( fragLen, nrow = nfiles, ncol = 2 )
-  if( !is.matrix( pairedEnd ) )
-    pairedEnd <- matrix( pairedEnd, nrow = nfiles, ncol = 2 )
+  if(!is.matrix(fragLen))
+    fragLen <- matrix(fragLen, nrow = nfiles, ncol = 2)
+  if(!is.matrix(pairedEnd))
+    pairedEnd <- matrix(pairedEnd, nrow = nfiles, ncol = 2)
 
   if(sum(pairedEnd[,1] > 0 & chipformat != "BAM") > 0)
-    stop( "Error: for paired-end data only BAM format is allowed." )
+    stop("Error: for paired-end data only BAM format is allowed.")
   if(sum(pairedEnd[,2] > 0 & inputformat != "BAM") > 0)
-    stop( "Error: for paired-end data only BAM format is allowed." )
+    stop("Error: for paired-end data only BAM format is allowed.")
   
-  target <- sort( target )
+  target <- sort(target)
 
   inputfile <- as.character(inputfile)
   chipfile <- as.character(chipfile)
@@ -200,19 +200,19 @@ generateReadMatrices <- function( chipfile, inputfile, input.suffix, target, chi
   registerDoMC(ncores)
   
   ## process all input files
-  uniqueInputCounts <- foreach(file = na.omit(unique( inputfile ))) %dopar% {
+  uniqueInputCounts <- foreach(file = na.omit(unique(inputfile))) %dopar% {
       ## For input file, must read all replicates
-      if( !is.null( input.suffix ) )
-          listinputstr <- paste( "ls ", file, "*", input.suffix, sep = "" )
+      if(!is.null(input.suffix))
+          listinputstr <- paste("ls ", file, "*", input.suffix, sep = "")
       else
-          listinputstr <- paste( "ls ", file, sep = "" )
+          listinputstr <- paste("ls ", file, sep = "")
       uniqueInputCount <- 0
-      for( ifile in system( listinputstr, intern = TRUE ) ) {
-          message( paste( "processing input file", ifile ) )
-          rds <- readReads( ifile, extended = TRUE, fragLen = fragLen[ which( inputfile == file )[1], 1 ], pairedEnd = pairedEnd[ which( inputfile == file )[1], 1 ], format = inputformat[which(inputfile == file)[1]] )
-          if( unique )
-              rds <- unique( rds )
-          uniqueInputCount <- uniqueInputCount + countOverlaps( target, rds )
+      for(ifile in system(listinputstr, intern = TRUE)) {
+          message(paste("processing input file", ifile))
+          rds <- readReads(ifile, extended = TRUE, fragLen = fragLen[ which(inputfile == file)[1], 1 ], pairedEnd = pairedEnd[ which(inputfile == file)[1], 1 ], format = inputformat[which(inputfile == file)[1]])
+          if(unique)
+              rds <- unique(rds)
+          uniqueInputCount <- uniqueInputCount + countOverlaps(target, rds)
       }
       gc()
       uniqueInputCount
@@ -224,13 +224,13 @@ generateReadMatrices <- function( chipfile, inputfile, input.suffix, target, chi
   }
 
   ## process all chip files
-  uniqueChIPCounts <- foreach( file = na.omit(unique( chipfile))) %dopar% {
-      message( paste( "processing chip file", file ) )
-      rds <- readReads( file, extended = TRUE, fragLen = fragLen[ which( chipfile == file )[1], 1 ], pairedEnd = pairedEnd[ which( chipfile == file )[1], 1 ], format = chipformat[which(chipfile == file)[1]] )
-      if( unique )
-          rds <- unique( rds )
+  uniqueChIPCounts <- foreach(file = na.omit(unique(chipfile))) %dopar% {
+      message(paste("processing chip file", file))
+      rds <- readReads(file, extended = TRUE, fragLen = fragLen[ which(chipfile == file)[1], 1 ], pairedEnd = pairedEnd[ which(chipfile == file)[1], 1 ], format = chipformat[which(chipfile == file)[1]])
+      if(unique)
+          rds <- unique(rds)
       gc()
-      countOverlaps( target, rds )
+      countOverlaps(target, rds)
   }
 
   uniqueChIPCountsWithoutNA <- NULL
@@ -241,12 +241,12 @@ generateReadMatrices <- function( chipfile, inputfile, input.suffix, target, chi
   ##message(dim(uniqueChIPCountsWithoutNA))
   ##message(dim(uniqueInputCountsWithoutNA))
   
-  uniquechipcounts <- matrix( 1, nrow = length( target ), ncol = length( unique( chipfile ) ) )
-  uniqueinputcounts <- matrix( 1, nrow = length( target), ncol = length( unique( inputfile ) ) )
+  uniquechipcounts <- matrix(1, nrow = length(target), ncol = length(unique(chipfile)))
+  uniqueinputcounts <- matrix(1, nrow = length(target), ncol = length(unique(inputfile)))
   inputfile[is.na(inputfile)] <- "NA"
   chipfile[is.na(chipfile)] <- "NA"
-  colnames( uniqueinputcounts ) <- unique( inputfile )
-  colnames( uniquechipcounts ) <- unique( chipfile )
+  colnames(uniqueinputcounts) <- unique(inputfile)
+  colnames(uniquechipcounts) <- unique(chipfile)
   if(!is.null(uniqueChIPCountsWithoutNA)) {
       uniquechipcounts[, colnames(uniquechipcounts) != "NA"] <- uniqueChIPCountsWithoutNA
   }
@@ -254,15 +254,15 @@ generateReadMatrices <- function( chipfile, inputfile, input.suffix, target, chi
       uniqueinputcounts[, colnames(uniqueinputcounts) != "NA"] <- uniqueInputCountsWithoutNA
   }
   
-  allchipcounts <- allinputcounts <- matrix( 0, nrow = length( target ), ncol = nfiles )
+  allchipcounts <- allinputcounts <- matrix(0, nrow = length(target), ncol = nfiles)
 
-  for( i in seq_len( nfiles ) ){
+  for(i in seq_len(nfiles)) {
     allchipcounts[ , i ] <- uniquechipcounts[ , chipfile[i] ]
     allinputcounts[ , i ] <- uniqueinputcounts[ , inputfile[i] ]
   }
 
   gc()
-  return( list( chip = allchipcounts, input = allinputcounts, target = target ) )
+  return(list(chip = allchipcounts, input = allinputcounts, target = target))
   
 }
 
@@ -284,61 +284,61 @@ generateReadMatrices <- function( chipfile, inputfile, input.suffix, target, chi
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @useDynLib MBASIC
 #' @export
-averageMGC <- function( target, m.prefix, m.suffix = NULL, gc.prefix, gc.suffix = NULL ){
-  if( class( target ) != "GRanges" )
-    stop( "Error: target must be a GRanges object." )
-  if( is.null( m.prefix ) & is.null( m.suffix ) )
-    stop( "Error: either m.prefix or m.suffix must not be null." )
-  if( is.null( gc.prefix ) & is.null( gc.suffix ) )
-    stop( "Error: either gc.prefix or gc.suffix must not be null." )
+averageMGC <- function(target, m.prefix, m.suffix = NULL, gc.prefix, gc.suffix = NULL) {
+  if(class(target) != "GRanges")
+    stop("Error: target must be a GRanges object.")
+  if(is.null(m.prefix) & is.null(m.suffix))
+    stop("Error: either m.prefix or m.suffix must not be null.")
+  if(is.null(gc.prefix) & is.null(gc.suffix))
+    stop("Error: either gc.prefix or gc.suffix must not be null.")
 
-  if( is.null( m.suffix ) & !file.exists( m.prefix ) )
-    stop( paste( "Error: the file", m.prefix, "does not exist." ) )
-  if( is.null( gc.suffix ) & !file.exists( gc.prefix ) )
-    stop( paste( "Error: the file", gc.prefix, "does not exist." ) )
+  if(is.null(m.suffix) & !file.exists(m.prefix))
+    stop(paste("Error: the file", m.prefix, "does not exist."))
+  if(is.null(gc.suffix) & !file.exists(gc.prefix))
+    stop(paste("Error: the file", gc.prefix, "does not exist."))
   
-  target.sorted <- sort( target )
-  if( prod( target == target.sorted ) == 0 )
-    message( "Warning: target is not sorted. The elements of target will be reordered." )
+  target.sorted <- sort(target)
+  if(prod(target == target.sorted) == 0)
+    message("Warning: target is not sorted. The elements of target will be reordered.")
   target <- target.sorted
 
   allmap <- allgc <- NULL
   
-  if( is.null( m.suffix ) ){
-    allmap <- read.table( m.prefix )
-    names( allmap ) <- c( "chr", "pos", "score" )
-    allmap$chr <- as.character( allmap$chr )
+  if(is.null(m.suffix)) {
+    allmap <- read.table(m.prefix)
+    names(allmap) <- c("chr", "pos", "score")
+    allmap$chr <- as.character(allmap$chr)
   }
-  if( is.null( gc.suffix ) ){
-    allgc <- read.table( gc.prefix )
-    names( allgc ) <- c( "chr", "pos", "score" )
-    allgc$chr <- as.character( allgc$chr )
+  if(is.null(gc.suffix)) {
+    allgc <- read.table(gc.prefix)
+    names(allgc) <- c("chr", "pos", "score")
+    allgc$chr <- as.character(allgc$chr)
   }
   
   allmgc <- NULL
-  for( chr in as.character( unique( seqnames( target ) ) ) ){
-    message( paste( "processing", chr ) )
-    if( !is.null( m.suffix ) )
-      map <- as.matrix( read.table( paste( m.prefix, chr, m.suffix, sep = "" ) ) )
+  for(chr in as.character(unique(seqnames(target)))) {
+    message(paste("processing", chr))
+    if(!is.null(m.suffix))
+      map <- as.matrix(read.table(paste(m.prefix, chr, m.suffix, sep = "")))
     else
-      map <- as.matrix( allmap[ allmap$chr == chr, -1 ] )
-    message( "read mappability file" )
+      map <- as.matrix(allmap[ allmap$chr == chr, -1 ])
+    message("read mappability file")
     
-    if( !is.null( gc.suffix ) )
-      gc <- as.matrix( read.table( paste( gc.prefix, chr, gc.suffix, sep = "" ) ) )
+    if(!is.null(gc.suffix))
+      gc <- as.matrix(read.table(paste(gc.prefix, chr, gc.suffix, sep = "")))
     else
-      gc <- as.matrix( allgc[ allgc$chr == chr, -1 ] )
-    message( "read gc file" )
+      gc <- as.matrix(allgc[ allgc$chr == chr, -1 ])
+    message("read gc file")
     
-    genecoord <- cbind( start( ranges( target[ seqnames( target ) == chr ] ) ),
-                   end( ranges( target[ seqnames( target ) == chr ] ) ) )
-    avgmgc <- .Call( "avg_score", genecoord, map[ , 2 ], gc[ , 2 ], diff( map[ 1:2, 1 ] ), diff( gc[ 1:2, 1 ] ), package = "MBASIC" )
-    allmgc <- rbind( allmgc, avgmgc )
+    genecoord <- cbind(start(ranges(target[ seqnames(target) == chr ])),
+                   end(ranges(target[ seqnames(target) == chr ])))
+    avgmgc <- .Call("avg_score", genecoord, map[ , 2 ], gc[ , 2 ], diff(map[ 1:2, 1 ]), diff(gc[ 1:2, 1 ]), package = "MBASIC")
+    allmgc <- rbind(allmgc, avgmgc)
   }
 
-  elementMetadata( target )[[ "mappability" ]] <- allmgc[ , 1 ]
-  elementMetadata( target )[[ "GC" ]] <- allmgc[ , 2 ]
-  return( target )
+  elementMetadata(target)[[ "mappability" ]] <- allmgc[ , 1 ]
+  elementMetadata(target)[[ "GC" ]] <- allmgc[ , 2 ]
+  return(target)
   
 }
 
@@ -347,33 +347,38 @@ averageMGC <- function( target, m.prefix, m.suffix = NULL, gc.prefix, gc.suffix 
 #' @param inputdat A matrix for the input counts at each locus (column) for each experiment (row).
 #' @param target A \link{GRanges} object with two fiels named "mappability" and "GC".The length of target must be the same as the column of inputdat.
 #' @param nknots A integer for the number of knots for the spline function. Default: 2.
-#' @param family A string for the distributional family. Must be either "lognormal" ( default ) or "negbin".
+#' @param family A string for the distributional family. Must be either "lognormal" (default) or "negbin".
 #' @return A numeric matrix for the background counts at each locus (column) for each experiment (row).
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @export
-bkng_mean <- function( inputdat, target, nknots = 2, family = "lognormal" ){
-  if( class( target ) != "GRanges" )
-    stop( "Error: target must be a GRanges object." )
-  if( length( target ) != nrow( inputdat ) )
-    stop( "Error: length of target must be the same as number of columns in inputdat." )
-  if( ! family %in% c( "lognormal", "negbin" ) )
-    stop( "Error: family must be either lognormal or negbin." )
+bkng_mean <- function(inputdat, target, nknots = 2, family = "lognormal") {
+  options(warn = -1)
+  if(class(target) != "GRanges")
+    stop("Error: target must be a GRanges object.")
+  if(length(target) != nrow(inputdat))
+    stop("Error: length of target must be the same as number of columns in inputdat.")
+  if(! family %in% c("lognormal", "negbin"))
+    stop("Error: family must be either lognormal or negbin.")
 
-  gc_bs <- splines::bs( target$GC, knots = quantile( target$GC, prob = seq( 0, 1, length = nknots + 2 )[ 2 : ( nknots + 1 ) ] ) )
-  map_bs <- splines::bs( target$mappability, knots = quantile( target$mappability, prob = seq(0, 1, length = nknots + 2 )[ 2 : (nknots + 1 ) ] ), degree = 1 )
+  gc_bs <- splines::bs(target$GC, knots = quantile(target$GC, prob = seq(0, 1, length = nknots + 2)[ 2 : (nknots + 1) ]))
+  map_bs <- splines::bs(target$mappability, knots = quantile(target$mappability, prob = seq(0, 1, length = nknots + 2)[ 2 : (nknots + 1) ]), degree = 1)
 
   Mu0 <- inputdat
-  for( i in seq_len( ncol( inputdat ) ) ){
-    if( family == "lognormal" ){
-      fit <- lm( log( inputdat[ , i ] + 1 ) ~ gc_bs + map_bs )
-      Mu0[ , i ] <- predict( fit )
+  for(i in seq_len(ncol(inputdat))) {
+    if(var(inputdat[, i]) == 0) {
+      Mu0[, i] <- inputdat[1, 1]
+      next
+    }
+    if(family == "lognormal") {
+      fit <- lm(log(inputdat[ , i ] + 1) ~ gc_bs + map_bs)
+      Mu0[ , i ] <- predict(fit)
     }  else {
-      fit <- glm.nb( inputdat[ , i ] ~ gc_bs + map_bs )
-      Mu0[ , i ] <- exp( predict.glm( fit ) )
+      fit <- glm.nb(inputdat[ , i ] ~ gc_bs + map_bs)
+      Mu0[ , i ] <- exp(predict.glm(fit))
     }
   }
 
-  return( Mu0 )
+  return(Mu0)
 }
 
  
@@ -388,33 +393,33 @@ bkng_mean <- function( inputdat, target, nknots = 2, family = "lognormal" ){
 #' @return A \link{GRanges} object.
 #' @author Samuel Younkin \email{syounkin@@stat.wisc.edu}
 #' @export
-readReads <- function(reads, extended, fragLen = 200, pairedEnd = FALSE, use.names = FALSE, format){
-  if( pairedEnd ){ # Paired-end reads
-    if( format == "BAM" ){
+readReads <- function(reads, extended, fragLen = 200, pairedEnd = FALSE, use.names = FALSE, format) {
+  if(pairedEnd) { # Paired-end reads
+    if(format == "BAM") {
       ga.pairs <- readGAlignmentPairs(file = reads, format = "BAM", use.names = use.names)
       reads.gr <- granges(ga.pairs)
       rm(ga.pairs)
       gc()
       return(reads.gr)
-    }else{
+    } else {
       stop("Paired-end format must be BAM.")
     }
-  }else{ # Single-end reads
-    if( format == "BED" ){
-      reads <- scan( file = reads, what = list("",1L,1L,"",1L,""))
+  } else { # Single-end reads
+    if(format == "BED") {
+      reads <- scan(file = reads, what = list("",1L,1L,"",1L,""))
       names(reads) <- c("chr","start","end", "unknown", "unknown2", "strand")
-      reads.gr <- with(reads, GRanges( seqnames = chr, ranges = IRanges(start=start,end=end), strand = strand))
+      reads.gr <- with(reads, GRanges(seqnames = chr, ranges = IRanges(start=start,end=end), strand = strand))
       rm(reads)
       gc()
-    }else if (format == "BAM"){
+    }else if (format == "BAM") {
       ga.single <- readGAlignments(file = reads, format = format, use.names = use.names)
       reads.gr <- granges(ga.single)
       rm(ga.single)
       gc()
-    }else{
+    } else {
       stop("Single end format must be BED or BAM.")
     }
-    if( extended ){
+    if(extended) {
       reads.forward <- reads.gr[strand(reads.gr)=="+"]
       reads.reverse <- reads.gr[strand(reads.gr)=="-"]
       reads.forward.extended <- GRanges(seqnames=seqnames(reads.forward), ranges = IRanges(start = start(reads.forward), width = fragLen), strand = "+")

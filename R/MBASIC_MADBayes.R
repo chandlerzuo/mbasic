@@ -22,19 +22,19 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
 
   ## Initialize
   ## prespecified
-  K <- length( unique( fac ) )
-  I <- ncol( Y )
-  N <- nrow( Y )
-  if( length( fac ) != N )
-    stop( "Error: total number of replicates do not match with the number of rows in Y" )
+  K <- length(unique(fac))
+  I <- ncol(Y)
+  N <- nrow(Y)
+  if(length(fac) != N)
+    stop("Error: total number of replicates do not match with the number of rows in Y")
 
-  if( prod( dim( Y ) == dim( Mu0 ) ) != 1 )
-    stop( "Error: dimensions for Y and Mu0 must be the same." )
+  if(prod(dim(Y) == dim(Mu0)) != 1)
+    stop("Error: dimensions for Y and Mu0 must be the same.")
 
   ## design matrix D is K by N
-  Dmat <- matrix( 0, nrow = K, ncol = length( fac ) )
-  for( k in 1:K ){
-    Dmat[ k, fac == unique( fac )[ k ] ] <- 1
+  Dmat <- matrix(0, nrow = K, ncol = length(fac))
+  for(k in 1:K) {
+    Dmat[ k, fac == unique(fac)[ k ] ] <- 1
   }
 
   ## Scale the data from different replicates
@@ -44,7 +44,7 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
     Mu0 <- Y - Y + 1
   }
   ## normalize the Mu0
-  Mu0 <- Mu0 / rep( apply(Mu0, 1, mean ), ncol( Mu0 ) )
+  Mu0 <- Mu0 / rep(apply(Mu0, 1, mean), ncol(Mu0))
   Gamma <- t(Mu0)
   Y <- t(log(Y+1) / scaleFactor)
   Gamma <- cbind(Gamma, matrix(0, nrow = nrow(Gamma), ncol = ncol(Gamma) * (S - 1)))
@@ -75,12 +75,12 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
     message("Initialize clusters...")
   J <- max(c(as.integer(sqrt(I) / 4), 2))
   if(FALSE) {
-    d <- dist( Theta, method = "manhattan" )
-    mind <- apply( as.matrix(d), 1, function( x ) min( x[x>0] ) )
-    thr <- quantile( mind, 1 - zeta )
+    d <- dist(Theta, method = "manhattan")
+    mind <- apply(as.matrix(d), 1, function(x) min(x[x>0]))
+    thr <- quantile(mind, 1 - zeta)
     b <- as.integer(mind > thr)
-    hcfit <- hclust( d )
-    States <- cutree( hcfit, k = J ) - 1
+    hcfit <- hclust(d)
+    States <- cutree(hcfit, k = J) - 1
   } else {
     b <- sample(c(0, 1), I, prob = c(1 - zeta, zeta), replace = TRUE)
     States <- sample(seq(J), I, replace = TRUE) - 1
@@ -133,9 +133,9 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
   if(!is.null(para)) {
     Theta.err = mean(para$Theta != t(ret$Theta + 1))
     W.f <- matrix(0, nrow = K * S, ncol = J)
-    for( s in seq_len( S ) )
-      W.f[ s + S * seq( 0, K - 1 ), ] <- W[ seq_len( K ) + K * ( s - 1 ), ]
-    mc <- matchCluster( W.f, para$W, Z, para$Z, rep(0, I), para$non.id)
+    for(s in seq_len(S))
+      W.f[ s + S * seq(0, K - 1), ] <- W[ seq_len(K) + K * (s - 1), ]
+    mc <- matchCluster(W.f, para$W, Z, para$Z, rep(0, I), para$non.id)
     W.err <- mc$W.err
     ari <- mc$ari
     mcr <- mc$mcr
@@ -195,7 +195,7 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
         W = loss.w,
         P = loss.p,
         Silhouette = silhouette)
-      )
+    )
 
 }
 
@@ -254,5 +254,5 @@ MBASIC.MADBayes.full <- function(Y, Mu0, fac, lambdap = 15, lambdaw = 0.5, lambd
   return(list(BestFit = bestFit,
               Iter = allIter,
               Loss = allLoss)
-         )
+       )
 }
