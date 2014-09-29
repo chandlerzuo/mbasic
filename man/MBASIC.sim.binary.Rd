@@ -17,7 +17,7 @@ MBASIC.sim.binary(I, fac, J, f, struct = NULL, beta = 0.1, zeta = 0.1,
 
 \item{struct}{An K by J integer matrix. The j-th column denotes the levels for the cluster level parameter. See details for more information. Default: NULL.}
 
-\item{beta}{Hyper parameter for simulating the entries of the W matrix. Each entry in the W matrix follows distribution Beta( beta, beta ). Default: 0.1.}
+\item{beta}{Hyper parameter for simulating the entries of the W matrix. Each entry in the W matrix follows distribution Beta(beta, beta). Default: 0.1.}
 
 \item{zeta}{The probability that each unit does not belong to any cluster. Default: 0.1.}
 
@@ -46,7 +46,7 @@ fac \tab A vector of length N denoting the experimental condition for each repli
 This function simulates MBASIC model with two states: background or binding. This mimics the standard ChIP-seq experiment.
 }
 \examples{
-dat.sim <- MBASIC.sim.binary( I = 100, fac = rep( 1:5, each = 2 ), J = 3, f = 5 )
+dat.sim <- MBASIC.sim.binary(I = 100, fac = rep(1:5, each = 2), J = 3, f = 5)
 }
 \author{
 Chandler Zuo \email{zuo@stat.wisc.edu}

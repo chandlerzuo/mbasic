@@ -12,7 +12,7 @@ bkng_mean(inputdat, target, nknots = 2, family = "lognormal")
 
 \item{nknots}{A integer for the number of knots for the spline function. Default: 2.}
 
-\item{family}{A string for the distributional family. Must be either "lognormal" ( default ) or "negbin".}
+\item{family}{A string for the distributional family. Must be either "lognormal" (default) or "negbin".}
 }
 \value{
 A numeric matrix for the background counts at each locus (column) for each experiment (row).

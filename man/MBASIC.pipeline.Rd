@@ -3,9 +3,10 @@
 \alias{MBASIC.pipeline}
 \title{The pipeline for fitting a MBASIC model for sequencing data.}
 \usage{
-MBASIC.pipeline(chipfile, inputfile, input.suffix, target, format, fragLen,
-  pairedEnd, unique, m.prefix, m.suffix, gc.prefix, gc.suffix, fac, struct, J,
-  family, burnin = 20, maxitr = 100, tol = 1e-04, nsig = 2, datafile)
+MBASIC.pipeline(chipfile, inputfile, input.suffix, target, chipformat,
+  inputformat, fragLen, pairedEnd, unique, m.prefix, m.suffix, gc.prefix,
+  gc.suffix, fac, struct, J, family, burnin = 20, maxitr = 100,
+  tol = 1e-04, nsig = 2, datafile)
 }
 \arguments{
 \item{chipfile}{A string vector for the ChIP files.}
@@ -16,7 +17,9 @@ MBASIC.pipeline(chipfile, inputfile, input.suffix, target, format, fragLen,
 
 \item{target}{A GenomicRanges object for the target intervals where the reads are mapped.}
 
-\item{format}{A string specifying the type of the file. Currently two file types are allowed: "BAM" or "BED". Default: "BAM".}
+\item{chipformat}{A string specifying the type of the ChIP file. Currently two file types are allowed: "BAM" or "BED". Default: "BAM".}
+
+\item{inputformat}{A string specifying the type of the input files. Currently two file types are allowed: "BAM" or "BED". Default: "BAM".}
 
 \item{fragLen}{Either a single value or a 2-column matrix of the fragment lengths for the chip and input files.  Default: 150.}
 
@@ -59,10 +62,10 @@ The pipeline for fitting a MBASIC model for sequencing data.
 \examples{
 \dontrun{
 ## This is the example in our vignette
-target <- generateSyntheticData( dir = "syntheticData" )
-tbl <- ChIPInputMatch( dir = paste( "syntheticData/", c( "chip", "input" ), sep = "" ),suffix = ".bed", depth = 5 )
-conds <- paste( tbl$cell, tbl$factor, sep = "." )
-MBASIC.fit <- MBASIC.pipeline( chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, format = "BED", fragLen = 150, pairedEnd = FALSE, unique = TRUE, m.prefix = "syntheticData/mgc/", m.suffix = "_M.txt", gc.prefix = "syntheticData/mgc/", gc.suffix = "_GC.txt", fac = conds, struct = NULL, J = 3, family = "negbin", burnin = 20, maxitr = 100, tol = 1e-4, nsig = 2, datafile = NULL )
+target <- generateSyntheticData(dir = "syntheticData")
+tbl <- ChIPInputMatch(dir = paste("syntheticData/", c("chip", "input"), sep = ""),suffix = ".bed", depth = 5)
+conds <- paste(tbl$cell, tbl$factor, sep = ".")
+MBASIC.fit <- MBASIC.pipeline(chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, format = "BED", fragLen = 150, pairedEnd = FALSE, unique = TRUE, m.prefix = "syntheticData/mgc/", m.suffix = "_M.txt", gc.prefix = "syntheticData/mgc/", gc.suffix = "_GC.txt", fac = conds, struct = NULL, J = 3, family = "negbin", burnin = 20, maxitr = 100, tol = 1e-4, nsig = 2, datafile = NULL)
 }
 }
 \author{

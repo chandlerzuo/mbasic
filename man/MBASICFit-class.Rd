@@ -22,7 +22,7 @@
 \item{e}{NULL except if this object is fitted by the 'MBASIC.binary' function. In that case, this is a vector of length N. The n-th entry is the normalization value for the background of the n-th experiment.}
 \item{probz}{A vector of length J. The j-th entry is the hyper probability of any locus to belong to the j-th cluster.}
 \item{P}{A matrix of length I by S. The (i,s)-th entry is the probability for the i-th locus to have state s, conditional on that this locus does not belong to any cluster.}
-\item{ converged}{Whether the final model is converged.}
+\item{converged}{Whether the final model is converged.}
 \item{Theta.err}{Mean absolute differences between the finally fitted Theta matrix and the true value passed by the 'para' argument.}
 \item{ARI}{Adjusted Rand Index between the fitted clustering and the true clustering passed by the 'para' argument.}
 \item{W.err}{Mean squared error between the elements of the fitted W matrix in the final model and the true values passed by the 'para' argument.}

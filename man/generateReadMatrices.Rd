@@ -32,7 +32,7 @@ generateReadMatrices(chipfile, inputfile, input.suffix, target,
 A list of two matrices:
 \tabular{ll}{
 chip \tab A matrix for the number of mapped reads at each target interval (row) from each ChIP file (column).\cr
-input \tab A matrix for the number of mapped reads at each target interval( row) from matching input files for the ChIP file (column).\cr
+input \tab A matrix for the number of mapped reads at each target interval(row) from matching input files for the ChIP file (column).\cr
 target \tab A GRanges object with sorted elements.\cr
 }
 }

@@ -49,10 +49,10 @@ A list containing:
 Simulate data for the general MBASIC model.
 }
 \details{
-MBASIC.sim allows two types of distributions. For the "lognormal" family, entries in the matrix Y follows distribution: log( Y[n,i] + 1 ) | Theta[n,i]=s ~ N( Mu[n,s], stdev[s] ). For the "negbin" family, entris in the matrix Y follows distribution: Y[n,i] | Theta[n,i]=s ~ NB( Mu[n,s], stdev[s] ). In this package, NB(mu,size) denotes a Negative binomial distribution with mean mu and variance mu(1+mu/size). For both distributions, Mu[n,s]~N(prior.mean[s],prior.sd[s]). Hyper paramters prior.mean and prior.sd are set differently under the two distributional families. For the "lognormal" family, where prior.mean[s] = xi+log((s-1)(f-1)+1), and prior.sd=log(f)/30. For the "negbin" family, prior.mean[s]=xi*((s-1)(f-1)+1), and prior.sd=(f-1)*xi/6. In general, xi is the mean for the state S=1, and f is roughly the ratio between the means from state S=2 and S=1.
+MBASIC.sim allows two types of distributions. For the "lognormal" family, entries in the matrix Y follows distribution: log(Y[n,i] + 1) | Theta[n,i]=s ~ N(Mu[n,s], stdev[s]). For the "negbin" family, entris in the matrix Y follows distribution: Y[n,i] | Theta[n,i]=s ~ NB(Mu[n,s], stdev[s]). In this package, NB(mu,size) denotes a Negative binomial distribution with mean mu and variance mu(1+mu/size). For both distributions, Mu[n,s]~N(prior.mean[s],prior.sd[s]). Hyper paramters prior.mean and prior.sd are set differently under the two distributional families. For the "lognormal" family, where prior.mean[s] = xi+log((s-1)(f-1)+1), and prior.sd=log(f)/30. For the "negbin" family, prior.mean[s]=xi*((s-1)(f-1)+1), and prior.sd=(f-1)*xi/6. In general, xi is the mean for the state S=1, and f is roughly the ratio between the means from state S=2 and S=1.
 }
 \examples{
-dat.sim <- MBASIC.sim( xi = 2, I = 100, fac = rep( 1:5, each = 2 ), J = 3 )
+dat.sim <- MBASIC.sim(xi = 2, I = 100, fac = rep(1:5, each = 2), J = 3)
 }
 \author{
 Chandler Zuo \email{zuo@stat.wisc.edu}

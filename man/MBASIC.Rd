@@ -30,7 +30,7 @@ MBASIC(Y, S, fac, J = NULL, maxitr = 100, struct = NULL, para = NULL,
 
 \item{tol}{Tolerance for error in checking the E-M algorithm's convergence. Default: 1e-04.}
 
-\item{out}{The file directory for writing fitting information in each E-M iteration. Default: NULL ( no information is outputted ).}
+\item{out}{The file directory for writing fitting information in each E-M iteration. Default: NULL (no information is outputted).}
 }
 \value{
 An object of class 'MBASICFit'.
@@ -40,8 +40,8 @@ This function is designed to analyze general state-space models. The data consis
 }
 \details{
 Function MBASIC currently supports two different distributional families: log-normal and negative binomial. This should be specified by the 'family' argument.\cr
-For the log-normal distributions, log(Y+1) is modeled as normal distributions. For experiment n, if locus i has state s, distribution for log(Y[n,i]+1) is N( Mu[n,s], Sigma[n,s] ).\cr
-For the negative binomial distributions, the meanings of Mu and Sigma are different. For experiment n, if locus i has state s, distribution of Y[n,i] is NB( Mu[n,s], Sigma[n,s] ). In this package, NB( mu, a ) denotes the negative-binomial distribution with mean mu and size a (i.e. the variance is mu*(1+mu/a) ).\cr
+For the log-normal distributions, log(Y+1) is modeled as normal distributions. For experiment n, if locus i has state s, distribution for log(Y[n,i]+1) is N(Mu[n,s], Sigma[n,s]).\cr
+For the negative binomial distributions, the meanings of Mu and Sigma are different. For experiment n, if locus i has state s, distribution of Y[n,i] is NB(Mu[n,s], Sigma[n,s]). In this package, NB(mu, a) denotes the negative-binomial distribution with mean mu and size a (i.e. the variance is mu*(1+mu/a)).\cr
  The 'method' argument determines what fitting method will be used. The default is 'em', where the states and the clustering are simultaneously estimated. 'naive' and '2em' methods use 2-step algorithms. In the first step, both estimate the states for each unit by an E-M algorithm for each experiment. In the second step, 'naive' uses hierarchical clustering to cluster the units, while '2em' uses function 'MBASIC.state' to identify clusters.\cr
 The 'para' argument takes a list object that is supposed to include the following fields:
 \tabular{ll}{
@@ -54,9 +54,9 @@ This argument is intended to carry the true parameters in simulation studies. If
 }
 \examples{
 ## Simulate a dataset
-dat.sim <- MBASIC.sim( xi = 2, family = "lognormal", I = 1000, fac = rep( 1:10, each = 2 ), J = 3, S = 3, zeta = 0.1 )
+dat.sim <- MBASIC.sim(xi = 2, family = "lognormal", I = 1000, fac = rep(1:10, each = 2), J = 3, S = 3, zeta = 0.1)
 ## Fit the model
-dat.sim.fit <- MBASIC( Y = dat.sim$Y, S = 3, fac = rep( 1:10, each = 2), J = 3, maxitr = 3, para = NULL, family = "lognormal", method = "em", zeta = 0.1, tol = 1e-04)
+dat.sim.fit <- MBASIC(Y = dat.sim$Y, S = 3, fac = rep(1:10, each = 2), J = 3, maxitr = 3, para = NULL, family = "lognormal", method = "em", zeta = 0.1, tol = 1e-04)
 }
 \author{
 Chandler Zuo \email{zuo@stat.wisc.edu}

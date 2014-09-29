@@ -23,7 +23,7 @@ MBASIC.state(Theta, J, struct = NULL, method = "2em", zeta = 0.1,
 
 \item{para}{A list object that contains the true model parameters. Default: NULL. See details for more information.}
 
-\item{out}{The file directory for writing fitting information in each E-M iteration. Default: NULL ( no information is outputted ).}
+\item{out}{The file directory for writing fitting information in each E-M iteration. Default: NULL (no information is outputted).}
 }
 \value{
 An object of class 'MBASICFit'.
@@ -42,8 +42,8 @@ non.id \tab A binary vector of length I. The i-th entry is the indicator whether
 This argument is intended to carry the true parameters in simulation studies. If it is not null, then the model also computes a number of metrics that describes the error in model fitting. Users should be cautious that the order of the rows and columns of matrices in the fields of para should match the Y matrix.
 }
 \examples{
-state.sim <- MBASIC.sim.state( I = 1000, K = 10, J = 4, S = 3, zeta = 0.1 )
-state.sim.fit <- MBASIC.state( Theta = state.sim$Theta, J = 4, method = "2em", zeta = 0.1, maxitr = 100, tol = 1e-04 )
+state.sim <- MBASIC.sim.state(I = 1000, K = 10, J = 4, S = 3, zeta = 0.1)
+state.sim.fit <- MBASIC.state(Theta = state.sim$Theta, J = 4, method = "2em", zeta = 0.1, maxitr = 100, tol = 1e-04)
 }
 \author{
 Chandler Zuo \email{zuo@stat.wisc.edu}

@@ -38,7 +38,7 @@ A list containing:
 Simulate for the Theta matrix
 }
 \examples{
-dat.sim <- MBASIC.sim.state( I = 100, K = 10, J = 3 )
+dat.sim <- MBASIC.sim.state(I = 100, K = 10, J = 3)
 }
 \author{
 Chandler Zuo \email{zuo@stat.wisc.edu}

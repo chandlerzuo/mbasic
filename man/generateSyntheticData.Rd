@@ -22,7 +22,7 @@ Each chromosome has a size of 10K, and each locus has 20 bp.
 ChIP data for two celllines, each with K transcription factors, are generated. All ChIP experiments with the same celltype have the same matching input. Each ChIP experiment has randomly 1-3 replicates. Each input has 3 replicates.
 }
 \examples{
-\dontrun{generateSyntheticData( "tmpData/", nchr = 5, K = 5, I = 100, J = 3 ) }
+\dontrun{generateSyntheticData("tmpData/", nchr = 5, K = 5, I = 100, J = 3) }
 }
 \author{
 Chandler Zuo \email{zuo@stat.wisc.edu}
