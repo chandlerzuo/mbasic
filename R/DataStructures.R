@@ -24,8 +24,8 @@
 #'\item{W.err}{Mean squared error between the elements of the fitted W matrix in the final model and the true values passed by the 'para' argument.}
 #'\item{MisClassRate}{Mis-classification rate by comparing the fitted clustering and the true clustering passed by the 'para' argument.}
 #'\item{Iter}{Number of iterations taken.}
-#'\Item{Loss}{A list object for different terms of loss function values.}
-#'\Item{Struct}{A matrix for the structure constraints for each cluster.}
+#'\item{Loss}{A list object for different terms of loss function values.}
+#'\item{Struct}{A matrix for the structure constraints for each cluster.}
 #'}
 #'
 #'@examples showClass("MBASICFit")

@@ -20,6 +20,7 @@
 MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 5, maxitr = 100, S = 2, tol = 0.01, zeta = 0.1,
                             verbose = TRUE, para = NULL) {
 
+  require(cluster)
   ## Initialize
   ## prespecified
   K <- length(unique(fac))
@@ -70,6 +71,7 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
       Sigma[n, s] <- var(foldChange[DTheta[, n] == s - 1, n])
     }
   }
+  Sigma[Sigma <= 0] <- min(Sigma[Sigma > 0])
   ## Initialize cluster
   if(verbose)
     message("Initialize clusters...")
@@ -142,19 +144,23 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
   }
 
   ## Compute the Silhouette score
-  ## Prepare the clusters removing the singletons
-  Theta.cl <- t(ret$Theta[ret$b == 0, ])
-  States.cl <- ret$States[ret$b == 0]
-  ## relabling the cluster labels
-  hashTable <- seq_along(unique(States.cl)) - 1
-  names(hashTable) <- unique(States.cl)
-  States.cl <- hashTable[as.character(States.cl)]
-  if(! prod(sort(c(table(States.cl))) == sort(c(table(ret$States[ret$b == 0]))))) {
-    message("Error in removing dummy state labels.")
+  if(FALSE) {
+    # do not calculate silhouette using self coded
+    ## Prepare the clusters removing the singletons
+    Theta.cl <- t(ret$Theta[ret$b == 0, ])
+    States.cl <- ret$States[ret$b == 0]
+    ## relabling the cluster labels
+    hashTable <- seq_along(unique(States.cl)) - 1
+    names(hashTable) <- unique(States.cl)
+    States.cl <- hashTable[as.character(States.cl)]
+    if(! prod(sort(c(table(States.cl))) == sort(c(table(ret$States[ret$b == 0]))))) {
+      message("Error in removing dummy state labels.")
+    }
+    storage.mode(Theta.cl) <- storage.mode(States.cl) <- "integer"
+    sil <- .Call("silhouette", Theta.cl, States.cl, as.integer(J), package = "MBASIC")
   }
-  storage.mode(Theta.cl) <- storage.mode(States.cl) <- "integer"
 
-  silhouette <- .Call("silhouette", Theta.cl, States.cl, as.integer(J), package = "MBASIC")
+  sil.theta <- mean(silhouette(ret$States, dist(ret$Theta, method = "manhattan"))[, 3])
 
   ## Compute the loss of each term
   Theta.aug <- P.aug <- W.aug <- matrix(0, nrow = K * S, ncol = I)
@@ -168,12 +174,38 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
 
   ## compute the loss of data fitting
   Theta.Y <- ret$Theta %*% Dmat
-  Mu.Y <- Y - Y
+  Mu.Y <- Sigma.Y <- Y - Y
   for(s in seq(S)) {
     id <- which(Theta.Y == s - 1)
     Mu.Y[id] <- (Gamma[, seq(N) + N * (s - 1)] * rep(Mu[, s], each = I))[id]
+    Sigma.Y[id] <- rep(Sigma[, s], each = I)[id]
   }
   loss.y <- mean((Y - Mu.Y) ^ 2)
+
+  ## Add normalized data
+  ## Y: I * N, each column has mean 1
+  Theta.norm <- matrix(0, nrow = I, ncol = K * S)
+  for(s in seq(S)) {
+    denY <- dnorm(Y, mean = rep(Mu[, s], each = I), sd = rep(sqrt(Sigma[, s]), each = I), log = TRUE)
+    Theta.norm[, seq(K) + K * (s - 1)] <- tcrossprod(denY, Dmat)
+  }
+  ## for any i k, max_s Theta.norm[i, k, s] = 0
+  Theta.norm <- Theta.norm - apply(matrix(Theta.norm, nrow = I * K), 1, max)
+  ## avoid getting Inf exponenant
+  Theta.norm[Theta.norm > 5] <- 5
+  Theta.norm <- exp(Theta.norm)
+  Theta.total <- matrix(0, nrow = I, ncol = K)
+  for(s in seq(S)) {
+    Theta.total <- Theta.total + Theta.norm[, (s - 1) * K + seq(K)]
+  }
+  Theta.norm <- Theta.norm / rep(Theta.total, S)
+  dist.norm <- dist(Theta.norm, method = "manhattan")
+  sil.norm <- mean(silhouette(ret$States, dist.norm)[, 3])
+  
+  ## compute sihouette score from composite distance
+  dist.Y <- dist(Y - Mu.Y)
+  dist.Theta <- dist(t(Theta.aug), method = "manhattan")
+  sil.comp <- mean(silhouette(ret$States, dmatrix = as.matrix(dist.Y) + lambdaw * as.matrix(dist.Theta))[, 3])
   
   new("MBASICFit",
       Theta = t(ret$Theta) + 1,
@@ -194,7 +226,9 @@ MBASIC.MADBayes <- function(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 
         Y = loss.y,
         W = loss.w,
         P = loss.p,
-        Silhouette = silhouette)
+        Silhouette.theta = sil.theta,
+        Silhouette.norm = sil.norm,
+        Silhouette.comp = sil.comp)
     )
 
 }
