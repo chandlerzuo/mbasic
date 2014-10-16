@@ -681,17 +681,17 @@ MBASIC.binary.fitall <- function(Y, Mu0, fac, allJ = NULL, allStruct = NULL,
     allliks <- results[1, ]
     allbic <- results[2, ]
     message(paste(round(allliks), collapse = " , "))
+    dat <- data.frame(t(results))
+    names(dat) <- c("Log_Likelihood", "BIC")
+    dat$Model_ID <- seq(nrow(dat))
     ## monitor BIC and likelihood
-    try({
-      pdf(file.path(outdir, "FitScore.pdf"))
-      print(ggplot() + geom_line(aes(x = seq_along(allliks),
-                                     y = allliks)) +
-            xlab("Model") + ylab("Log Likelihood"))
-      print(ggplot() + geom_line(aes(x = seq_along(allbic),
-                                     y = allbic)) +
-            xlab("Model") + ylab("BIC"))
-      dev.off()
-    })
+    localenv <- environment()
+    pdf(file.path(outdir, "FitScore.pdf"))
+    print(ggplot(data = dat, aes(x = Model_ID, y = Log_Likelihood),
+                 environment = localenv) + geom_line())
+    print(ggplot(data = dat, aes(x = Model_ID, y = BIC),
+                 environment = localenv) + geom_line())
+    dev.off()
     gc()
   }
 }
