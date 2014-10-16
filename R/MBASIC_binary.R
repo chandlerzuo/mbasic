@@ -228,9 +228,9 @@ MBASIC.binary <- function(Y, Mu0, fac, J=NULL, zeta=0.2, maxitr = 100, burnin = 
       ## This gives deterministic initialization
 
       ## initialize W, Z, b
-      if(!is.null(outfile)) {
-        save(list = ls(), file = outfile)
-      }
+      ##if(!is.null(outfile)) {
+        ##save(list = ls(), file = outfile)
+      ##}
       if(FALSE) {
         write.out(out, "Initialize the distance matrix.")
         distMat <- dist(t(ProbMat[ , seq_len(I) ]))
@@ -490,26 +490,28 @@ MBASIC.binary <- function(Y, Mu0, fac, J=NULL, zeta=0.2, maxitr = 100, burnin = 
    
       ## save intermediate results
 
-      if((outitr %% 10 == 0) & (!is.null(outfile))) {
-        tmpfit <-            list(
-                W = bestW,
-                V = bestV,
-                b = bestb,
-                Z = predZ,
-                Theta = bestTheta,
-                zeta = bestzeta,
-                aic = - 2 * tail(alllik, 1) + 2 * numpar,
-                bic = - 2 * tail(alllik, 1) + log(N * I) * numpar,
-                aicc = -2 * tail(alllik, 1) + 2 * numpar + 2 * numpar * (numpar + 1) / (N * I - numpar - 1),
-                alllik = alllik,
-                e = e,
-                mu1 = mu1,
-                sigma1 = sigma1,
-                sigma0 = sigma0,
-                p = p,
-                probz = probz
-              )
-        save(tmpfit, file =outfile)
+      if(FALSE) {
+        if((outitr %% 10 == 0) & (!is.null(outfile))) {
+          tmpfit <-  list(
+                          W = bestW,
+                          V = bestV,
+                          b = bestb,
+                          Z = predZ,
+                          Theta = bestTheta,
+                          zeta = bestzeta,
+                          aic = - 2 * tail(alllik, 1) + 2 * numpar,
+                          bic = - 2 * tail(alllik, 1) + log(N * I) * numpar,
+                          aicc = -2 * tail(alllik, 1) + 2 * numpar + 2 * numpar * (numpar + 1) / (N * I - numpar - 1),
+                          alllik = alllik,
+                          e = e,
+                          mu1 = mu1,
+                          sigma1 = sigma1,
+                          sigma0 = sigma0,
+                          p = p,
+                          probz = probz
+                          )
+          save(tmpfit, file =outfile)
+        }
       }
 
       oldpar <- newpar
@@ -651,7 +653,7 @@ MBASIC.binary.fitall <- function(Y, Mu0, fac, allJ = NULL, allStruct = NULL,
                          J = thisJ,
                          struct = thisStruct,
                          zeta = zeta,
-                         maxitr = 100,
+                         maxitr = 50,
                          burnin = 20,
                          outfile = outfile,
                          out = out,
@@ -665,7 +667,7 @@ MBASIC.binary.fitall <- function(Y, Mu0, fac, allJ = NULL, allStruct = NULL,
     return(c(tail(fit@alllik, 1), fit@bic))
   }
   
-  for(i in seq(as.integer(maxitr / 100))) {
+  for(i in seq(as.integer(maxitr / 50))) {
     message("Pass ", i)
     if(FALSE) {
       clusterExport(cl, c("Y", "Mu0", "fac", "allJ", "allStruct", "zeta", "maxitr", "burnin", "family", "tol", "nsig", "min.count", "parent.id", "outdir", "modelIds", "allliks"))

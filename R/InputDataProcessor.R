@@ -109,17 +109,18 @@ ChIPInputMatch <- function(dir, suffices, depth = 5) {
   }
     
   return(data.frame(
-                     chipfile = chipfile,
-                     inputfile = inputfile,
-                     lab = lab,
-                     experiment = exper,
-                     cell = cell,
-                     factor = fac,
-                     control = ctrl,
-                     chipformat = ctype,
-                     inputformat = itype
-                  )
-      )
+                    chipfile = chipfile,
+                    inputfile = inputfile,
+                    lab = lab,
+                    experiment = exper,
+                    cell = cell,
+                    factor = fac,
+                    control = ctrl,
+                    chipformat = ctype,
+                    inputformat = itype,
+                    stringsAsFactors = FASLE
+                    )
+         )
   
 }
 
