@@ -118,7 +118,7 @@ ChIPInputMatch <- function(dir, suffices, depth = 5) {
                     control = ctrl,
                     chipformat = ctype,
                     inputformat = itype,
-                    stringsAsFactors = FASLE
+                    stringsAsFactors = FALSE
                     )
          )
   
