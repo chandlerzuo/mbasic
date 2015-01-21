@@ -15,6 +15,7 @@
  * on Rcpp-devel for a misuse of RcppExport
  */
 using namespace Rcpp;
-RcppExport SEXP e_step_theta( SEXP, SEXP, SEXP, SEXP, SEXP ) ;
+RcppExport SEXP e_step_theta(SEXP, SEXP, SEXP, SEXP, SEXP);
+RcppExport SEXP e_step_theta1(SEXP, SEXP, SEXP, SEXP);
 
 #endif

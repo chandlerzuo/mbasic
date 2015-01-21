@@ -15,6 +15,7 @@
  * on Rcpp-devel for a misuse of RcppExport
  */
 using namespace Rcpp;
-RcppExport SEXP e_step( SEXP, SEXP, SEXP, SEXP, SEXP ) ;
+RcppExport SEXP e_step(SEXP, SEXP, SEXP, SEXP, SEXP);
+RcppExport SEXP e_step1(SEXP, SEXP, SEXP, SEXP);
 
 #endif

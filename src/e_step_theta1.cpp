@@ -1,6 +1,6 @@
 #include "e_step_theta.h"
 
-SEXP e_step_theta(SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _Theta) {
+SEXP e_step_theta1(SEXP _W, SEXP _P, SEXP _probz, SEXP _Theta) {
 
 	// the following parameters are inputs and are not updated
 	NumericMatrix Theta(_Theta);
@@ -8,7 +8,6 @@ SEXP e_step_theta(SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _Theta) {
 	// the following parameters serve both as input, but will be updated in M step as output
         NumericMatrix W(_W);
 	NumericMatrix P(_P);
-	double zeta = as<double>(_zeta);
 	NumericVector probz(_probz);
 	
 	// extract the dimensions
@@ -58,35 +57,16 @@ SEXP e_step_theta(SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _Theta) {
 
 	for(i = 0; i < I; i ++){
 		// b_mean
-
-		double exp1 = log(zeta) + TP(i);
-		double exp2 = log(1 - zeta);
-		double maxexp = TW(i, 0);
-		for(j = 1; j < J; j ++)
-			if(maxexp < TW(i, j))
-				maxexp = TW(i, j);
-
-		double tmp = 0;
-		for(j = 0; j < J; j ++)
-			tmp += probz[ j ] * exp(TW(i, j) - maxexp);
-		exp2 += log(tmp) + maxexp;
-		if(exp1 > exp2)
-			b_mean(i) = 1 / (1 + exp(exp2 - exp1));
-		else
-			b_mean(i) = exp(exp1 - exp2) / (1 + exp(exp1 - exp2));
+		b_mean(i) = 0;
 
 		// predZ
 
 		double tmpexp[ J ];
 		for(j = 0; j < J; j ++){
-			tmpexp[ j ] = log(probz[ j ]);
-			if(TW(i, j) > TP(i))
-				tmpexp[ j ] += log((1 - zeta) + zeta * exp(TP(i) - TW(i, j))) + TW(i, j);
-			else
-				tmpexp[ j ] += log((1 - zeta) * exp(TW(i, j) - TP(i)) + zeta) + TP(i);
+			tmpexp[ j ] = log(probz[ j ]) + TW(i, j);
 		}
 
-		maxexp = tmpexp[ 0 ];
+		double maxexp = tmpexp[ 0 ];
 		for(j = 1; j < J; j ++)
 			if(maxexp < tmpexp[ j ])
 				maxexp = tmpexp[ j ];
@@ -102,7 +82,7 @@ SEXP e_step_theta(SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _Theta) {
 
 		// Zcond
 		for(j = 0; j < J; j ++){
-			exp1 = predZ(i, j) - probz(j) * b_mean(i);
+			double exp1 = predZ(i, j);
 			//exp2 = 1 - b_mean(i);
 			if(exp1 < _LOW)
 				Zcond(i, j) = _LOW;
@@ -123,15 +103,6 @@ SEXP e_step_theta(SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _Theta) {
 
 	}
 
-	zeta = 0;
-	for(i = 0; i < I; i ++)
-		zeta += b_mean[ i ];
-	zeta /= I;
-	if(zeta < _LOW)
-		zeta = _LOW;
-	else if(zeta > 1 - _LOW)
-		zeta = 1 - _LOW;
-	
 	for(j = 0; j < J; j ++){
 		Z_mean(j) /= I;
 		if(Z_mean(j) < _LOW)
@@ -158,7 +129,7 @@ SEXP e_step_theta(SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _Theta) {
 		}
 	
 	Rcpp::List ret = Rcpp::List::create(
-					    Rcpp::Named("zeta") = zeta,
+					    Rcpp::Named("zeta") = 0,
 					    Rcpp::Named("probz") = Z_mean,
 					    Rcpp::Named("W") = W_max,
 					    Rcpp::Named("b_prob") = b_mean,

@@ -122,9 +122,11 @@ logdensity <- function(y, mu, sigma, family) {
   if(family == "lognormal") {
     y <- log(y + 1)
     return(-(y - mu) ^ 2 / sigma / 2 - log(sigma) / 2 - log(2 * pi) / 2 )
+  } else if(family == "negbin") {
+    return(dnbinom(y, mu = mu, size = sigma, log = TRUE))
+  } else {
+    return(dbinom(y, size = sigma, prob = mu, log = TRUE))
   }
-  else
-    return(log(dnbinom(y, mu = mu, size = sigma)))
 }
 
 logit <- function(x) {
@@ -167,9 +169,7 @@ matchCluster <- function(W, W.true, predZ, Z.true, b.prob, non.id) {
   matchId2 <- matrix(-1, nrow = ncol(W.true), ncol = 2)
   
   numMissClass <- 0
-  Z.pred <- cbind(predZ, 0)
-  Z.pred[ b.prob > 0.5 ] <- 0
-  Z.pred[ b.prob> 0.5, J + 1 ] <- 1
+  Z.pred <- cbind(predZ * ( 1- b.prob), b.prob)
   Z.true <- cbind(Z.true, 0)
   Z.true[ non.id, ] <- 0
   Z.true[ non.id, ncol(W.true) + 1] <- 1
