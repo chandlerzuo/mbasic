@@ -305,9 +305,13 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
   W <- .structure(W, struct)
   ## initialize p, probz
   P <- matrix(0, nrow = I, ncol = S)
-  for(s in seq_len(S)) {
-    idx <- seq_len(K) + K * (s - 1)
-    P[,s] <- apply(ProbMat[idx,], 2, mean)
+  if(family != "binom") {
+      for(s in seq_len(S)) {
+          idx <- seq_len(K) + K * (s - 1)
+          P[, s] <- apply(ProbMat[idx, ], 2, mean)
+      }
+  } else {
+      P[, seq(K) + K] <- 1
   }
   probz <- apply(rbind(Z, diag(rep(1, J))), 2, mean)
   
@@ -395,7 +399,9 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     ProbMat <- mcmc.result[["Theta_mean"]]
     ## Maximizers
     zeta <- mcmc.result[["zeta"]]
-    P <- mcmc.result[["P"]]
+    if(family != "binom") {
+        P <- mcmc.result[["P"]]
+    }
     W <- mcmc.result[["W"]]
     probz <- mcmc.result[["probz"]]
     predZ <- mcmc.result[["predZ"]]
@@ -502,4 +508,3 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
       Struct = struct
     )
 }
-
