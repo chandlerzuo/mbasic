@@ -4,7 +4,7 @@
 #' @description This function is designed to analyze general state-space models. The data consists of observations over I units under N experiments with K different conditions. There are S states for each experiment and unit.
 #' @param Y An N by I matrix containing the data from N experiments across I observation units.
 #' @param S An integer for the number of states.
-#' @param fac A vector of levels representing the conditions of each replicate.
+#' @param fac A vector of levels repr1esenting the conditions of each replicate.
 #' @param struct A K by J matrix indicating the structures of each cluster.
 #' @param J The number of clusters to be identified.
 #' @param family The distribution of family to be used. Either "lognormal", "negbin" or "binomial". See details for more information.
@@ -311,7 +311,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
           P[, s] <- apply(ProbMat[idx, ], 2, mean)
       }
   } else {
-      P[, seq(K) + K] <- 1
+      P[, 2] <- 1
   }
   probz <- apply(rbind(Z, diag(rep(1, J))), 2, mean)
   
