@@ -36,7 +36,7 @@
 #' dat.sim.fit <- MBASIC(Y = dat.sim$Y, S = 3, fac = rep(1:10, each = 2), J = 3, maxitr = 3, para = NULL, family = "lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-04)
 #' @useDynLib MBASIC
 #' @export
-MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL,  family="lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-4, out = NULL, X) {
+MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL,  family="lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-4, out = NULL, X = NULL) {
 
   write.out(out, "Started")
   if(! method %in% c("SE-HC", "SE-MC", "PE-MC", "MBASIC")) {
