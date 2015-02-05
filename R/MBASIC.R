@@ -81,33 +81,37 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
   
   ## initialize mu and variance
   Sigma <- Mu <- matrix(0, nrow = N, ncol = S)
+
+  InitMuSigma()
   
-  if(family == "lognormal") {
-    for(s in 1:S) {
-      Y.sec <- c(Y)[c(Y) <= quantile(c(Y), s / S) & c(Y) >= quantile(c(Y), (s - 1) / S)]
-      Mu[, s] <- mean(log(Y.sec + 1))
-      Sigma[, s] <- sd(log(Y.sec + 1))
-      Sigma[Sigma <= 0.01] <- 0.01
-    }
-  } else if(family == "negbin") {
-    for(s in 1:S) {
-      Y.sec <- c(Y)[c(Y) < quantile(c(Y), s / S) & c(Y) > quantile(c(Y), (s - 1) / S)]
-      Mu[, s] <- m1 <- mean(Y.sec)
-      vari <- var(Y.sec)
-      size <- m1 / (vari / m1 - 1)
-      if(size > 0)
-        Sigma[, s] <- size
-      else
-        Sigma[, s] <- 100
-    }
-  } else {
-    ## binomial
-    Y.sec <- Y / X
-    Y.sec[X == 0] <- 0.5
-    for(s in seq(S)) {
-      Y.sec <- c(Y.sec)[c(Y.sec) <= quantile(c(Y.sec), s / S) & c(Y.sec) >= quantile(c(Y.sec), (s - 1) / S)]
-      Mu[, s] <- mean(Y.sec)
-    }
+  if(FALSE) {
+      if(family == "lognormal") {
+          for(s in 1:S) {
+              Y.sec <- c(Y)[c(Y) <= quantile(c(Y), s / S) & c(Y) >= quantile(c(Y), (s - 1) / S)]
+              Mu[, s] <- mean(log(Y.sec + 1))
+              Sigma[, s] <- sd(log(Y.sec + 1))
+              Sigma[Sigma <= 0.01] <- 0.01
+          }
+      } else if(family == "negbin") {
+          for(s in 1:S) {
+              Y.sec <- c(Y)[c(Y) < quantile(c(Y), s / S) & c(Y) > quantile(c(Y), (s - 1) / S)]
+              Mu[, s] <- m1 <- mean(Y.sec)
+              vari <- var(Y.sec)
+              size <- m1 / (vari / m1 - 1)
+              if(size > 0)
+                  Sigma[, s] <- size
+              else
+                  Sigma[, s] <- 100
+          }
+      } else {
+          ## binomial
+          Y.sec <- Y / X
+          Y.sec[X == 0] <- 0.5
+          for(s in seq(S)) {
+              Y.sec <- c(Y.sec)[c(Y.sec) <= quantile(c(Y.sec), s / S) & c(Y.sec) >= quantile(c(Y.sec), (s - 1) / S)]
+              Mu[, s] <- mean(Y.sec)
+          }
+      }
   }
   
   b <- rep(0, I)
@@ -116,38 +120,41 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
   ## initialize the matrices by hierarchical clustering
   ## in constructing Z, cluster all locis
   ## This gives deterministic initialization
-  totalF <- matrix(0, nrow = K, ncol = I)
-  if(family == "lognormal") {
-    F1 <- matrix(0, nrow = K * S, ncol = I)
-    for(s in 1:S) {
-      idx <- (s-1) * K + seq_len(K)
-      F1[idx,] <-  exp(crossprod(t(D) , - (log(Y + 1) - Mu[,s]) ^ 2 / 2 / Sigma[,s]))
-      totalF <- totalF + F1[idx,]
-    }
-  } else if(family == "negbin") {
-    F1 <- matrix(0, nrow = K * S, ncol = I)
-    for(s in 1:S) {
-      idx <- (s-1) * K + seq_len(K)
-      F1[idx,] <-  exp(crossprod(t(D), dnbinom(Y, size = Sigma[,s], mu = Mu[,s], log = TRUE)))
-      totalF <- totalF + F1[idx,]
-    }
-  } else {
-    ## binomial distribution
-    F1 <- matrix(0, nrow = K * S, ncol = I)
-    for(s in 1:S) {
-      idx <- (s-1) * K + seq_len(K)
-      F1[idx,] <-  exp(crossprod(t(D), dbinom(Y, size = X, prob = Mu[, s], log = TRUE)))
-      totalF <- totalF + F1[idx,]
-    }
+  ProbMat <- matrix(0, nrow = K * S, ncol = I)
+  InitProbMat()
+
+  if(FALSE) {
+      totalF <- matrix(0, nrow = K, ncol = I)
+      F1 <- matrix(0, nrow = K * S, ncol = I)
+      if(family == "lognormal") {
+          for(s in 1:S) {
+              idx <- (s-1) * K + seq_len(K)
+              F1[idx,] <-  exp(crossprod(t(D) , - (log(Y + 1) - Mu[,s]) ^ 2 / 2 / Sigma[,s]))
+              totalF <- totalF + F1[idx,]
+          }
+      } else if(family == "negbin") {
+          for(s in 1:S) {
+              idx <- (s-1) * K + seq_len(K)
+              F1[idx,] <-  exp(crossprod(t(D), dnbinom(Y, size = Sigma[,s], mu = Mu[,s], log = TRUE)))
+              totalF <- totalF + F1[idx,]
+          }
+      } else {
+          ## binomial distribution
+          for(s in 1:S) {
+              idx <- (s-1) * K + seq_len(K)
+              F1[idx,] <-  exp(crossprod(t(D), dbinom(Y, size = X, prob = Mu[, s], log = TRUE)))
+              totalF <- totalF + F1[idx,]
+          }
+      }
+      totalF <- t(matrix(rep(c(t(totalF)), S), nrow = I))
+      ProbMat <- F1 / totalF
+      ProbMat[totalF == 0] <- 1/S
+      maxProb <- max(na.omit(ProbMat[ProbMat != 1]))
+      minProb <- min(na.omit(ProbMat[ProbMat != 0]))
+      ProbMat[ProbMat > maxProb] <- max(c(0.999, na.omit(maxProb)))
+      ProbMat[ProbMat < minProb] <- min(c(0.001, na.omit(minProb)))
+      ProbMat[is.na(ProbMat)] <- mean(ProbMat, na.rm = TRUE)
   }
-  totalF <- t(matrix(rep(c(t(totalF)), S), nrow = I))
-  ProbMat <- F1 / totalF
-  ProbMat[totalF == 0] <- 1/S
-  maxProb <- max(na.omit(ProbMat[ProbMat != 1]))
-  minProb <- min(na.omit(ProbMat[ProbMat != 0]))
-  ProbMat[ProbMat > maxProb] <- max(c(0.999, na.omit(maxProb)))
-  ProbMat[ProbMat < minProb] <- min(c(0.001, na.omit(minProb)))
-  ProbMat[is.na(ProbMat)] <- mean(ProbMat, na.rm = TRUE)
   
   if(method != "MBASIC") {
     ## SE-HC, PE-MC or SE-MC method
@@ -165,81 +172,88 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
         idx <- seq_len(K) + (s-1) * K
         Pi[,s] <- apply(ProbMat[idx,], 1 ,mean)
       }
+
+      UpdateMuSigma()
       
-      if(family == "lognormal") {
-        for(s in seq_len(S)) {
-          idx <- SampleToExp + (s - 1) * K
-          Mu[, s] <- apply(log(Y + 1) * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
-          M2 <- apply(log(Y + 1) ^ 2 * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
-          Sigma[,s] <- M2 - Mu[,s] ^2
-          Sigma[Sigma < 0.01] <- 0.01
-        }
-      } else if(family == "negbin"){
-        ## negative binomial family
-        for(s in seq_len(S)) {
-          idx <- SampleToExp + (s-1) * K
-          Mu[,s] <- apply(Y * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
-          M2 <- apply(Y ^ 2 * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
-          M2 <- M2 - Mu[, s] ^ 2
-          Sigma[,s] <- Mu[,s] / (M2 / Mu[, s] - 1)
-          Sigma[Sigma[,s] < 0,] <- 100
-        }
-      } else {
-        ## binomial distribution
-        for(s in seq_len(S)) {
-          idx <- SampleToExp + (s-1) * K
-          Mu[,s] <- apply(Y * ProbMat[idx, ], 1, sum) / apply(X * ProbMat[idx, ], 1, sum)
-        }
-        Mu[is.na(Mu)] <- 0.5
+      if(FALSE) {
+          if(family == "lognormal") {
+              for(s in seq_len(S)) {
+                  idx <- SampleToExp + (s - 1) * K
+                  Mu[, s] <- apply(log(Y + 1) * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
+                  M2 <- apply(log(Y + 1) ^ 2 * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
+                  Sigma[,s] <- M2 - Mu[,s] ^2
+                  Sigma[Sigma < 0.01] <- 0.01
+              }
+          } else if(family == "negbin"){
+              ## negative binomial family
+              for(s in seq_len(S)) {
+                  idx <- SampleToExp + (s-1) * K
+                  Mu[,s] <- apply(Y * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
+                  M2 <- apply(Y ^ 2 * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
+                  M2 <- M2 - Mu[, s] ^ 2
+                  Sigma[,s] <- Mu[,s] / (M2 / Mu[, s] - 1)
+                  Sigma[Sigma[,s] < 0,] <- 100
+              }
+          } else {
+              ## binomial distribution
+              for(s in seq_len(S)) {
+                  idx <- SampleToExp + (s-1) * K
+                  Mu[,s] <- apply(Y * ProbMat[idx, ], 1, sum) / apply(X * ProbMat[idx, ], 1, sum)
+              }
+              Mu[is.na(Mu)] <- 0.5
+          }
+          ## order the means
+          od <-  apply(Mu, 1, order)
+          Mu <- matrix(Mu[cbind(rep(seq_len(N), each = S), c(od))], ncol = S, byrow = TRUE)
+          Sigma <- matrix(Sigma[cbind(rep(seq_len(N), each = S), c(od))], ncol = S, byrow = TRUE)
       }
-      ## order the means
-      od <-  apply(Mu, 1, order)
-      Mu <- matrix(Mu[cbind(rep(seq_len(N), each = S), c(od))], ncol = S, byrow = TRUE)
-      Sigma <- matrix(Sigma[cbind(rep(seq_len(N), each = S), c(od))], ncol = S, byrow = TRUE)
       
       ## E step
-      if(family == "lognormal") {
-        F1  <- matrix(0, nrow = K * S, ncol = I)
-        for(s in 1:S) {
-          idx <- (s-1) * K + seq_len(K)
-          F1[idx,] <-  crossprod(t(D), - (log(Y + 1) - Mu[,s]) ^ 2 / 2 / Sigma[,s] - log(Sigma[, s]) / 2) + log(Pi[,s])
-        }
-      } else if(family == "negbin") {
-        F1 <- matrix(0, nrow = K * S, ncol = I)
-        for(s in 1:S) {
-          idx <- (s-1) * K + seq_len(K)
-          F1[idx,] <-  crossprod(t(D), dnbinom(Y, size = Sigma[,s], mu = Mu[,s], log = TRUE)) + log(Pi[,s])
-        }
-      } else {
-        ## binomial distribution
-        F1 <- matrix(0, nrow = K * S, ncol = I)
-        for(s in 1:S) {
-          idx <- (s-1) * K + seq_len(K)
-          F1[idx, ] <-  crossprod(t(D), dbinom(Y, size = X, prob = Mu[,s], log = TRUE)) + log(Pi[,s])
-        }
-      }
-      F1[is.na(F1)] <- -5000
-      F1[F1 <  -5000] <- -5000
-      F.max <- t(matrix(apply(matrix(t(F1), ncol = S), 1, max), nrow = I))
-      totalF <- matrix(0, nrow = K, ncol = I)
-      for(s in seq_len(S)) {
-        idx <- seq_len(K) + (s-1) * K
-        F1[idx,] <- exp(F1[idx,] - F.max)
-        totalF <- totalF + F1[idx,]
-      }
-      totalF <- t(matrix(rep(c(t(totalF)), S), nrow = I))
-      
-      ProbMat <- F1 / totalF
-      maxProb <- max(ProbMat[ProbMat != 1])
-      minProb <- min(ProbMat[ProbMat != 0])
-      ProbMat[ProbMat > maxProb] <- maxProb
-      ProbMat[ProbMat < minProb] <- minProb
-    }## finish iteration
+      UpdateProbMat()
+      if(FALSE) {
+          if(family == "lognormal") {
+              F1  <- matrix(0, nrow = K * S, ncol = I)
+              for(s in 1:S) {
+                  idx <- (s-1) * K + seq_len(K)
+                  F1[idx,] <-  crossprod(t(D), - (log(Y + 1) - Mu[,s]) ^ 2 / 2 / Sigma[,s] - log(Sigma[, s]) / 2) + log(Pi[,s])
+              }
+          } else if(family == "negbin") {
+              F1 <- matrix(0, nrow = K * S, ncol = I)
+              for(s in 1:S) {
+                  idx <- (s-1) * K + seq_len(K)
+                  F1[idx,] <-  crossprod(t(D), dnbinom(Y, size = Sigma[,s], mu = Mu[,s], log = TRUE)) + log(Pi[,s])
+              }
+          } else {
+              ## binomial distribution
+              F1 <- matrix(0, nrow = K * S, ncol = I)
+              for(s in 1:S) {
+                  idx <- (s-1) * K + seq_len(K)
+                  F1[idx, ] <-  crossprod(t(D), dbinom(Y, size = X, prob = Mu[,s], log = TRUE)) + log(Pi[,s])
+              }
+          }
+          F1[is.na(F1)] <- -5000
+          F1[F1 <  -5000] <- -5000
+          F.max <- t(matrix(apply(matrix(t(F1), ncol = S), 1, max), nrow = I))
+          totalF <- matrix(0, nrow = K, ncol = I)
+          for(s in seq_len(S)) {
+              idx <- seq_len(K) + (s-1) * K
+              F1[idx,] <- exp(F1[idx,] - F.max)
+              totalF <- totalF + F1[idx,]
+          }
+          totalF <- t(matrix(rep(c(t(totalF)), S), nrow = I))
+          
+          ProbMat <- F1 / totalF
+          maxProb <- max(ProbMat[ProbMat != 1])
+          minProb <- min(ProbMat[ProbMat != 0])
+          ProbMat[ProbMat > maxProb] <- maxProb
+          ProbMat[ProbMat < minProb] <- minProb
+      }## finish iteration
+  }
     
     Theta <- matrix(-1, nrow = K, ncol = I)
     for(i in seq_len(K)) {
-      idx <- i + K * (seq_len(S) - 1)
-      Theta[i,] <- apply(ProbMat[idx,], 2, which.max)
+        idx <- i + K * (seq_len(S) - 1)
+        Theta[i,] <- apply(ProbMat[idx,], 2, which.max)
     }
     if(!is.null(para))
       allerr <- mean(Theta != para$Theta)
@@ -420,59 +434,62 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     if(method != "PE-MC") {
       ## skip this step if the method is PE-MC
       ## M-step for Mu and Sigma
-      if(family == "negbin") {
-        for(s in seq_len(S)) {
-          ## estimate for mu1
-          idx <- seq_len(I) + I * (s - 1)
-          F1 <- apply(Y * crossprod(D, ProbMat[, idx]), 1, sum)
-          F2 <- apply(crossprod(D, ProbMat[, idx]), 1, sum)
-          ## rep(apply(ProbMat[, idx], 1, sum), n)
-          Mu[, s] <-  F1 / F2
-          ## estimate sigma1
-          F3 <- apply(Y * Y * crossprod(D, ProbMat[, idx]), 1, sum)
-          Vari <- F3 / F2 - Mu[, s] ^ 2
-          Sigma[, s] <- Mu[, s] / (Vari / Mu[, s] - 1)
-          Sigma[Sigma[, s] < 0] <- 100
+        UpdateMuSigma()
+        if(FALSE) {
+            if(family == "negbin") {
+                for(s in seq_len(S)) {
+                    ## estimate for mu1
+                    idx <- seq_len(I) + I * (s - 1)
+                    F1 <- apply(Y * crossprod(D, ProbMat[, idx]), 1, sum)
+                    F2 <- apply(crossprod(D, ProbMat[, idx]), 1, sum)
+                    ## rep(apply(ProbMat[, idx], 1, sum), n)
+                    Mu[, s] <-  F1 / F2
+                    ## estimate sigma1
+                    F3 <- apply(Y * Y * crossprod(D, ProbMat[, idx]), 1, sum)
+                    Vari <- F3 / F2 - Mu[, s] ^ 2
+                    Sigma[, s] <- Mu[, s] / (Vari / Mu[, s] - 1)
+                    Sigma[Sigma[, s] < 0] <- 100
+                }
+            } else if(family == "lognormal") {
+                for(s in seq_len(S)) {
+                    ## estimate for mu1
+                    idx <- seq_len(I) + I * (s - 1)
+                    F1 <- apply(log(Y + 1) * crossprod(D, ProbMat[, idx]), 1, sum)
+                    F2 <- apply(crossprod(D, ProbMat[, idx]), 1, sum)
+                    ##rep(apply(ProbMat[, idx], 1, sum), n)
+                    Mu[, s] <-  F1 / F2
+                    
+                    ## estimate sigma1
+                    F3 <- apply(log(Y + 1) * log(Y + 1) * crossprod(D, ProbMat[, idx]), 1, sum)
+                    Sigma[, s] <- F3 / F2 - Mu[, s] ^ 2
+                }
+            } else {
+                ## binomial
+                for(s in seq_len(S)) {
+                    ## estimate for mu1
+                    idx <- seq_len(I) + I * (s - 1)
+                    F1 <- apply(Y * crossprod(D, ProbMat[, idx]), 1, sum)
+                    F2 <- apply(X * crossprod(D, ProbMat[, idx]), 1, sum)
+                    ##rep(apply(ProbMat[, idx], 1, sum), n)
+                    Mu[, s] <-  F1 / F2
+                }
+                Mu[is.na(Mu)] <- 0.5
+            }
         }
-      } else if(family == "lognormal") {
-        for(s in seq_len(S)) {
-          ## estimate for mu1
-          idx <- seq_len(I) + I * (s - 1)
-          F1 <- apply(log(Y + 1) * crossprod(D, ProbMat[, idx]), 1, sum)
-          F2 <- apply(crossprod(D, ProbMat[, idx]), 1, sum)
-          ##rep(apply(ProbMat[, idx], 1, sum), n)
-          Mu[, s] <-  F1 / F2
-          
-          ## estimate sigma1
-          F3 <- apply(log(Y + 1) * log(Y + 1) * crossprod(D, ProbMat[, idx]), 1, sum)
-          Sigma[, s] <- F3 / F2 - Mu[, s] ^ 2
-        }
-      } else {
-        ## binomial
-        for(s in seq_len(S)) {
-          ## estimate for mu1
-          idx <- seq_len(I) + I * (s - 1)
-          F1 <- apply(Y * crossprod(D, ProbMat[, idx]), 1, sum)
-          F2 <- apply(X * crossprod(D, ProbMat[, idx]), 1, sum)
-          ##rep(apply(ProbMat[, idx], 1, sum), n)
-          Mu[, s] <-  F1 / F2
-        }
-        Mu[is.na(Mu)] <- 0.5
-      }
+        
+        ## order the means
+        od <-  apply(Mu, 1, order)
+        Mu <- matrix(Mu[cbind(rep(seq_len(N), each = S), c(od))], ncol = S, byrow = TRUE)
+        Sigma <- matrix(Sigma[cbind(rep(seq_len(N), each = S), c(od))], ncol = S, byrow = TRUE)
     }
-    
-    ## order the means
-    od <-  apply(Mu, 1, order)
-    Mu <- matrix(Mu[cbind(rep(seq_len(N), each = S), c(od))], ncol = S, byrow = TRUE)
-    Sigma <- matrix(Sigma[cbind(rep(seq_len(N), each = S), c(od))], ncol = S, byrow = TRUE)
-    
+        
     ## convert everything to matrices
     B <- matrix(rep(b, each = K), nrow = K)
     
     ## format ProbMat
     ProbMat.Format <- matrix(0, nrow = K * S, ncol = I)
     for(s in 1:S) {
-      ProbMat.Format[(s - 1) * K + seq_len(K) ,] <- ProbMat[, seq_len(I) + I * (s - 1)]
+        ProbMat.Format[(s - 1) * K + seq_len(K) ,] <- ProbMat[, seq_len(I) + I * (s - 1)]
     }
     ProbMat <- ProbMat.Format
     
@@ -507,4 +524,147 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
       MisClassRate = tail(allmisclass, 1),
       Struct = struct
     )
+}
+
+UpdateProbMat <- function() {
+    totalF <- matrix(0, nrow = K, ncol = I)
+    F1 <- matrix(0, nrow = K * S, ncol = I)
+    if(family == "lognormal") {
+        for(s in 1:S) {
+            idx <- (s-1) * K + seq_len(K)
+            F1[idx,] <-  exp(crossprod(t(D) , - (log(Y + 1) - Mu[,s]) ^ 2 / 2 / Sigma[,s]))
+            totalF <- totalF + F1[idx,]
+        }
+    } else if(family == "negbin") {
+        for(s in 1:S) {
+            idx <- (s-1) * K + seq_len(K)
+            F1[idx,] <-  exp(crossprod(t(D), dnbinom(Y, size = Sigma[,s], mu = Mu[,s], log = TRUE)))
+            totalF <- totalF + F1[idx,]
+        }
+    } else {
+        ## binomial distribution
+        for(s in 1:S) {
+            idx <- (s-1) * K + seq_len(K)
+            F1[idx,] <-  exp(crossprod(t(D), dbinom(Y, size = X, prob = Mu[, s], log = TRUE)))
+            totalF <- totalF + F1[idx,]
+        }
+    }
+    totalF <- t(matrix(rep(c(t(totalF)), S), nrow = I))
+    ProbMat <- F1 / totalF
+    ProbMat[totalF == 0] <- 1/S
+    maxProb <- max(na.omit(ProbMat[ProbMat != 1]))
+    minProb <- min(na.omit(ProbMat[ProbMat != 0]))
+    ProbMat[ProbMat > maxProb] <- max(c(0.999, na.omit(maxProb)))
+    ProbMat[ProbMat < minProb] <- min(c(0.001, na.omit(minProb)))
+    ProbMat[is.na(ProbMat)] <- mean(ProbMat, na.rm = TRUE)
+    assign("ProbMat", ProbMat, envir = parent.frame())
+}
+
+InitMuSigma <- function() {
+    if(family == "lognormal") {
+        for(s in 1:S) {
+            Y.sec <- c(Y)[c(Y) <= quantile(c(Y), s / S) & c(Y) >= quantile(c(Y), (s - 1) / S)]
+            Mu[, s] <- mean(log(Y.sec + 1))
+            Sigma[, s] <- sd(log(Y.sec + 1))
+            Sigma[Sigma <= 0.01] <- 0.01
+        }
+    } else if(family == "negbin") {
+        for(s in 1:S) {
+            Y.sec <- c(Y)[c(Y) < quantile(c(Y), s / S) & c(Y) > quantile(c(Y), (s - 1) / S)]
+            Mu[, s] <- m1 <- mean(Y.sec)
+            vari <- var(Y.sec)
+            size <- m1 / (vari / m1 - 1)
+            if(size > 0)
+                Sigma[, s] <- size
+            else
+                Sigma[, s] <- 100
+        }
+    } else {
+        ## binomial
+        Y.sec <- Y / X
+        Y.sec[X == 0] <- 0.5
+        for(s in seq(S)) {
+            Y.sec <- c(Y.sec)[c(Y.sec) <= quantile(c(Y.sec), s / S) & c(Y.sec) >= quantile(c(Y.sec), (s - 1) / S)]
+            Mu[, s] <- mean(Y.sec)
+        }
+    }
+    assign("Mu", Mu, envir = parent.frame())
+    assign("Sigma", Sigma, envir = parent.frame())
+}
+
+UpdateMuSigma <- function() {
+    if(family == "lognormal") {
+        for(s in seq_len(S)) {
+            idx <- SampleToExp + (s - 1) * K
+            Mu[, s] <- apply(log(Y + 1) * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
+            M2 <- apply(log(Y + 1) ^ 2 * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
+            Sigma[,s] <- M2 - Mu[,s] ^2
+            Sigma[Sigma < 0.01] <- 0.01
+        }
+    } else if(family == "negbin"){
+        ## negative binomial family
+        for(s in seq_len(S)) {
+            idx <- SampleToExp + (s-1) * K
+            Mu[,s] <- apply(Y * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
+            M2 <- apply(Y ^ 2 * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
+            M2 <- M2 - Mu[, s] ^ 2
+            Sigma[,s] <- Mu[,s] / (M2 / Mu[, s] - 1)
+            Sigma[Sigma[,s] < 0,] <- 100
+        }
+    } else {
+        ## binomial distribution
+        for(s in seq_len(S)) {
+            idx <- SampleToExp + (s-1) * K
+            Mu[,s] <- apply(Y * ProbMat[idx, ], 1, sum) / apply(X * ProbMat[idx, ], 1, sum)
+        }
+        Mu[is.na(Mu)] <- 0.5
+    }
+    ## order the means
+    od <-  apply(Mu, 1, order)
+    Mu <- matrix(Mu[cbind(rep(seq_len(N), each = S), c(od))], ncol = S, byrow = TRUE)
+    Sigma <- matrix(Sigma[cbind(rep(seq_len(N), each = S), c(od))], ncol = S, byrow = TRUE)
+
+    assign("Mu", Mu, envir = parent.frame())
+    assign("Sigma", Sigma, envir = parent.frame())
+}
+
+UpdateProbMat <- function() {
+    if(family == "lognormal") {
+        F1  <- matrix(0, nrow = K * S, ncol = I)
+        for(s in 1:S) {
+            idx <- (s-1) * K + seq_len(K)
+            F1[idx,] <-  crossprod(t(D), - (log(Y + 1) - Mu[,s]) ^ 2 / 2 / Sigma[,s] - log(Sigma[, s]) / 2) + log(Pi[,s])
+        }
+    } else if(family == "negbin") {
+        F1 <- matrix(0, nrow = K * S, ncol = I)
+        for(s in 1:S) {
+            idx <- (s-1) * K + seq_len(K)
+            F1[idx,] <-  crossprod(t(D), dnbinom(Y, size = Sigma[,s], mu = Mu[,s], log = TRUE)) + log(Pi[,s])
+        }
+    } else {
+        ## binomial distribution
+        F1 <- matrix(0, nrow = K * S, ncol = I)
+        for(s in 1:S) {
+            idx <- (s-1) * K + seq_len(K)
+            F1[idx, ] <-  crossprod(t(D), dbinom(Y, size = X, prob = Mu[,s], log = TRUE)) + log(Pi[,s])
+        }
+    }
+    F1[is.na(F1)] <- -5000
+    F1[F1 <  -5000] <- -5000
+    F.max <- t(matrix(apply(matrix(t(F1), ncol = S), 1, max), nrow = I))
+    totalF <- matrix(0, nrow = K, ncol = I)
+    for(s in seq_len(S)) {
+        idx <- seq_len(K) + (s-1) * K
+        F1[idx,] <- exp(F1[idx,] - F.max)
+        totalF <- totalF + F1[idx,]
+    }
+    totalF <- t(matrix(rep(c(t(totalF)), S), nrow = I))
+    
+    ProbMat <- F1 / totalF
+    maxProb <- max(ProbMat[ProbMat != 1])
+    minProb <- min(ProbMat[ProbMat != 0])
+    ProbMat[ProbMat > maxProb] <- maxProb
+    ProbMat[ProbMat < minProb] <- minProb
+
+    assign("ProbMat", ProbMat, envir = parent.frame())
 }
