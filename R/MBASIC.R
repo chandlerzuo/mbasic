@@ -675,6 +675,6 @@ UpdateProbMat <- function() {
 
 Inherit <- function() {
     for(v in ls(envir = parent.frame(2))) {
-        set(v, get(v, envir = parent.frame(2)), parent.frame())
+        assign(v, get(v, envir = parent.frame(2)), parent.frame())
     }
 }
