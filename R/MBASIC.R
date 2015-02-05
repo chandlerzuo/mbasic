@@ -526,7 +526,8 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     )
 }
 
-UpdateProbMat <- function() {
+InitProbMat <- function() {
+    Inherit()
     totalF <- matrix(0, nrow = K, ncol = I)
     F1 <- matrix(0, nrow = K * S, ncol = I)
     if(family == "lognormal") {
@@ -561,6 +562,7 @@ UpdateProbMat <- function() {
 }
 
 InitMuSigma <- function() {
+    Inherit()
     if(family == "lognormal") {
         for(s in 1:S) {
             Y.sec <- c(Y)[c(Y) <= quantile(c(Y), s / S) & c(Y) >= quantile(c(Y), (s - 1) / S)]
@@ -593,6 +595,7 @@ InitMuSigma <- function() {
 }
 
 UpdateMuSigma <- function() {
+    Inherit()
     if(family == "lognormal") {
         for(s in seq_len(S)) {
             idx <- SampleToExp + (s - 1) * K
@@ -629,6 +632,7 @@ UpdateMuSigma <- function() {
 }
 
 UpdateProbMat <- function() {
+    Inherit()
     if(family == "lognormal") {
         F1  <- matrix(0, nrow = K * S, ncol = I)
         for(s in 1:S) {
@@ -667,4 +671,10 @@ UpdateProbMat <- function() {
     ProbMat[ProbMat < minProb] <- minProb
 
     assign("ProbMat", ProbMat, envir = parent.frame())
+}
+
+Inherit <- function() {
+    for(v in ls(envir = parent.frame(2))) {
+        set(v, get(v, envir = parent.frame(2)), parent.frame())
+    }
 }
