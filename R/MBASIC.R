@@ -253,7 +253,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     Theta <- matrix(-1, nrow = K, ncol = I)
     for(k in seq_len(K)) {
         idx <- k + K * (seq_len(S) - 1)
-        Theta[i,] <- apply(ProbMat[idx,], 2, which.max)
+        Theta[k,] <- apply(ProbMat[idx,], 2, which.max)
     }
     if(!is.null(para))
       allerr <- mean(Theta != para$Theta)
