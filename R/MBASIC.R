@@ -251,8 +251,8 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
   }
     
     Theta <- matrix(-1, nrow = K, ncol = I)
-    for(i in seq_len(K)) {
-        idx <- i + K * (seq_len(S) - 1)
+    for(k in seq_len(K)) {
+        idx <- k + K * (seq_len(S) - 1)
         Theta[i,] <- apply(ProbMat[idx,], 2, which.max)
     }
     if(!is.null(para))
@@ -371,9 +371,9 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     alllik <- c(alllik, totallik)
     allzeta <- c(allzeta, zeta)
     Theta <- matrix(-1, nrow = K, ncol = I)
-    for(i in seq_len(K)) {
-      idx <- i + K * (seq_len(S) - 1)
-      Theta[i,] <- apply(ProbMat[idx,], 2, which.max)
+    for(k in seq_len(K)) {
+      idx <- k + K * (seq_len(S) - 1)
+      Theta[k,] <- apply(ProbMat[idx,], 2, which.max)
     }
     if(length(names(para)) != 0) {
       allerr <- c(allerr, mean(para$Theta != Theta))
@@ -431,6 +431,13 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     probz <- probz[clustOrder]
     predZ <- predZ[, clustOrder]
 
+    ## format ProbMat
+    ProbMat.Format <- matrix(0, nrow = K * S, ncol = I)
+    for(s in 1:S) {
+        ProbMat.Format[(s - 1) * K + seq_len(K) ,] <- ProbMat[, seq_len(I) + I * (s - 1)]
+    }
+    ProbMat <- ProbMat.Format
+    
     if(method != "PE-MC") {
       ## skip this step if the method is PE-MC
       ## M-step for Mu and Sigma
@@ -485,14 +492,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
         
     ## convert everything to matrices
     B <- matrix(rep(b, each = K), nrow = K)
-    
-    ## format ProbMat
-    ProbMat.Format <- matrix(0, nrow = K * S, ncol = I)
-    for(s in 1:S) {
-        ProbMat.Format[(s - 1) * K + seq_len(K) ,] <- ProbMat[, seq_len(I) + I * (s - 1)]
-    }
-    ProbMat <- ProbMat.Format
-    
+        
     oldpar <- newpar
     newpar <- c(c(W), probz, zeta, c(P), c(Mu), c(Sigma))
     
