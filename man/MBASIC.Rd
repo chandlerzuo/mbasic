@@ -6,14 +6,14 @@
 \usage{
 MBASIC(Y, S, fac, J = NULL, maxitr = 100, struct = NULL, para = NULL,
   family = "lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-04,
-  out = NULL)
+  out = NULL, X = NULL, verbose = FALSE)
 }
 \arguments{
 \item{Y}{An N by I matrix containing the data from N experiments across I observation units.}
 
 \item{S}{An integer for the number of states.}
 
-\item{fac}{A vector of levels representing the conditions of each replicate.}
+\item{fac}{A vector of levels repr1esenting the conditions of each replicate.}
 
 \item{J}{The number of clusters to be identified.}
 
@@ -23,15 +23,17 @@ MBASIC(Y, S, fac, J = NULL, maxitr = 100, struct = NULL, para = NULL,
 
 \item{para}{A list object that contains the true model parameters. Default: NULL. See details for more information.}
 
-\item{family}{The distribution of family to be used. Either "lognormal" or "negbin". See details for more information.}
+\item{family}{The distribution of family to be used. Either "lognormal", "negbin" or "gamma-binom". See details for more information.}
 
 \item{method}{A string for the fitting method, 'MBASIC' (default), 'PE-MC', 'SE-HC',  or 'SE-MC'. See details for more information.}
 
-\item{zeta}{The initial value for the proportion of units that are not clustered. Default: 0.1.}
+\item{zeta}{The initial value for the proportion of units that are not clustered. Default: 0.1. If 0, no singleton cluster is fitted.}
 
 \item{tol}{Tolerance for error in checking the E-M algorithm's convergence. Default: 1e-04.}
 
 \item{out}{The file directory for writing fitting information in each E-M iteration. Default: NULL (no information is outputted).}
+
+\item{verbose}{A boolean variable indicating whether intermediate model fitting metrics should be printed. Default: FALSE.}
 }
 \value{
 An object of class 'MBASICFit'.

@@ -432,7 +432,7 @@ UpdateProbMat <- function() {
 }
 
 PrintUpdate <- function() {
-    inherit()
+    Inherit()
     allerr <- c(allerr, mean(para$Theta != Theta))
     ## compute misclassification rate
     W.f <- matrix(0, nrow = K * S, ncol = J)
