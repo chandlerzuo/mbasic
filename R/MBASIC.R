@@ -387,8 +387,8 @@ InitMuSigma <- function() {
 UpdateMuSigma <- function() {
     Inherit()
     for(s in seq_len(S)) {
+        idx <- SampleToExp + (s - 1) * K
         if(family == "lognormal") {
-            idx <- SampleToExp + (s - 1) * K
             m1 <- apply(log(Y + 1) * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
             m2 <- apply(log(Y + 1) ^ 2 * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
         } else if(family == "negbin"){
