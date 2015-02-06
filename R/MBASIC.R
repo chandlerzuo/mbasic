@@ -404,22 +404,22 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     ## E step
     ## M step for some parameters
     if(zeta > 0) {
-      mcmc.result <- .Call("e_step", W.lik, P, zeta, probz, PDF, package = "MBASIC")
+      estep.result <- .Call("e_step", W.lik, P, zeta, probz, PDF, package = "MBASIC")
     } else {
-      mcmc.result <- .Call("e_step1", W.lik, P, probz, PDF, package = "MBASIC")
+      estep.result <- .Call("e_step1", W.lik, P, probz, PDF, package = "MBASIC")
     }
     
     ## Expected Theta matrix
-    ProbMat <- mcmc.result[["Theta_mean"]]
+    ProbMat <- estep.result[["Theta_mean"]]
     ## Maximizers
-    zeta <- mcmc.result[["zeta"]]
+    zeta <- estep.result[["zeta"]]
     if(family != "binom") {
-        P <- mcmc.result[["P"]]
+        P <- estep.result[["P"]]
     }
-    W <- mcmc.result[["W"]]
-    probz <- mcmc.result[["probz"]]
-    predZ <- mcmc.result[["predZ"]]
-    b.prob <- mcmc.result[["b_prob"]]
+    W <- estep.result[["W"]]
+    probz <- estep.result[["probz"]]
+    predZ <- estep.result[["predZ"]]
+    b.prob <- estep.result[["b_prob"]]
     
     W.aug <- matrix(0, nrow = K * S, ncol = J)
     for(s in 1:S) {
