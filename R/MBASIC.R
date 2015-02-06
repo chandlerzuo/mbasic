@@ -483,12 +483,8 @@ MomentEstimate <- function() {
         a.plus.b <- 1 / (m1 * (1 - m1)) - 1
         a <- m1 * a.plus.b
         b <- a.plus.b - a
-        if(a < 0.01) {
-            a <- 0.01
-        }
-        if(b < 0.01) {
-            b <- 0.01
-        }
+        a[a < 0.01] <- 0.01
+        b[b < 0.01] <- 0.01
         Mu[, s] <- a / (a + b)
         Sigma[, s] <- b
     }
