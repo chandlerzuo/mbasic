@@ -118,7 +118,7 @@ SEXP e_step_theta1(SEXP _W, SEXP _P, SEXP _probz, SEXP _Theta) {
 				total += W_max(k, j + J * s);
 			for(s = 0; s < S; s ++){
 				if(total == 0)
-					W_max(k, j + s * J) = 1 / S;
+					W_max(k, j + s * J) = 1 / (double)S;
 				else if(W_max(k, j + s * J) < _LOW * total)
 					W_max(k, j + s * J) = _LOW;
 				else if(W_max(k, j + s * J) > (1 - _LOW) * total)

@@ -194,10 +194,8 @@ SEXP e_step(SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _PDF) {
 					Theta_mean(k, i + I * s) = _LOW;
 				else if(Theta_mean(k, i + I * s) > 1 - _LOW)
 					Theta_mean(k, i + I * s) = 1 - _LOW;
-				
 			}
 		}
-		
 	}
 	
 	zeta = 0;
@@ -227,8 +225,8 @@ SEXP e_step(SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _PDF) {
 				Theta_b(i, s) = _LOW;
 			else if(Theta_b(i, s) > (1-_LOW) * total)
 				Theta_b(i, s) = 1 - _LOW;
-			//			else if(total < _LOW)
-			//	Theta_b(i, s) = 1 / (double)S;
+			else if(total < _LOW)
+				Theta_b(i, s) = 1 / (double)S;
 			else
 				Theta_b(i, s) /= total;
 		}
