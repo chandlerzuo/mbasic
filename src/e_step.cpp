@@ -184,7 +184,7 @@ SEXP e_step( SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _PDF ) {
 				tmp1 = b_mean( i ) * exp( PDF( k, i + s * I ) - FP( k, i ) ) * P( i, s );
 				Theta_b( i, s ) += tmp1;
 				if(i == 64) {
-					printf("i=7, k=%d, s=%d, Theta_b(i, s) += %3.3f\n b_mean=%3.3f, PDF=%3.3f, FP=%3.3f, P=%3.3f\n\n", k, s, tmp1, b_mean(i), PDF(k, i + s * I), FP(k, i), P(i, s));
+					printf("i=%d, k=%d, s=%d, Theta_b(i, s) += %3.3f\n b_mean=%3.3f, PDF=%3.3f, FP=%3.3f, P=%3.3f\n\n", i, k, s, tmp1, b_mean(i), PDF(k, i + s * I), FP(k, i), P(i, s));
 				} 
 				Theta_mean( k, i + I * s ) = tmp1;
 				for( j = 0; j < J; j ++ ){
@@ -246,9 +246,10 @@ SEXP e_step( SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _PDF ) {
 		for( s = 0; s < S; s ++ )
 			total += Theta_b( i, s );
 		if(i == 64)
-			printf("total = %3.3f\t", total);
+			printf("total = %lf\t", total);
 		for( s = 0; s < S; s ++ ){
-			printf("Theta_b(7, %d) = %3.3f\t", s, Theta_b(i, s)); 
+			if(i == 64)
+				printf("Theta_b(%d, %d) = %lf\t", i, s, Theta_b(i, s)); 
 			if( Theta_b( i, s ) < _LOW * total )
 				Theta_b( i, s ) = _LOW;
 			else if( Theta_b( i, s ) > ( 1-_LOW ) * total )
@@ -258,7 +259,7 @@ SEXP e_step( SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _PDF ) {
 			else
 				Theta_b( i, s ) /= total;
 			if(i == 64)
-				printf("--> %3.3f\n", Theta_b(i, s)); 
+				printf("--> %lf\n", Theta_b(i, s)); 
 		}
 	}
 
