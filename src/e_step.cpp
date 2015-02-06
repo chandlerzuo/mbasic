@@ -246,7 +246,7 @@ SEXP e_step( SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _PDF ) {
 		for( s = 0; s < S; s ++ )
 			total += Theta_b( i, s );
 		if(i == 64)
-			printf("total = %3.20f\t", total);
+			printf("total = %3.20f\n", total);
 		for( s = 0; s < S; s ++ ){
 			if(i == 64)
 				printf("Theta_b(%d, %d) = %3.20f\t", i, s, Theta_b(i, s)); 
@@ -259,7 +259,7 @@ SEXP e_step( SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _PDF ) {
 			else
 				Theta_b( i, s ) /= total;
 			if(i == 64)
-				printf("--> %3.20f\n", Theta_b(i, s)); 
+				printf("--> %3.20f  S=%d  1/S=%3.20f\n", Theta_b(i, s), S, 1 / S); 
 		}
 	}
 
