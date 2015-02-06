@@ -118,17 +118,6 @@ write.out <- function(out, msg) {
     message(msg)
 }
 
-logdensity <- function(y, mu, sigma, family) {
-  if(family == "lognormal") {
-    y <- log(y + 1)
-    return(-(y - mu) ^ 2 / sigma / 2 - log(sigma) / 2 - log(2 * pi) / 2 )
-  } else if(family == "negbin") {
-    return(dnbinom(y, mu = mu, size = sigma, log = TRUE))
-  } else {
-    return(dbinom(y, size = sigma, prob = mu, log = TRUE))
-  }
-}
-
 logit <- function(x) {
     res <- x
     res[res>=1] <- Inf
