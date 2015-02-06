@@ -454,7 +454,7 @@ logdensity <- function(y, mu, sigma, x = NULL, family) {
   } else if(family == "negbin") {
     return(dnbinom(y, mu = mu, size = sigma, log = TRUE))
   } else {
-      a <- mu
+      a <- mu / (1 - mu) * sigma
       b <- sigma
       return(
           log(beta(a + y, x - y + b)) -
@@ -489,7 +489,7 @@ MomentEstimate <- function() {
         if(b < 0.01) {
             b <- 0.01
         }
-        Mu[, s] <- a
+        Mu[, s] <- a / (a + b)
         Sigma[, s] <- b
     }
     assign("Mu", Mu, envir = parent.frame())
