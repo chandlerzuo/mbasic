@@ -254,8 +254,8 @@ SEXP e_step( SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _PDF ) {
 				Theta_b( i, s ) = _LOW;
 			else if( Theta_b( i, s ) > ( 1-_LOW ) * total )
 				Theta_b( i, s ) = 1 - _LOW;
-			else if( total < _LOW )
-				Theta_b( i, s ) = 1 / S;
+			//			else if( total < _LOW )
+			//	Theta_b( i, s ) = 1 / S;
 			else
 				Theta_b( i, s ) /= total;
 			if(i == 64)
