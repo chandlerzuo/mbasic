@@ -367,20 +367,17 @@ InitMuSigma <- function() {
     for(s in 1:S) {
         if(family == "lognormal") {
             Y.sec <- c(Y)[c(Y) <= quantile(c(Y), s / S) & c(Y) >= quantile(c(Y), (s - 1) / S)]
-            m1 <- mean(log(Y.sec + 1))
-            m2 <- mean(log(Y.sec + 1) * log(Y.sec + 1))
+            Y.sec <- log(Y.sec + 1)
         } else if(family == "negbin") {
             Y.sec <- c(Y)[c(Y) < quantile(c(Y), s / S) & c(Y) > quantile(c(Y), (s - 1) / S)]
-            m1 <- mean(Y.sec)
-            m2 <- mean(Y.sec * Y.sec)
         } else {
             ## gamma-binomial distribution
             ratio <- Y / X
             ratio[X == 0] <- mean(Y[X > 0] / X[X > 0])
             Y.sec <- c(ratio)[ratio <= quantile(ratio, s / S) & ratio >= quantile(ratio, (s - 1) / S)]
-            m1 <- mean(Y.sec)
-            m2 <- mean(Y.sec * Y.sec)
         }
+        m1 <- mean(Y.sec)
+        m2 <- mean(Y.sec * Y.sec)
         MomentEstimate()
     }
     assign("Mu", Mu, envir = parent.frame())
@@ -468,7 +465,7 @@ logdensity <- function(y, mu, sigma, x = NULL, family) {
 
 MomentEstimate <- function() {
     for(v in c("m1", "m2", "Mu", "Sigma", "family", "s")) {
-        assign(v, get(v, parent.frame()[[v]]))
+        assign(v, parent.frame()[[v]])
     }
     if(family == "lognormal") {
         Mu[, s] <- m1
