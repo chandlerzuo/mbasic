@@ -7,7 +7,7 @@
 #' @param fac A vector of levels repr1esenting the conditions of each replicate.
 #' @param struct A K by J matrix indicating the structures of each cluster.
 #' @param J The number of clusters to be identified.
-#' @param family The distribution of family to be used. Either "lognormal", "negbin" or "binomial". See details for more information.
+#' @param family The distribution of family to be used. Either "lognormal", "negbin" or "gamma-binom". See details for more information.
 #' @param method A string for the fitting method, 'MBASIC' (default), 'PE-MC', 'SE-HC',  or 'SE-MC'. See details for more information.
 #' @param para A list object that contains the true model parameters. Default: NULL. See details for more information.
 #' @param maxitr The maximum number of iterations in the E-M algorithm. Default: 100.
@@ -84,36 +84,6 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
 
   InitMuSigma()
   
-  if(FALSE) {
-      if(family == "lognormal") {
-          for(s in 1:S) {
-              Y.sec <- c(Y)[c(Y) <= quantile(c(Y), s / S) & c(Y) >= quantile(c(Y), (s - 1) / S)]
-              Mu[, s] <- mean(log(Y.sec + 1))
-              Sigma[, s] <- sd(log(Y.sec + 1))
-              Sigma[Sigma <= 0.01] <- 0.01
-          }
-      } else if(family == "negbin") {
-          for(s in 1:S) {
-              Y.sec <- c(Y)[c(Y) < quantile(c(Y), s / S) & c(Y) > quantile(c(Y), (s - 1) / S)]
-              Mu[, s] <- m1 <- mean(Y.sec)
-              vari <- var(Y.sec)
-              size <- m1 / (vari / m1 - 1)
-              if(size > 0)
-                  Sigma[, s] <- size
-              else
-                  Sigma[, s] <- 100
-          }
-      } else {
-          ## binomial
-          Y.sec <- Y / X
-          Y.sec[X == 0] <- 0.5
-          for(s in seq(S)) {
-              Y.sec <- c(Y.sec)[c(Y.sec) <= quantile(c(Y.sec), s / S) & c(Y.sec) >= quantile(c(Y.sec), (s - 1) / S)]
-              Mu[, s] <- mean(Y.sec)
-          }
-      }
-  }
-  
   b <- rep(0, I)
   B <- matrix(rep(b, each = K), nrow = K)
   
@@ -123,171 +93,67 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
   ProbMat <- matrix(0, nrow = K * S, ncol = I)
   InitProbMat()
 
-  if(FALSE) {
-      totalF <- matrix(0, nrow = K, ncol = I)
-      F1 <- matrix(0, nrow = K * S, ncol = I)
-      if(family == "lognormal") {
-          for(s in 1:S) {
-              idx <- (s-1) * K + seq_len(K)
-              F1[idx,] <-  exp(crossprod(t(D) , - (log(Y + 1) - Mu[,s]) ^ 2 / 2 / Sigma[,s]))
-              totalF <- totalF + F1[idx,]
-          }
-      } else if(family == "negbin") {
-          for(s in 1:S) {
-              idx <- (s-1) * K + seq_len(K)
-              F1[idx,] <-  exp(crossprod(t(D), dnbinom(Y, size = Sigma[,s], mu = Mu[,s], log = TRUE)))
-              totalF <- totalF + F1[idx,]
-          }
-      } else {
-          ## binomial distribution
-          for(s in 1:S) {
-              idx <- (s-1) * K + seq_len(K)
-              F1[idx,] <-  exp(crossprod(t(D), dbinom(Y, size = X, prob = Mu[, s], log = TRUE)))
-              totalF <- totalF + F1[idx,]
-          }
-      }
-      totalF <- t(matrix(rep(c(t(totalF)), S), nrow = I))
-      ProbMat <- F1 / totalF
-      ProbMat[totalF == 0] <- 1/S
-      maxProb <- max(na.omit(ProbMat[ProbMat != 1]))
-      minProb <- min(na.omit(ProbMat[ProbMat != 0]))
-      ProbMat[ProbMat > maxProb] <- max(c(0.999, na.omit(maxProb)))
-      ProbMat[ProbMat < minProb] <- min(c(0.001, na.omit(minProb)))
-      ProbMat[is.na(ProbMat)] <- mean(ProbMat, na.rm = TRUE)
-  }
-  
   if(method != "MBASIC") {
-    ## SE-HC, PE-MC or SE-MC method
-    Pi <- matrix(1/S, nrow = K, ncol = S)
-    ## em step to estimate Theta
-    allpar <- c(c(Mu), c(Sigma), c(Pi))
-    oldpar <- 0
-    for(itr in 1:maxitr) {
-      ## check for convergence
-      if(max(abs(oldpar - allpar))< tol)
-        break
-      
-      ## M step
-      for(s in seq_len(S)) {
-        idx <- seq_len(K) + (s-1) * K
-        Pi[,s] <- apply(ProbMat[idx,], 1 ,mean)
-      }
-
-      UpdateMuSigma()
-      
-      if(FALSE) {
-          if(family == "lognormal") {
-              for(s in seq_len(S)) {
-                  idx <- SampleToExp + (s - 1) * K
-                  Mu[, s] <- apply(log(Y + 1) * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
-                  M2 <- apply(log(Y + 1) ^ 2 * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
-                  Sigma[,s] <- M2 - Mu[,s] ^2
-                  Sigma[Sigma < 0.01] <- 0.01
-              }
-          } else if(family == "negbin"){
-              ## negative binomial family
-              for(s in seq_len(S)) {
-                  idx <- SampleToExp + (s-1) * K
-                  Mu[,s] <- apply(Y * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
-                  M2 <- apply(Y ^ 2 * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
-                  M2 <- M2 - Mu[, s] ^ 2
-                  Sigma[,s] <- Mu[,s] / (M2 / Mu[, s] - 1)
-                  Sigma[Sigma[,s] < 0,] <- 100
-              }
-          } else {
-              ## binomial distribution
-              for(s in seq_len(S)) {
-                  idx <- SampleToExp + (s-1) * K
-                  Mu[,s] <- apply(Y * ProbMat[idx, ], 1, sum) / apply(X * ProbMat[idx, ], 1, sum)
-              }
-              Mu[is.na(Mu)] <- 0.5
-          }
-          ## order the means
-          od <-  apply(Mu, 1, order)
-          Mu <- matrix(Mu[cbind(rep(seq_len(N), each = S), c(od))], ncol = S, byrow = TRUE)
-          Sigma <- matrix(Sigma[cbind(rep(seq_len(N), each = S), c(od))], ncol = S, byrow = TRUE)
-      }
-      
-      ## E step
-      UpdateProbMat()
-      if(FALSE) {
-          if(family == "lognormal") {
-              F1  <- matrix(0, nrow = K * S, ncol = I)
-              for(s in 1:S) {
-                  idx <- (s-1) * K + seq_len(K)
-                  F1[idx,] <-  crossprod(t(D), - (log(Y + 1) - Mu[,s]) ^ 2 / 2 / Sigma[,s] - log(Sigma[, s]) / 2) + log(Pi[,s])
-              }
-          } else if(family == "negbin") {
-              F1 <- matrix(0, nrow = K * S, ncol = I)
-              for(s in 1:S) {
-                  idx <- (s-1) * K + seq_len(K)
-                  F1[idx,] <-  crossprod(t(D), dnbinom(Y, size = Sigma[,s], mu = Mu[,s], log = TRUE)) + log(Pi[,s])
-              }
-          } else {
-              ## binomial distribution
-              F1 <- matrix(0, nrow = K * S, ncol = I)
-              for(s in 1:S) {
-                  idx <- (s-1) * K + seq_len(K)
-                  F1[idx, ] <-  crossprod(t(D), dbinom(Y, size = X, prob = Mu[,s], log = TRUE)) + log(Pi[,s])
-              }
-          }
-          F1[is.na(F1)] <- -5000
-          F1[F1 <  -5000] <- -5000
-          F.max <- t(matrix(apply(matrix(t(F1), ncol = S), 1, max), nrow = I))
-          totalF <- matrix(0, nrow = K, ncol = I)
+      ## SE-HC, PE-MC or SE-MC method
+      Pi <- matrix(1/S, nrow = K, ncol = S)
+      ## em step to estimate Theta
+      allpar <- c(c(Mu), c(Sigma), c(Pi))
+      oldpar <- 0
+      for(itr in 1:maxitr) {
+          ## check for convergence
+          if(max(abs(oldpar - allpar))< tol)
+              break
+          
+          ## M step
           for(s in seq_len(S)) {
               idx <- seq_len(K) + (s-1) * K
-              F1[idx,] <- exp(F1[idx,] - F.max)
-              totalF <- totalF + F1[idx,]
+              Pi[,s] <- apply(ProbMat[idx,], 1 ,mean)
           }
-          totalF <- t(matrix(rep(c(t(totalF)), S), nrow = I))
           
-          ProbMat <- F1 / totalF
-          maxProb <- max(ProbMat[ProbMat != 1])
-          minProb <- min(ProbMat[ProbMat != 0])
-          ProbMat[ProbMat > maxProb] <- maxProb
-          ProbMat[ProbMat < minProb] <- minProb
+          UpdateMuSigma()
+          
+          ## E step
+          UpdateProbMat()
       }## finish iteration
-  }
-    
-    Theta <- matrix(-1, nrow = K, ncol = I)
-    for(k in seq_len(K)) {
-        idx <- k + K * (seq_len(S) - 1)
-        Theta[k,] <- apply(ProbMat[idx,], 2, which.max)
-    }
-    if(!is.null(para))
-      allerr <- mean(Theta != para$Theta)
-
-    if(method != "PE-MC") {
-      ret <- MBASIC.state(Theta, J=J, zeta = zeta, struct = struct, method = method, maxitr = maxitr, tol = tol, para = para, out = out)
-    
-      conv <- FALSE
-      if(ret@converged & itr < maxitr)
-        conv <- TRUE
       
-      ## Pi is the proportion for components in the k experiment to have state s
-      ## Pi is different from Z. Z is the posterior probability.
+      Theta <- matrix(-1, nrow = K, ncol = I)
+      for(k in seq_len(K)) {
+          idx <- k + K * (seq_len(S) - 1)
+          Theta[k,] <- apply(ProbMat[idx,], 2, which.max)
+      }
+      if(!is.null(para))
+          allerr <- mean(Theta != para$Theta)
       
-      return(new("MBASICFit",
-                 Theta = Theta,
-                 W = ret@W,
-                 Z = ret@Z,
-                 b = ret@b,
-                 lik = ret@lik,
-                 alllik = ret@alllik,
-                 zeta = ret@zeta,
-                 Mu = Mu,
-                 Sigma = Sigma,
-                 probz = ret@probz,
-                 P = ret@P,
-                 converged = conv,
-                 Theta.err = tail(allerr, 1),
-                 ARI = ret@ARI,
-                 W.err = ret@W.err,
-                 MisClassRate = ret@MisClassRate
+      if(method != "PE-MC") {
+          ret <- MBASIC.state(Theta, J=J, zeta = zeta, struct = struct, method = method, maxitr = maxitr, tol = tol, para = para, out = out)
+          
+          conv <- FALSE
+          if(ret@converged & itr < maxitr)
+              conv <- TRUE
+          
+          ## Pi is the proportion for components in the k experiment to have state s
+          ## Pi is different from Z. Z is the posterior probability.
+          
+          return(new("MBASICFit",
+                     Theta = Theta,
+                     W = ret@W,
+                     Z = ret@Z,
+                     b = ret@b,
+                     lik = ret@lik,
+                     alllik = ret@alllik,
+                     zeta = ret@zeta,
+                     Mu = Mu,
+                     Sigma = Sigma,
+                     probz = ret@probz,
+                     P = ret@P,
+                     converged = conv,
+                     Theta.err = tail(allerr, 1),
+                     ARI = ret@ARI,
+                     W.err = ret@W.err,
+                     MisClassRate = ret@MisClassRate
+                     )
                  )
-             )
-    }
+      }
   }
   
   ## initialize W, Z, b
@@ -344,23 +210,19 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     
     W.lik <- matrix(0, nrow = K, ncol = J * S)
     for(s in seq_len(S)) {
-      W.lik[, seq_len(J) + J * (s - 1)] <- W[seq_len(K) + K * (s - 1) ,]
+        W.lik[, seq_len(J) + J * (s - 1)] <- W[seq_len(K) + K * (s - 1) ,]
     }
-
+    
     if(outitr == 1 | method == "MBASIC") {
-      ## only compute the PDF once if the method is PE-MC
-      PDF <- matrix(0, nrow = N, ncol = I * S)
-      for(s in seq_len(S)) {
-        if(family %in% c("lognormal", "negbin")) {
-          PDF[, seq_len(I) + I * (s - 1)] <- logdensity(Y, Mu[, s], Sigma[,s], family)
-        } else {
-          PDF[, seq_len(I) + I * (s - 1)] <- logdensity(Y, Mu[, s], X, family)
+        ## only compute the PDF once if the method is PE-MC
+        PDF <- matrix(0, nrow = N, ncol = I * S)
+        for(s in seq_len(S)) {
+            PDF[, seq_len(I) + I * (s - 1)] <- logdensity(Y, Mu[, s], Sigma[,s], X, family)
         }
-      }
-      PDF[PDF > 5] <- 5
-      PDF[PDF < -5000] <- -5000
-      PDF[is.na(PDF)] <- mean(PDF, na.rm = TRUE)
-      PDF <- crossprod(t(D), PDF)
+        PDF[PDF > 5] <- 5
+        PDF[PDF < -5000] <- -5000
+        PDF[is.na(PDF)] <- mean(PDF, na.rm = TRUE)
+        PDF <- crossprod(t(D), PDF)
     }
     
     oldlik <- totallik
@@ -372,41 +234,41 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     allzeta <- c(allzeta, zeta)
     Theta <- matrix(-1, nrow = K, ncol = I)
     for(k in seq_len(K)) {
-      idx <- k + K * (seq_len(S) - 1)
-      Theta[k,] <- apply(ProbMat[idx,], 2, which.max)
+        idx <- k + K * (seq_len(S) - 1)
+        Theta[k,] <- apply(ProbMat[idx,], 2, which.max)
     }
     if(length(names(para)) != 0) {
-      allerr <- c(allerr, mean(para$Theta != Theta))
-      
-      ## compute misclassification rate
-      W.f <- matrix(0, nrow = K * S, ncol = J)
-      for(s in seq_len(S))
-        W.f[s + S * seq(0, K - 1),] <- W[seq_len(K) + K * (s - 1),]
-      
-      mc <- matchCluster(W.f, para$W, predZ, para$Z, b.prob, para$non.id)
-      
-      write.out(out, paste("mis-class rate ", mc$mcr))
-      write.out(out, paste("Error for W ",  round(mc$W.err, 3)))
-      allmisclass <- c(allmisclass, mc$mcr)
-      W.err <- c(W.err, mc$W.err)
-      allari <- c(allari, mc$ari)
-      write.out(out, paste("ARI ", mc$ari))
-      write.out(out, paste("loglik", totallik, "err", round(allerr[length(allerr)], 2)))
+        allerr <- c(allerr, mean(para$Theta != Theta))
+        
+        ## compute misclassification rate
+        W.f <- matrix(0, nrow = K * S, ncol = J)
+        for(s in seq_len(S))
+            W.f[s + S * seq(0, K - 1),] <- W[seq_len(K) + K * (s - 1),]
+        
+        mc <- matchCluster(W.f, para$W, predZ, para$Z, b.prob, para$non.id)
+        
+        write.out(out, paste("mis-class rate ", mc$mcr))
+        write.out(out, paste("Error for W ",  round(mc$W.err, 3)))
+        allmisclass <- c(allmisclass, mc$mcr)
+        W.err <- c(W.err, mc$W.err)
+        allari <- c(allari, mc$ari)
+        write.out(out, paste("ARI ", mc$ari))
+        write.out(out, paste("loglik", totallik, "err", round(allerr[length(allerr)], 2)))
     }
     
     if(maxlik < totallik) {
-      maxlik <- totallik
-      bestb <- b.prob
-      bestW <- W
-      bestTheta <- Theta
+        maxlik <- totallik
+        bestb <- b.prob
+        bestW <- W
+        bestTheta <- Theta
     }
     
     ## E step
     ## M step for some parameters
     if(zeta > 0) {
-      estep.result <- .Call("e_step", W.lik, P, zeta, probz, PDF, package = "MBASIC")
+        estep.result <- .Call("e_step", W.lik, P, zeta, probz, PDF, package = "MBASIC")
     } else {
-      estep.result <- .Call("e_step1", W.lik, P, probz, PDF, package = "MBASIC")
+        estep.result <- .Call("e_step1", W.lik, P, probz, PDF, package = "MBASIC")
     }
     
     ## Expected Theta matrix
@@ -423,14 +285,14 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     
     W.aug <- matrix(0, nrow = K * S, ncol = J)
     for(s in 1:S) {
-      W.aug[seq_len(K) + K * (s - 1),] <- W[,  seq_len(J) + J * (s - 1)]
+        W.aug[seq_len(K) + K * (s - 1),] <- W[,  seq_len(J) + J * (s - 1)]
     }
     clustOrder <- .orderCluster(W.aug, struct)
     W <- W.aug[, clustOrder]
     W <- .structure(W, struct)
     probz <- probz[clustOrder]
     predZ <- predZ[, clustOrder]
-
+    
     ## format ProbMat
     ProbMat.Format <- matrix(0, nrow = K * S, ncol = I)
     for(s in 1:S) {
@@ -439,60 +301,14 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     ProbMat <- ProbMat.Format
     
     if(method != "PE-MC") {
-      ## skip this step if the method is PE-MC
-      ## M-step for Mu and Sigma
+        ## skip this step if the method is PE-MC
+        ## M-step for Mu and Sigma
         UpdateMuSigma()
-        if(FALSE) {
-            if(family == "negbin") {
-                for(s in seq_len(S)) {
-                    ## estimate for mu1
-                    idx <- seq_len(I) + I * (s - 1)
-                    F1 <- apply(Y * crossprod(D, ProbMat[, idx]), 1, sum)
-                    F2 <- apply(crossprod(D, ProbMat[, idx]), 1, sum)
-                    ## rep(apply(ProbMat[, idx], 1, sum), n)
-                    Mu[, s] <-  F1 / F2
-                    ## estimate sigma1
-                    F3 <- apply(Y * Y * crossprod(D, ProbMat[, idx]), 1, sum)
-                    Vari <- F3 / F2 - Mu[, s] ^ 2
-                    Sigma[, s] <- Mu[, s] / (Vari / Mu[, s] - 1)
-                    Sigma[Sigma[, s] < 0] <- 100
-                }
-            } else if(family == "lognormal") {
-                for(s in seq_len(S)) {
-                    ## estimate for mu1
-                    idx <- seq_len(I) + I * (s - 1)
-                    F1 <- apply(log(Y + 1) * crossprod(D, ProbMat[, idx]), 1, sum)
-                    F2 <- apply(crossprod(D, ProbMat[, idx]), 1, sum)
-                    ##rep(apply(ProbMat[, idx], 1, sum), n)
-                    Mu[, s] <-  F1 / F2
-                    
-                    ## estimate sigma1
-                    F3 <- apply(log(Y + 1) * log(Y + 1) * crossprod(D, ProbMat[, idx]), 1, sum)
-                    Sigma[, s] <- F3 / F2 - Mu[, s] ^ 2
-                }
-            } else {
-                ## binomial
-                for(s in seq_len(S)) {
-                    ## estimate for mu1
-                    idx <- seq_len(I) + I * (s - 1)
-                    F1 <- apply(Y * crossprod(D, ProbMat[, idx]), 1, sum)
-                    F2 <- apply(X * crossprod(D, ProbMat[, idx]), 1, sum)
-                    ##rep(apply(ProbMat[, idx], 1, sum), n)
-                    Mu[, s] <-  F1 / F2
-                }
-                Mu[is.na(Mu)] <- 0.5
-            }
-        }
-        
-        ## order the means
-        od <-  apply(Mu, 1, order)
-        Mu <- matrix(Mu[cbind(rep(seq_len(N), each = S), c(od))], ncol = S, byrow = TRUE)
-        Sigma <- matrix(Sigma[cbind(rep(seq_len(N), each = S), c(od))], ncol = S, byrow = TRUE)
     }
-        
+    
     ## convert everything to matrices
     B <- matrix(rep(b, each = K), nrow = K)
-        
+    
     oldpar <- newpar
     newpar <- c(c(W), probz, zeta, c(P), c(Mu), c(Sigma))
     
@@ -530,25 +346,10 @@ InitProbMat <- function() {
     Inherit()
     totalF <- matrix(0, nrow = K, ncol = I)
     F1 <- matrix(0, nrow = K * S, ncol = I)
-    if(family == "lognormal") {
-        for(s in 1:S) {
-            idx <- (s-1) * K + seq_len(K)
-            F1[idx,] <-  exp(crossprod(t(D) , - (log(Y + 1) - Mu[,s]) ^ 2 / 2 / Sigma[,s]))
-            totalF <- totalF + F1[idx,]
-        }
-    } else if(family == "negbin") {
-        for(s in 1:S) {
-            idx <- (s-1) * K + seq_len(K)
-            F1[idx,] <-  exp(crossprod(t(D), dnbinom(Y, size = Sigma[,s], mu = Mu[,s], log = TRUE)))
-            totalF <- totalF + F1[idx,]
-        }
-    } else {
-        ## binomial distribution
-        for(s in 1:S) {
-            idx <- (s-1) * K + seq_len(K)
-            F1[idx,] <-  exp(crossprod(t(D), dbinom(Y, size = X, prob = Mu[, s], log = TRUE)))
-            totalF <- totalF + F1[idx,]
-        }
+    for(s in 1:S) {
+        idx <- (s-1) * K + seq_len(K)
+        F1[idx,] <-  exp(crossprod(t(D) , logdensity(Y, Mu[,s], Sigma[,s], X, family)))
+        totalF <- totalF + F1[idx,]
     }
     totalF <- t(matrix(rep(c(t(totalF)), S), nrow = I))
     ProbMat <- F1 / totalF
@@ -563,32 +364,24 @@ InitProbMat <- function() {
 
 InitMuSigma <- function() {
     Inherit()
-    if(family == "lognormal") {
-        for(s in 1:S) {
+    for(s in 1:S) {
+        if(family == "lognormal") {
             Y.sec <- c(Y)[c(Y) <= quantile(c(Y), s / S) & c(Y) >= quantile(c(Y), (s - 1) / S)]
-            Mu[, s] <- mean(log(Y.sec + 1))
-            Sigma[, s] <- sd(log(Y.sec + 1))
-            Sigma[Sigma <= 0.01] <- 0.01
-        }
-    } else if(family == "negbin") {
-        for(s in 1:S) {
+            m1 <- mean(log(Y.sec + 1))
+            m2 <- mean(log(Y.sec + 1) * log(Y.sec + 1))
+        } else if(family == "negbin") {
             Y.sec <- c(Y)[c(Y) < quantile(c(Y), s / S) & c(Y) > quantile(c(Y), (s - 1) / S)]
-            Mu[, s] <- m1 <- mean(Y.sec)
-            vari <- var(Y.sec)
-            size <- m1 / (vari / m1 - 1)
-            if(size > 0)
-                Sigma[, s] <- size
-            else
-                Sigma[, s] <- 100
+            m1 <- mean(Y.sec)
+            m2 <- mean(Y.sec * Y.sec)
+        } else {
+            ## gamma-binomial distribution
+            ratio <- Y / X
+            ratio[X == 0] <- mean(Y[X > 0] / X[X > 0])
+            Y.sec <- c(ratio)[ratio <= quantile(ratio, s / S) & ratio >= quantile(ratio, (s - 1) / S)]
+            m1 <- mean(Y.sec)
+            m2 <- mean(Y.sec * Y.sec)
         }
-    } else {
-        ## binomial
-        Y.sec <- Y / X
-        Y.sec[X == 0] <- 0.5
-        for(s in seq(S)) {
-            Y.sec <- c(Y.sec)[c(Y.sec) <= quantile(c(Y.sec), s / S) & c(Y.sec) >= quantile(c(Y.sec), (s - 1) / S)]
-            Mu[, s] <- mean(Y.sec)
-        }
+        MomentEstimate()
     }
     assign("Mu", Mu, envir = parent.frame())
     assign("Sigma", Sigma, envir = parent.frame())
@@ -596,31 +389,23 @@ InitMuSigma <- function() {
 
 UpdateMuSigma <- function() {
     Inherit()
-    if(family == "lognormal") {
-        for(s in seq_len(S)) {
+    for(s in seq_len(S)) {
+        if(family == "lognormal") {
             idx <- SampleToExp + (s - 1) * K
-            Mu[, s] <- apply(log(Y + 1) * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
-            M2 <- apply(log(Y + 1) ^ 2 * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
-            Sigma[,s] <- M2 - Mu[,s] ^2
-            Sigma[Sigma < 0.01] <- 0.01
+            m1 <- apply(log(Y + 1) * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
+            m2 <- apply(log(Y + 1) ^ 2 * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
+        } else if(family == "negbin"){
+            ## negative binomial family
+            m1 <- apply(Y * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
+            m2 <- apply(Y ^ 2 * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
+        } else {
+            ## gamma-binomial distribution
+            ratio <- Y / X
+            ratio[X == 0] <- mean(Y[X > 0] / X[X > 0])
+            m1 <- apply(ratio * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
+            m2 <- apply(ratio * ratio * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
         }
-    } else if(family == "negbin"){
-        ## negative binomial family
-        for(s in seq_len(S)) {
-            idx <- SampleToExp + (s-1) * K
-            Mu[,s] <- apply(Y * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
-            M2 <- apply(Y ^ 2 * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
-            M2 <- M2 - Mu[, s] ^ 2
-            Sigma[,s] <- Mu[,s] / (M2 / Mu[, s] - 1)
-            Sigma[Sigma[,s] < 0,] <- 100
-        }
-    } else {
-        ## binomial distribution
-        for(s in seq_len(S)) {
-            idx <- SampleToExp + (s-1) * K
-            Mu[,s] <- apply(Y * ProbMat[idx, ], 1, sum) / apply(X * ProbMat[idx, ], 1, sum)
-        }
-        Mu[is.na(Mu)] <- 0.5
+        MomentEstimate()
     }
     ## order the means
     od <-  apply(Mu, 1, order)
@@ -633,25 +418,10 @@ UpdateMuSigma <- function() {
 
 UpdateProbMat <- function() {
     Inherit()
-    if(family == "lognormal") {
-        F1  <- matrix(0, nrow = K * S, ncol = I)
-        for(s in 1:S) {
-            idx <- (s-1) * K + seq_len(K)
-            F1[idx,] <-  crossprod(t(D), - (log(Y + 1) - Mu[,s]) ^ 2 / 2 / Sigma[,s] - log(Sigma[, s]) / 2) + log(Pi[,s])
-        }
-    } else if(family == "negbin") {
-        F1 <- matrix(0, nrow = K * S, ncol = I)
-        for(s in 1:S) {
-            idx <- (s-1) * K + seq_len(K)
-            F1[idx,] <-  crossprod(t(D), dnbinom(Y, size = Sigma[,s], mu = Mu[,s], log = TRUE)) + log(Pi[,s])
-        }
-    } else {
-        ## binomial distribution
-        F1 <- matrix(0, nrow = K * S, ncol = I)
-        for(s in 1:S) {
-            idx <- (s-1) * K + seq_len(K)
-            F1[idx, ] <-  crossprod(t(D), dbinom(Y, size = X, prob = Mu[,s], log = TRUE)) + log(Pi[,s])
-        }
+    F1  <- matrix(0, nrow = K * S, ncol = I)
+    for(s in 1:S) {
+        idx <- (s-1) * K + seq_len(K)
+        F1[idx,] <-  crossprod(t(D), logdensity(Y, Mu[, s], Sigma[, s], X, family)) + log(Pi[,s])
     }
     F1[is.na(F1)] <- -5000
     F1[F1 <  -5000] <- -5000
@@ -678,4 +448,53 @@ Inherit <- function() {
         ## do not use get() since it will cause error for non-defined variables
         assign(v, parent.frame(2)[[v]], envir = parent.frame())
     }
+}
+
+logdensity <- function(y, mu, sigma, x = NULL, family) {
+  if(family == "lognormal") {
+    y <- log(y + 1)
+    return(-(y - mu) ^ 2 / sigma / 2 - log(sigma) / 2 - log(2 * pi) / 2 )
+  } else if(family == "negbin") {
+    return(dnbinom(y, mu = mu, size = sigma, log = TRUE))
+  } else {
+      a <- mu
+      b <- sigma
+      return(
+          log(beta(a + y, x - y + b)) -
+              log(beta(a, b)) + log(choose(x, y))
+      )
+  }
+}
+
+MomentEstimate <- function() {
+    for(v in c("m1", "m2", "Mu", "Sigma", "family", "s")) {
+        assign(v, get(v, parent.frame()[[v]]))
+    }
+    if(family == "lognormal") {
+        Mu[, s] <- m1
+        m2 <- m2 - m1 * m1
+        m2[m2 < 0.01] <- 0.01
+        Sigma[, s] <- m2
+    } else if(family == "negbin") {
+        Mu[, s] <- m1
+        m2 <- m2 - m1 * m1
+        m2 <- m1 / (m2 / m1 - 1)
+        m2[m2 < 0] <- 100
+        Sigma[, s] <- m2
+    } else {
+        m2 <- m2 - m1 * m1
+        a.plus.b <- 1 / (m1 * (1 - m1)) - 1
+        a <- m1 * a.plus.b
+        b <- a.plus.b - a
+        if(a < 0.01) {
+            a <- 0.01
+        }
+        if(b < 0.01) {
+            b <- 0.01
+        }
+        Mu[, s] <- a
+        Sigma[, s] <- b
+    }
+    assign("Mu", Mu, envir = parent.frame())
+    assign("Sigma", Sigma, envir = parent.frame())
 }
