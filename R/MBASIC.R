@@ -14,6 +14,7 @@
 #' @param tol Tolerance for error in checking the E-M algorithm's convergence. Default: 1e-04.
 #' @param zeta The initial value for the proportion of units that are not clustered. Default: 0.1. If 0, no singleton cluster is fitted.
 #' @param out The file directory for writing fitting information in each E-M iteration. Default: NULL (no information is outputted).
+#' @param verbose A boolean variable indicating whether intermediate model fitting metrics should be printed. Default: FALSE.
 #' @details
 #' Function MBASIC currently supports two different distributional families: log-normal and negative binomial. This should be specified by the 'family' argument.\cr
 #' For the log-normal distributions, log(Y+1) is modeled as normal distributions. For experiment n, if locus i has state s, distribution for log(Y[n,i]+1) is N(Mu[n,s], Sigma[n,s]).\cr
@@ -36,7 +37,7 @@
 #' dat.sim.fit <- MBASIC(Y = dat.sim$Y, S = 3, fac = rep(1:10, each = 2), J = 3, maxitr = 3, para = NULL, family = "lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-04)
 #' @useDynLib MBASIC
 #' @export
-MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL,  family="lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-4, out = NULL, X = NULL) {
+MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL,  family="lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-4, out = NULL, X = NULL, verbose = FALSE) {
 
   write.out(out, "Started")
   if(! method %in% c("SE-HC", "SE-MC", "PE-MC", "MBASIC")) {
@@ -185,7 +186,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
   W <- .structure(W, struct)
   ## initialize p, probz
   P <- matrix(0, nrow = I, ncol = S)
-  if(family != "binom") {
+  if(family != "gamma-binom") {
       for(s in seq_len(S)) {
           idx <- seq_len(K) + K * (s - 1)
           P[, s] <- apply(ProbMat[idx, ], 2, mean)
@@ -227,8 +228,9 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     
     oldlik <- totallik
     totallik <- .Call("loglik", W.lik, P, zeta, probz, PDF, package="MBASIC")
-    write.out(out, paste("itr", outitr, "lik", round(totallik, 2), "zeta", round(zeta, 2)))
-    ##write.out(out, paste("loglik in C =", totallik))
+    if(verbose) {
+        write.out(out, paste("itr", outitr, "lik", round(totallik, 2), "zeta", round(zeta, 2)))
+    }
     
     alllik <- c(alllik, totallik)
     allzeta <- c(allzeta, zeta)
@@ -237,23 +239,9 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
         idx <- k + K * (seq_len(S) - 1)
         Theta[k,] <- apply(ProbMat[idx,], 2, which.max)
     }
-    if(length(names(para)) != 0) {
-        allerr <- c(allerr, mean(para$Theta != Theta))
-        
-        ## compute misclassification rate
-        W.f <- matrix(0, nrow = K * S, ncol = J)
-        for(s in seq_len(S))
-            W.f[s + S * seq(0, K - 1),] <- W[seq_len(K) + K * (s - 1),]
-        
-        mc <- matchCluster(W.f, para$W, predZ, para$Z, b.prob, para$non.id)
-        
-        write.out(out, paste("mis-class rate ", mc$mcr))
-        write.out(out, paste("Error for W ",  round(mc$W.err, 3)))
-        allmisclass <- c(allmisclass, mc$mcr)
-        W.err <- c(W.err, mc$W.err)
-        allari <- c(allari, mc$ari)
-        write.out(out, paste("ARI ", mc$ari))
-        write.out(out, paste("loglik", totallik, "err", round(allerr[length(allerr)], 2)))
+
+    if(length(para) > 1 & verbose) {
+        PrintUpdate()
     }
     
     if(maxlik < totallik) {
@@ -316,7 +304,10 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
   
   conv <- FALSE
   if(outitr < maxitr)
-    conv <- TRUE
+      conv <- TRUE
+  
+  if(length(para) > 1)
+      PrintUpdate()
   
   new("MBASICFit",
       Theta = bestTheta,
@@ -439,6 +430,29 @@ UpdateProbMat <- function() {
 
     assign("ProbMat", ProbMat, envir = parent.frame())
 }
+
+PrintUpdate <- function() {
+    inherit()
+    allerr <- c(allerr, mean(para$Theta != Theta))
+    ## compute misclassification rate
+    W.f <- matrix(0, nrow = K * S, ncol = J)
+    for(s in seq_len(S))
+        W.f[s + S * seq(0, K - 1),] <- W[seq_len(K) + K * (s - 1),]
+    
+    mc <- matchCluster(W.f, para$W, predZ, para$Z, b.prob, para$non.id)
+    
+    write.out(out, paste("mis-class rate ", mc$mcr))
+    write.out(out, paste("Error for W ",  round(mc$W.err, 3)))
+    allmisclass <- c(allmisclass, mc$mcr)
+    W.err <- c(W.err, mc$W.err)
+    allari <- c(allari, mc$ari)
+    write.out(out, paste("ARI ", mc$ari))
+    write.out(out, paste("loglik", totallik, "err", round(allerr[length(allerr)], 2)))
+    for(v in c("allerr", "allari", "allmisclass")) {
+        assign(v, get(v), envir = parent.frame())
+    }
+}
+
 
 Inherit <- function() {
     for(v in ls(envir = parent.frame(2))) {
