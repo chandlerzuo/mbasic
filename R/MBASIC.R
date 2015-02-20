@@ -7,7 +7,7 @@
 #' @param fac A vector of levels repr1esenting the conditions of each replicate.
 #' @param struct A K by J matrix indicating the structures of each cluster.
 #' @param J The number of clusters to be identified.
-#' @param family The distribution of family to be used. Either "lognormal", "negbin" or "gamma-binom". See details for more information.
+#' @param family The distribution of family to be used. Either "lognormal", "negbin", "binom", "gamma-binom". See details for more information.
 #' @param method A string for the fitting method, 'MBASIC' (default), 'PE-MC', 'SE-HC',  or 'SE-MC'. See details for more information.
 #' @param para A list object that contains the true model parameters. Default: NULL. See details for more information.
 #' @param maxitr The maximum number of iterations in the E-M algorithm. Default: 100.
@@ -41,10 +41,14 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
 
   write.out(out, "Started")
   if(! method %in% c("SE-HC", "SE-MC", "PE-MC", "MBASIC")) {
-    message("Error: method must be one of SE-HC, SE-MC, PE-MC or MBASIC.")
+    message("Error: 'method' must be one of 'SE-HC', 'SE-MC', 'PE-MC' or 'MBASIC'.")
     return
   }
-  
+
+  if(! family %in% c("lognormal", "negbin", "binom", "gamma-binom", "scaled-t")) {
+      message("Error: 'family' must be one of 'lognormal', 'negbin', 'binom', 'gamma-binom', 'scaled-t'.")
+  }
+
   ## prespecified
   K <- length(unique(fac))
   I <- ncol(Y)
@@ -94,6 +98,13 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
   ProbMat <- matrix(0, nrow = K * S, ncol = I)
   InitProbMat()
 
+  if(!is.null(para)) {
+    ProbMat.true <- matrix(0, nrow = S * K, ncol = I)
+    for(s in seq(S)) {
+        ProbMat.true[(s - 1) * K + seq(K), ] <- as.numeric(para$Theta == s)
+    }
+  }
+
   if(method != "MBASIC") {
       ## SE-HC, PE-MC or SE-MC method
       Pi <- matrix(1/S, nrow = K, ncol = S)
@@ -117,13 +128,14 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
           UpdateProbMat()
       }## finish iteration
       
-      Theta <- matrix(-1, nrow = K, ncol = I)
-      for(k in seq_len(K)) {
-          idx <- k + K * (seq_len(S) - 1)
-          Theta[k,] <- apply(ProbMat[idx,], 2, which.max)
-      }
+    Theta <- matrix(-1, nrow = K, ncol = I)
+    for(k in seq_len(K)) {
+        idx <- k + K * (seq_len(S) - 1)
+        Theta[k,] <- apply(ProbMat[idx,], 2, which.max)
+    }
+
       if(!is.null(para))
-          allerr <- mean(Theta != para$Theta)
+          allerr <- sqrt(sum((ProbMat - ProbMat.true) ^ 2) / I / K / (S - 1))
       
       if(method != "PE-MC") {
           ret <- MBASIC.state(Theta, J=J, zeta = zeta, struct = struct, method = method, maxitr = maxitr, tol = tol, para = para, out = out)
@@ -136,7 +148,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
           ## Pi is different from Z. Z is the posterior probability.
           
           return(new("MBASICFit",
-                     Theta = Theta,
+                     Theta = ProbMat,
                      W = ret@W,
                      Z = ret@Z,
                      b = ret@b,
@@ -186,13 +198,9 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
   W <- .structure(W, struct)
   ## initialize p, probz
   P <- matrix(0, nrow = I, ncol = S)
-  if(family != "gamma-binom") {
-      for(s in seq_len(S)) {
-          idx <- seq_len(K) + K * (s - 1)
-          P[, s] <- apply(ProbMat[idx, ], 2, mean)
-      }
-  } else {
-      P[, 2] <- 1
+  for(s in seq_len(S)) {
+    idx <- seq_len(K) + K * (s - 1)
+    P[, s] <- apply(ProbMat[idx, ], 2, mean)
   }
   probz <- apply(rbind(Z, diag(rep(1, J))), 2, mean)
   
@@ -263,9 +271,6 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     ProbMat <- estep.result[["Theta_mean"]]
     ## Maximizers
     zeta <- estep.result[["zeta"]]
-    if(family != "binom") {
-        P <- estep.result[["P"]]
-    }
     W <- estep.result[["W"]]
     probz <- estep.result[["probz"]]
     predZ <- estep.result[["predZ"]]
@@ -310,7 +315,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
       PrintUpdate()
   
   new("MBASICFit",
-      Theta = bestTheta,
+      Theta = ProbMat,
       W = bestW,
       Z = predZ,
       b = bestb,
@@ -359,14 +364,23 @@ InitMuSigma <- function() {
         if(family == "lognormal") {
             Y.sec <- c(Y)[c(Y) <= quantile(c(Y), s / S) & c(Y) >= quantile(c(Y), (s - 1) / S)]
             Y.sec <- log(Y.sec + 1)
-        } else if(family == "negbin") {
+	} else if(family  == "negbin") {
             Y.sec <- c(Y)[c(Y) < quantile(c(Y), s / S) & c(Y) > quantile(c(Y), (s - 1) / S)]
-        } else {
+        } else if(family == "scaled-t") {
+	    Y.sec <- abs(Y)
+            Y.sec <- c(Y.sec)[c(Y.sec) < quantile(c(Y.sec), s / S) & c(Y.sec) > quantile(c(Y.sec), (s - 1) / S)]
+	} else if(family == "gamma-binom") {
             ## gamma-binomial distribution
             ratio <- Y / X
             ratio[X == 0] <- mean(Y[X > 0] / X[X > 0])
             Y.sec <- c(ratio)[ratio <= quantile(ratio, s / S) & ratio >= quantile(ratio, (s - 1) / S)]
-        }
+        } else {
+	    ratio <- Y / X
+            id1 <- which(X > 0)
+            ratio <- ratio[id1]
+	    id <- which(ratio <= quantile(ratio, s / S) & ratio >= quantile(ratio, (s - 1) / S))
+	    Y.sec <- sum(Y[id1[id]]) / sum(X[id1[id]])
+	}
         m1 <- mean(Y.sec)
         m2 <- mean(Y.sec * Y.sec)
         MomentEstimate()
@@ -381,19 +395,27 @@ UpdateMuSigma <- function() {
         idx <- SampleToExp + (s - 1) * K
         if(family == "lognormal") {
             m1 <- apply(log(Y + 1) * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
-            m2 <- apply(log(Y + 1) ^ 2 * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
-        } else if(family == "negbin"){
+            m2 <- apply(log(Y + 1) * log(Y + 1) * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
+	} else if(family == "negbin"){
             ## negative binomial family
             m1 <- apply(Y * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
-            m2 <- apply(Y ^ 2 * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
-        } else {
+            m2 <- apply(Y * Y * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
+	} else if(family == "scaled-t"){
+            ## scaled-t family
+            m1 <- apply(abs(Y) * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
+            m2 <- apply(Y * Y * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
+        } else if(family == "gamma-binom") {
             ## gamma-binomial distribution
             ratio <- Y / X
             ratio[X == 0] <- mean(Y[X > 0] / X[X > 0])
             m1 <- apply(ratio * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
             m2 <- apply(ratio * ratio * ProbMat[idx, ], 1, sum) / apply(ProbMat[idx, ], 1, sum)
-        }
-        MomentEstimate()
+        } else { 
+  	    ## binomial
+	    m1 <- apply(Y * ProbMat[idx, ], 1, sum) / apply(X * ProbMat[idx, ], 1, sum)
+	    m2 <- NULL
+	}
+	MomentEstimate()
     }
     ## order the means
     od <-  apply(Mu, 1, order)
@@ -433,13 +455,13 @@ UpdateProbMat <- function() {
 
 PrintUpdate <- function() {
     Inherit()
-    allerr <- c(allerr, mean(para$Theta != Theta))
+    allerr <- sqrt(sum((ProbMat - ProbMat.true) ^ 2) / I / K / (S - 1))
     ## compute misclassification rate
     W.f <- matrix(0, nrow = K * S, ncol = J)
     for(s in seq_len(S))
         W.f[s + S * seq(0, K - 1),] <- W[seq_len(K) + K * (s - 1),]
     
-    mc <- matchCluster(W.f, para$W, predZ, para$Z, b.prob, para$non.id)
+    mc <- matchCluster(W.f, para$W, predZ, para$Z, b.prob, para$non.id, S)
     
     write.out(out, paste("mis-class rate ", mc$mcr))
     write.out(out, paste("Error for W ",  round(mc$W.err, 3)))
@@ -448,11 +470,10 @@ PrintUpdate <- function() {
     allari <- c(allari, mc$ari)
     write.out(out, paste("ARI ", mc$ari))
     write.out(out, paste("loglik", totallik, "err", round(allerr[length(allerr)], 2)))
-    for(v in c("allerr", "allari", "allmisclass")) {
+    for(v in c("allerr", "allari", "allmisclass", "W.err")) {
         assign(v, get(v), envir = parent.frame())
     }
 }
-
 
 Inherit <- function() {
     for(v in ls(envir = parent.frame(2))) {
@@ -465,15 +486,19 @@ logdensity <- function(y, mu, sigma, x = NULL, family) {
   if(family == "lognormal") {
     y <- log(y + 1)
     return(-(y - mu) ^ 2 / sigma / 2 - log(sigma) / 2 - log(2 * pi) / 2 )
+  } else if(family == "scaled-t") {
+    return(dt(y / mu, df = sigma, log = TRUE))
   } else if(family == "negbin") {
     return(dnbinom(y, mu = mu, size = sigma, log = TRUE))
-  } else {
+  } else if(family == "gamma-binom") {
       a <- mu / (1 - mu) * sigma
       b <- sigma
       return(
           log(beta(a + y, x - y + b)) -
               log(beta(a, b)) + log(choose(x, y))
       )
+  } else {
+      return(dbinom(y, prob = mu, size = x, log = TRUE))
   }
 }
 
@@ -486,13 +511,49 @@ MomentEstimate <- function() {
         m2 <- m2 - m1 * m1
         m2[m2 < 0.01] <- 0.01
         Sigma[, s] <- m2
-    } else if(family == "negbin") {
+    } else if(family == "scaled-t") {
+        func <- function(df) {
+	    g1 <- gamma((df - 1) / 2)
+	    g2 <- gamma(df / 2)
+	    (df - 2) * g1 * g1 / g2 / g2 / pi
+	}
+	solve <- function(v) {
+	    lower <- 2.01
+	    upper <- 100
+	    fun.up <- func(upper)
+	    fun.low <- func(lower)
+	    if(v >= fun.up) {
+	        return(upper)
+	    } else if(v <= fun.low) {
+	        return(lower)
+	    } else {
+	        while(abs(fun.up - fun.low) > 0.01 & abs(upper - lower) > 0.01) {
+		    med <- (upper + lower) / 2
+		    fun.med <- func(med)
+		    if(fun.med > v + 0.005) {
+		        upper <- med
+			fun.up <- fun.med
+		    } else if(fun.med < v - 0.005){
+		        lower <- med
+			fun.low <- fun.med
+		    } else {
+		        return(med)
+		    }
+		}
+		return((upper + lower) / 2)
+	    }
+	}
+	## df
+	Sigma[, s] <- sapply(m1 * m1 / m2, solve)
+	## scale
+	Mu[, s] <- sqrt(m2 * (1 - 2 / Sigma[, s]))
+     } else if(family == "negbin") {
         Mu[, s] <- m1
         m2 <- m2 - m1 * m1
         m2 <- m1 / (m2 / m1 - 1)
         m2[m2 < 0] <- 100
         Sigma[, s] <- m2
-    } else {
+    } else if(family == "gamma-binom") {
         m2 <- m2 - m1 * m1
         a.plus.b <- 1 / (m1 * (1 - m1)) - 1
         a <- m1 * a.plus.b
@@ -501,6 +562,9 @@ MomentEstimate <- function() {
         b[b < 0.01] <- 0.01
         Mu[, s] <- a / (a + b)
         Sigma[, s] <- b
+    } else {
+        Mu[, s] <- m1
+	Sigma[, s] <- 0
     }
     assign("Mu", Mu, envir = parent.frame())
     assign("Sigma", Sigma, envir = parent.frame())

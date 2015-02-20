@@ -144,7 +144,7 @@ group2mat <- function(x) {
         return(mat)
 }
 
-matchCluster <- function(W, W.true, predZ, Z.true, b.prob, non.id) {
+matchCluster <- function(W, W.true, predZ, Z.true, b.prob, non.id, S) {
   if(is.null(b.prob))
     b.prob <- rep(0, nrow(predZ))
   
@@ -182,9 +182,9 @@ matchCluster <- function(W, W.true, predZ, Z.true, b.prob, non.id) {
   
   W.err <- sqrt(
                 (
-                 mean((W[, matchId1[ ,2] ] -W.true[ , matchId1 [,1] ]) ^ 2) +
-                 mean((W[, matchId2[ ,2] ] -W.true[ , matchId2 [,1] ]) ^ 2)
-                ) / 2
+                 sum((W[, matchId1[ ,2] ] -W.true[ , matchId1 [,1] ]) ^ 2) +
+                 sum((W[, matchId2[ ,2] ] -W.true[ , matchId2 [,1] ]) ^ 2)
+                ) / 2 / K / J / (S - 1)
                )
 
   ari <- adjustedRandIndex(

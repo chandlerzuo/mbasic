@@ -242,7 +242,7 @@ MBASIC.sim.state <- function(I, K, J, S = 2, struct = NULL, delta = NULL, delta.
 #' @name MBASIC.sim
 #' @title Simulate data for the general MBASIC model.
 #' @param xi Parameter for the magnitude of each observations. See details for more information.
-#' @param family A parameter for the family of distribution to be used. Either "lognormal" or "negbin". Default: "lognormal".
+#' @param family A parameter for the family of distribution to be used, must be "lognormal", "negbin" or "binom". Default: "lognormal".
 #' @param f A numerical value that determine the difference of the means between different states. See details for more information. Default: 5.
 #' @param I An integer for the total number of units.
 #' @param fac A vector of length N denoting the experimental condition for each replicate.
@@ -253,10 +253,17 @@ MBASIC.sim.state <- function(I, K, J, S = 2, struct = NULL, delta = NULL, delta.
 #' @param delta.non  A vector of length S, or NULL. This is the dirichlet prior parameter to simulate the probability across the S states for each UNCLUSTERED unit and each experiment. If NULL, rep(0.1,S) is used.
 #' @param zeta The probability that each unit does not belong to any cluster. Default: 0.1.
 #' @details
-#' MBASIC.sim allows two types of distributions. For the "lognormal" family, entries in the matrix Y follows distribution: log(Y[n,i] + 1) | Theta[n,i]=s ~ N(Mu[n,s], stdev[s]). For the "negbin" family, entris in the matrix Y follows distribution: Y[n,i] | Theta[n,i]=s ~ NB(Mu[n,s], stdev[s]). In this package, NB(mu,size) denotes a Negative binomial distribution with mean mu and variance mu(1+mu/size). For both distributions, Mu[n,s]~N(prior.mean[s],prior.sd[s]). Hyper paramters prior.mean and prior.sd are set differently under the two distributional families. For the "lognormal" family, where prior.mean[s] = xi+log((s-1)(f-1)+1), and prior.sd=log(f)/30. For the "negbin" family, prior.mean[s]=xi*((s-1)(f-1)+1), and prior.sd=(f-1)*xi/6. In general, xi is the mean for the state S=1, and f is roughly the ratio between the means from state S=2 and S=1.
+#' MBASIC.sim allows three types of distributions:\cr
+#' For the "lognormal" family, entries in the matrix Y follows distribution: log(Y[n,i] + 1) | Theta[n,i]=s ~ N(Mu[n,s], stdev[s]).\cr
+#' For the "negbin" family, entries in the matrix Y follows distribution: Y[n,i] | Theta[n,i]=s ~ NB(Mu[n,s], stdev[s]).\cr
+#' For the "binom" family, entries in the matrices X and Y follows distribution: X[n,i] ~ Pois(xi), Y[n,i]| Theta[n,i]=s,X[n,i] ~ Binom(X[n,i],Mu[n,s]). In this package, NB(mu,size) denotes a Negative binomial distribution with mean mu and variance mu(1+mu/size).\cr
+#' For "lognormal" or "negbin" families, Mu[n,s]~N(prior.mean[s],prior.sd[s]). Hyper paramters prior.mean and prior.sd are set differently under the two distributional families. For the "lognormal" family, where prior.mean[s] = xi+log((s-1)(f-1)+1), and prior.sd=log(f)/30. For the "negbin" family, prior.mean[s]=xi*((s-1)(f-1)+1), and prior.sd=(f-1)*xi/6. In general, xi is the mean for the state S=1, and f is roughly the ratio between the means from state S=2 and S=1.\cr
+#' For the "binom" family, Mu[n,s] ～ Beta(s * f, (S + 1 - s) * f).
 #' @return A list containing:
 #' \tabular{ll}{
-#'  Y \tab A N by I matrix. The (n,i)-th entry is the observed value at the i-th unit for the n-th experiment. \cr
+#'  Y \tab An N by I matrix. The (n,i)-th entry is the observed value at the i-th unit for the n-th experiment. \cr
+#'  X \tab An N by I matrix for the "binom" family, or NULL otherwise. The (n,i)-th entry is the observed size parameter for the i-th unit in the n-th experiment. \cr
+#'  fac \tab Same as the input argument 'fac'.\cr
 #'  Theta \tab A K by I matrix. The (k,i)-th element is the indicator of whether the i-th unit is binding for condition k.\cr
 #'  W \tab A K by (J*S) matrix. The (k,J*(s-1)+j)-th entry is the probability of units in the j-th cluster have state s under the k-th experimental condition. \cr
 #'  Z \tab An I by J matrix. Each column is the indicator for an individual loci set.\cr
@@ -275,6 +282,9 @@ MBASIC.sim.state <- function(I, K, J, S = 2, struct = NULL, delta = NULL, delta.
 #' @export
 MBASIC.sim<- function(xi, family = "lognormal", struct = NULL, I, fac, J, S = 2, f = 5, delta = NULL, delta.non = NULL, zeta = 0.1) {
   
+  if(!family %in% c("lognormal", "negbin", "binom")) {
+    stop("Error: 'family' must be one of 'lognormal', 'negbin' or 'binom'.")
+  }
   K <- length(unique(fac))
   N <- length(fac)
   D <- matrix(0, nrow = K, ncol = N)
@@ -290,8 +300,8 @@ MBASIC.sim<- function(xi, family = "lognormal", struct = NULL, I, fac, J, S = 2,
 
   if(family == "lognormal") {
     prior_mean <- xi + log (((1:S) - 1) * (f - 1) + 1)
-    prior_sd <- log(f) / 30
-    sdev <- diff(exp(prior_mean))[ 1 ] / 6
+    prior_sd <- log(f) / 10
+    sdev <- diff(exp(prior_mean))[ 1 ] / 2
     stdev <- sqrt((log(sdev ^ 2 + exp(2 * prior_mean)) - 2 * prior_mean)/2)
   }  else {
     prior_mean <- xi * (((1:S) - 1) * (f - 1) + 1)
@@ -301,22 +311,30 @@ MBASIC.sim<- function(xi, family = "lognormal", struct = NULL, I, fac, J, S = 2,
     stdev[ stdev < 0 ] <- 100
   }
 
-  prior.Mu <- t(matrix(rtnorm(S * N, mean = prior_mean, sd = prior_sd, lower = 0), nrow = S))
+  if(family != "binom") {  
+    prior.Mu <- t(matrix(rtnorm(S * N, mean = prior_mean, sd = prior_sd, lower = 0), nrow = S))
+  } else {
+    prior.Mu <- t(matrix(rbeta(S * N, f * seq(S), f * rev(seq(S))), nrow = S))
+  }
   
   Mu <- matrix(0, nrow = N, ncol = I)
   for(m in 1:N)
     for(s in 1:S)
       Mu[ m, Delta[m,] == s ] <- prior.Mu[ m, s ]
 
+  X <- NULL
   if(family == "lognormal") {
     Y <- matrix(as.integer(exp(rtnorm(N * I, mean = Mu, sd = stdev, upper = max(Mu) + 1 / max(Mu)))), nrow = N)
-  } else {
+  } else if(family == "negbin") {
     Y <- matrix(rnbinom(N * I, mu = Mu, size = stdev), nrow = N)
+  } else {
+    X <- matrix(rpois(N * I, lambda = xi), nrow = N)
+    Y <- matrix(rbinom(N * I, size = X, prob = Mu), nrow = N)
   }
   
   bkng <- mean(Y[ Delta == 1 ])
   snr <- mean(Y[ Delta == 2 ]) / mean(Y[ Delta == 1 ])
 
-  return(list(Theta = para.theta$Theta, Y = Y, W = para.theta$W, Z = para.theta$Z, delta = para.theta$delta, zeta = para.theta$zeta, prior.mean = prior_mean, prior.sd = prior_sd, stdev = stdev, Mu = prior.Mu, bkng = bkng, snr = snr, non.id = para.theta$non.id))
+  return(list(Theta = para.theta$Theta, Y = Y, X = X, fac = fac, W = para.theta$W, Z = para.theta$Z, delta = para.theta$delta, zeta = para.theta$zeta, prior.mean = prior_mean, prior.sd = prior_sd, stdev = stdev, Mu = prior.Mu, bkng = bkng, snr = snr, non.id = para.theta$non.id))
   
 }
