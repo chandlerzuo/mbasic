@@ -37,7 +37,7 @@ MBASIC.sim.binary <- function(I, fac, J, f, struct=NULL, beta=0.1, zeta = 0.1, b
         if(!is.null(struct)) {
           J <- ncol(struct)
           if(nrow(struct) != K) {
-            message("Dimension of struct is not consistent with K")
+            stop("Error: dimension of 'struct' is not consistent with 'K'.")
           }
         } else {
           struct <- matrix(1:K, nrow = K, ncol = J)
@@ -174,8 +174,9 @@ MBASIC.sim.binary <- function(I, fac, J, f, struct=NULL, beta=0.1, zeta = 0.1, b
 #' @param J An integer for the number of clusters.
 #' @param S An integer for the number of states.
 #' @param struct An K by J integer matrix. The j-th column denotes the levels for the cluster level parameter. See details for more information. Default: NULL.
-#' @param delta A vector of length S, or NULL. This is the dirichlet prior parameter to simulate the probability across the S states for each CLUSTERED unit and each experiment. If NULL, rep(0.1,S) is used.
-#' @param delta.non  A vector of length S, or NULL. This is the dirichlet prior parameter to simulate the probability across the S states for each UNCLUSTERED unit and each experiment. If NULL, rep(0.1,S) is used.
+#' @param statemap A vector consisted of 1, 2, ..., S, representing which state each component belongs to. Default: NULL.
+#' @param delta A vector the same length as statemap, or NULL. This is the dirichlet prior parameter to simulate the probability across the components for each CLUSTERED unit and each experiment. If NULL, rep(0.1, length(statemap)) is used.
+#' @param delta.non  A vector of length S, or NULL. This is the dirichlet prior parameter to simulate the probability across the components for each UNCLUSTERED unit and each experiment. If NULL, rep(0.1, length(statemap)) is used.
 #' @param zeta The probability that each unit does not belong to any cluster. Default: 0.1.
 #' @return A list containing:
 #' \tabular{ll}{
@@ -190,28 +191,37 @@ MBASIC.sim.binary <- function(I, fac, J, f, struct=NULL, beta=0.1, zeta = 0.1, b
 #' @examples
 #' dat.sim <- MBASIC.sim.state(I = 100, K = 10, J = 3)
 #' @export
-MBASIC.sim.state <- function(I, K, J, S = 2, struct = NULL, delta = NULL, delta.non = NULL, zeta = 0.1) {
+MBASIC.sim.state <- function(I, K, J, S = 2, struct = NULL, delta = NULL, delta.non = NULL, zeta = 0.1, statemap = NULL) {
   
+  if(is.null(statemap)) {
+    statemap <- seq(S)
+  } else if(prod(sort(unique(statemap)) == seq(S)) != 1) {
+    stop("Error: statemap must be a vector consisted of 1, 2, ..., S.")
+  }
+
   ##prior parameters
   if(is.null(delta))
-    delta <- rep(0.1, S)
-  else if(S != length(delta)) {
-    message("S must be the length of delta")
-    return
+    delta <- rep(0.1, length(statemap))
+  else if(length(statemap) != length(delta)) {
+    stop("Error: the length of 'delta' must be the same as 'statemap'.")
   }
 
   if(is.null(delta.non))
-    delta.non <- rep(0.1, S)
-  else if(S != length(delta)) {
-    message("S must be the length of delta")
-    return
+    delta.non <- rep(0.1, length(statemap))
+  else if(length(statemap) != length(delta.non)) {
+    stop("Error: the of 'delta.non' must be the same as 'statemap'.")
   }
 
   if(!is.null(struct))
     if(ncol(struct) != J | nrow(struct) != K)
-      message("matrix struct is not of correct dimension!")
+      stop("Error: matrix 'struct' is not of the correct dimension.")
 
+  stateMap <- matrix(0, nrow = length(statemap), ncol = S)
+  stateMap[cbind(seq_along(statemap), statemap)] <- 1
 
+  delta <- c(t(stateMap) %*% delta)
+  delta.non <- c(t(stateMap) %*% delta.non)
+  
   W <- matrix(t(rdirichlet(K * J, delta)), nrow = S * K, ncol = J)
 
   for(j in 1:J)
@@ -280,47 +290,72 @@ MBASIC.sim.state <- function(I, K, J, S = 2, struct = NULL, delta = NULL, delta.
 #' @examples
 #' dat.sim <- MBASIC.sim(xi = 2, I = 100, fac = rep(1:5, each = 2), J = 3)
 #' @export
-MBASIC.sim<- function(xi, family = "lognormal", struct = NULL, I, fac, J, S = 2, f = 5, delta = NULL, delta.non = NULL, zeta = 0.1) {
+MBASIC.sim<- function(xi, family = "lognormal", struct = NULL, I, fac, J, S = 2, f = 5, delta = NULL, delta.non = NULL, zeta = 0.1, statemap = NULL) {
   
   if(!family %in% c("lognormal", "negbin", "binom")) {
     stop("Error: 'family' must be one of 'lognormal', 'negbin' or 'binom'.")
   }
-  K <- length(unique(fac))
-  N <- length(fac)
-  D <- matrix(0, nrow = K, ncol = N)
-  
-  ## design matrix D is K by N
-  D <- matrix(0, nrow = K, ncol = length(fac))
-  for(k in 1:K) {
-    D[ k, fac == unique(fac)[ k ] ] <- 1
+
+  if(is.null(statemap)) {
+    statemap <- seq(S)
   }
 
-  para.theta <- MBASIC.sim.state(I=I, K=K, J=J, S=S, delta=delta, delta.non=delta.non, zeta=zeta, struct = struct)
-  Delta <- crossprod(D, para.theta$Theta)
+  if(prod(sort(unique(statemap)) == seq(S)) != 1) {
+    stop("Error: statemap must be consisted of 1, 2, ... S.")
+  }
 
+  M <- length(statemap)
+  K <- length(unique(fac))
+  N <- length(fac)
+ 
+  para.theta <- MBASIC.sim.state(I=I, K=K, J=J, S=S, delta=delta, delta.non=delta.non, zeta=zeta, struct = struct, statemap = statemap)
+
+  V <- matrix(0, nrow = N, ncol = M)
+  for(s in seq(S)) {
+    ids <- which(statemap == s)
+    if(length(ids) == 1)
+      V[, ids] <- 1
+    else
+      V[, ids] <- t(matrix(rdirichlet(N, delta[ids]), nrow = length(ids)))
+  }
+  
+  Delta <- matrix(0, nrow = N, ncol = I)
+  for(n in seq(N)) {
+    for(s in seq(S)) {
+      ids <- which(para.theta$Theta[fac[n], ] == s)
+      if(length(ids) == 0)
+        next
+      if(sum(statemap == s) == 1) {
+        Delta[n, ids] <- which(statemap == s)
+      } else {
+        Delta[n, ids] <- sample(which(statemap == s), length(ids), replace = TRUE, prob = V[n, statemap == s])
+      }
+    }
+  }
+  
   if(family == "lognormal") {
-    prior_mean <- xi + log (((1:S) - 1) * (f - 1) + 1)
+    prior_mean <- xi + log ((seq(M) - 1) * (f - 1) + 1)
     prior_sd <- log(f) / 10
     sdev <- diff(exp(prior_mean))[ 1 ] / 2
     stdev <- sqrt((log(sdev ^ 2 + exp(2 * prior_mean)) - 2 * prior_mean)/2)
   }  else {
-    prior_mean <- xi * (((1:S) - 1) * (f - 1) + 1)
+    prior_mean <- xi * ((seq(M) - 1) * (f - 1) + 1)
     prior_sd <- (f - 1) * xi / 6
     sdev <- diff(prior_mean)[1] / 3
     stdev <- prior_mean / (sdev ^ 2 / prior_mean - 1)
     stdev[ stdev < 0 ] <- 100
   }
-
+    
   if(family != "binom") {  
-    prior.Mu <- t(matrix(rtnorm(S * N, mean = prior_mean, sd = prior_sd, lower = 0), nrow = S))
+    prior.Mu <- t(matrix(rtnorm(M * N, mean = prior_mean, sd = prior_sd, lower = 0), nrow = M))
   } else {
-    prior.Mu <- t(matrix(rbeta(S * N, f * seq(S), f * rev(seq(S))), nrow = S))
+    prior.Mu <- t(matrix(rbeta(M * N, f * seq(M), f * rev(seq(M))), nrow = M))
   }
   
   Mu <- matrix(0, nrow = N, ncol = I)
-  for(m in 1:N)
-    for(s in 1:S)
-      Mu[ m, Delta[m,] == s ] <- prior.Mu[ m, s ]
+  for(n in 1:N)
+    for(m in seq(M))
+      Mu[ n, Delta[n,] == m ] <- prior.Mu[ n, m ]
 
   X <- NULL
   if(family == "lognormal") {
@@ -335,6 +370,6 @@ MBASIC.sim<- function(xi, family = "lognormal", struct = NULL, I, fac, J, S = 2,
   bkng <- mean(Y[ Delta == 1 ])
   snr <- mean(Y[ Delta == 2 ]) / mean(Y[ Delta == 1 ])
 
-  return(list(Theta = para.theta$Theta, Y = Y, X = X, fac = fac, W = para.theta$W, Z = para.theta$Z, delta = para.theta$delta, zeta = para.theta$zeta, prior.mean = prior_mean, prior.sd = prior_sd, stdev = stdev, Mu = prior.Mu, bkng = bkng, snr = snr, non.id = para.theta$non.id))
+  return(list(Theta = para.theta$Theta, Y = Y, X = X, fac = fac, W = para.theta$W, Z = para.theta$Z, V = V, delta = para.theta$delta, zeta = para.theta$zeta, prior.mean = prior_mean, prior.sd = prior_sd, stdev = stdev, Mu = prior.Mu, bkng = bkng, snr = snr, non.id = para.theta$non.id))
   
 }

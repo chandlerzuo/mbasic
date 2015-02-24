@@ -5,12 +5,12 @@
 \title{Simulate data for the general MBASIC model.}
 \usage{
 MBASIC.sim(xi, family = "lognormal", struct = NULL, I, fac, J, S = 2,
-  f = 5, delta = NULL, delta.non = NULL, zeta = 0.1)
+  f = 5, delta = NULL, delta.non = NULL, zeta = 0.1, statemap = NULL)
 }
 \arguments{
 \item{xi}{Parameter for the magnitude of each observations. See details for more information.}
 
-\item{family}{A parameter for the family of distribution to be used. Either "lognormal" or "negbin". Default: "lognormal".}
+\item{family}{A parameter for the family of distribution to be used, must be "lognormal", "negbin" or "binom". Default: "lognormal".}
 
 \item{struct}{An K by J integer matrix. The j-th column denotes the levels for the cluster level parameter. See details for more information. Default: NULL.}
 
@@ -33,7 +33,9 @@ MBASIC.sim(xi, family = "lognormal", struct = NULL, I, fac, J, S = 2,
 \value{
 A list containing:
 \tabular{ll}{
- Y \tab A N by I matrix. The (n,i)-th entry is the observed value at the i-th unit for the n-th experiment. \cr
+ Y \tab An N by I matrix. The (n,i)-th entry is the observed value at the i-th unit for the n-th experiment. \cr
+ X \tab An N by I matrix for the "binom" family, or NULL otherwise. The (n,i)-th entry is the observed size parameter for the i-th unit in the n-th experiment. \cr
+ fac \tab Same as the input argument 'fac'.\cr
  Theta \tab A K by I matrix. The (k,i)-th element is the indicator of whether the i-th unit is binding for condition k.\cr
  W \tab A K by (J*S) matrix. The (k,J*(s-1)+j)-th entry is the probability of units in the j-th cluster have state s under the k-th experimental condition. \cr
  Z \tab An I by J matrix. Each column is the indicator for an individual loci set.\cr
@@ -50,7 +52,12 @@ A list containing:
 Simulate data for the general MBASIC model.
 }
 \details{
-MBASIC.sim allows two types of distributions. For the "lognormal" family, entries in the matrix Y follows distribution: log(Y[n,i] + 1) | Theta[n,i]=s ~ N(Mu[n,s], stdev[s]). For the "negbin" family, entris in the matrix Y follows distribution: Y[n,i] | Theta[n,i]=s ~ NB(Mu[n,s], stdev[s]). In this package, NB(mu,size) denotes a Negative binomial distribution with mean mu and variance mu(1+mu/size). For both distributions, Mu[n,s]~N(prior.mean[s],prior.sd[s]). Hyper paramters prior.mean and prior.sd are set differently under the two distributional families. For the "lognormal" family, where prior.mean[s] = xi+log((s-1)(f-1)+1), and prior.sd=log(f)/30. For the "negbin" family, prior.mean[s]=xi*((s-1)(f-1)+1), and prior.sd=(f-1)*xi/6. In general, xi is the mean for the state S=1, and f is roughly the ratio between the means from state S=2 and S=1.
+MBASIC.sim allows three types of distributions:\cr
+For the "lognormal" family, entries in the matrix Y follows distribution: log(Y[n,i] + 1) | Theta[n,i]=s ~ N(Mu[n,s], stdev[s]).\cr
+For the "negbin" family, entries in the matrix Y follows distribution: Y[n,i] | Theta[n,i]=s ~ NB(Mu[n,s], stdev[s]).\cr
+For the "binom" family, entries in the matrices X and Y follows distribution: X[n,i] ~ Pois(xi), Y[n,i]| Theta[n,i]=s,X[n,i] ~ Binom(X[n,i],Mu[n,s]). In this package, NB(mu,size) denotes a Negative binomial distribution with mean mu and variance mu(1+mu/size).\cr
+For "lognormal" or "negbin" families, Mu[n,s]~N(prior.mean[s],prior.sd[s]). Hyper paramters prior.mean and prior.sd are set differently under the two distributional families. For the "lognormal" family, where prior.mean[s] = xi+log((s-1)(f-1)+1), and prior.sd=log(f)/30. For the "negbin" family, prior.mean[s]=xi*((s-1)(f-1)+1), and prior.sd=(f-1)*xi/6. In general, xi is the mean for the state S=1, and f is roughly the ratio between the means from state S=2 and S=1.\cr
+For the "binom" family, Mu[n,s] ～ Beta(s * f, (S + 1 - s) * f).
 }
 \examples{
 dat.sim <- MBASIC.sim(xi = 2, I = 100, fac = rep(1:5, each = 2), J = 3)

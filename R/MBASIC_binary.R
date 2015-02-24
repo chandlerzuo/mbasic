@@ -359,9 +359,7 @@ MBASIC.binary <- function(Y, Mu0, fac, J=NULL, zeta=0.2, maxitr = 100, burnin = 
           PDF[ , idx ] <- logdensity(Y, Mu1, Sigma1, family)
         }
       }
-      PDF[ PDF > 5 ] <- 5
-      PDF[ PDF ==-Inf ] <- min(PDF[ PDF > -Inf ], na.rm = TRUE)
-      PDF[ is.na(PDF) ] <- mean(PDF[ !is.na(PDF) ])
+      PDF <- trimLogValue(PDF)
       PDF <- crossprod(t(D), PDF)
 
       oldlik <- totallik

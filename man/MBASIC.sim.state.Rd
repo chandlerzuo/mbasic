@@ -5,7 +5,7 @@
 \title{Simulate the state matrix for general MBASIC models.}
 \usage{
 MBASIC.sim.state(I, K, J, S = 2, struct = NULL, delta = NULL,
-  delta.non = NULL, zeta = 0.1)
+  delta.non = NULL, zeta = 0.1, statemap = NULL)
 }
 \arguments{
 \item{I}{An integer for the total number of units.}
@@ -18,11 +18,13 @@ MBASIC.sim.state(I, K, J, S = 2, struct = NULL, delta = NULL,
 
 \item{struct}{An K by J integer matrix. The j-th column denotes the levels for the cluster level parameter. See details for more information. Default: NULL.}
 
-\item{delta}{A vector of length S, or NULL. This is the dirichlet prior parameter to simulate the probability across the S states for each CLUSTERED unit and each experiment. If NULL, rep(0.1,S) is used.}
+\item{delta}{A vector the same length as statemap, or NULL. This is the dirichlet prior parameter to simulate the probability across the components for each CLUSTERED unit and each experiment. If NULL, rep(0.1, length(statemap)) is used.}
 
-\item{delta.non}{A vector of length S, or NULL. This is the dirichlet prior parameter to simulate the probability across the S states for each UNCLUSTERED unit and each experiment. If NULL, rep(0.1,S) is used.}
+\item{delta.non}{A vector of length S, or NULL. This is the dirichlet prior parameter to simulate the probability across the components for each UNCLUSTERED unit and each experiment. If NULL, rep(0.1, length(statemap)) is used.}
 
 \item{zeta}{The probability that each unit does not belong to any cluster. Default: 0.1.}
+
+\item{statemap}{A vector consisted of 1, 2, ..., S, representing which state each component belongs to. Default: NULL.}
 }
 \value{
 A list containing:

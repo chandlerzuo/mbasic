@@ -138,12 +138,8 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
       
       totallik <- .Call("loglik_theta", W, P, zeta, probz, PDF, package = "MBASIC")
       alllik <- c(alllik, totallik)
-
-      if(zeta > 0) {
-        mcmc.result <- .Call("e_step_theta", W, P, zeta, probz, PDF, package = "MBASIC")
-      } else {
-        mcmc.result <- .Call("e_step_theta1", W, P, probz, PDF, package = "MBASIC")
-      }
+      
+      mcmc.result <- .Call("e_step_theta", W, P, zeta, probz, PDF, package = "MBASIC")
       
       ## Maximizers
       zeta <- mcmc.result[["zeta"]]

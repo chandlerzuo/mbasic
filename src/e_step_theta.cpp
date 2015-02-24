@@ -59,7 +59,10 @@ SEXP e_step_theta(SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _Theta) {
 	for(i = 0; i < I; i ++){
 		// b_mean
 
-		double exp1 = log(zeta) + TP(i);
+		double exp1 = 0;
+		if(zeta > 0) {
+			exp1 = log(zeta) + TP(i);
+		}
 		double exp2 = log(1 - zeta);
 		double maxexp = TW(i, 0);
 		for(j = 1; j < J; j ++)
@@ -70,10 +73,15 @@ SEXP e_step_theta(SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _Theta) {
 		for(j = 0; j < J; j ++)
 			tmp += probz[ j ] * exp(TW(i, j) - maxexp);
 		exp2 += log(tmp) + maxexp;
-		if(exp1 > exp2)
-			b_mean(i) = 1 / (1 + exp(exp2 - exp1));
-		else
-			b_mean(i) = exp(exp1 - exp2) / (1 + exp(exp1 - exp2));
+
+		if(zeta > 0) {
+			if(exp1 > exp2)
+				b_mean(i) = 1 / (1 + exp(exp2 - exp1));
+			else
+				b_mean(i) = exp(exp1 - exp2) / (1 + exp(exp1 - exp2));
+		} else {
+			b_mean(i) = 0;
+		}
 
 		// predZ
 
@@ -103,7 +111,6 @@ SEXP e_step_theta(SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _Theta) {
 		// Zcond
 		for(j = 0; j < J; j ++){
 			exp1 = predZ(i, j) - probz(j) * b_mean(i);
-			//exp2 = 1 - b_mean(i);
 			if(exp1 < _LOW)
 				Zcond(i, j) = _LOW;
 			else if(exp1 >= (1 - _LOW))
@@ -115,7 +122,6 @@ SEXP e_step_theta(SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _Theta) {
 				for(s = 0; s < S; s ++){
 					if(Theta(k, i + I * s) > 0){
 						W_max(k, j + J * s) += Zcond(i, j);
-						//	printf("%d, %d\t%d\t%d\t%f\t%f\t%f\t%f\n", i, k, j, s, W_max(k, j + J * s), Zcond(i, j), predZ(i, j), b_mean(i), probz(j));
 						break;
 					}
 				}
@@ -123,14 +129,16 @@ SEXP e_step_theta(SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _Theta) {
 
 	}
 
-	zeta = 0;
-	for(i = 0; i < I; i ++)
-		zeta += b_mean[ i ];
-	zeta /= I;
-	if(zeta < _LOW)
-		zeta = _LOW;
-	else if(zeta > 1 - _LOW)
-		zeta = 1 - _LOW;
+	if(zeta > 0) {
+		zeta = 0;
+		for(i = 0; i < I; i ++)
+			zeta += b_mean[ i ];
+		zeta /= I;
+		if(zeta < _LOW)
+			zeta = _LOW;
+		else if(zeta > 1 - _LOW)
+			zeta = 1 - _LOW;
+	}
 	
 	for(j = 0; j < J; j ++){
 		Z_mean(j) /= I;

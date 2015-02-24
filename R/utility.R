@@ -92,9 +92,9 @@ orderCluster <- function(W, struct) {
                   summary(lm(x~as.factor(paste(rep(1:S, each = K), rep(struct[,j] , S), sep = "|"))))$sigma
                  )
     if(length(which.min(r2))==0)
-      id <- workSet[ 1 ]
+      id <- workSet[1]
     else
-      id <- workSet[ which.min(r2) ]
+      id <- workSet[which.min(r2)]
     ret <- c(ret, id)
     workSet <- setdiff(workSet, id)
   }
@@ -148,13 +148,12 @@ matchCluster <- function(W, W.true, predZ, Z.true, b.prob, non.id, S) {
   if(is.null(b.prob))
     b.prob <- rep(0, nrow(predZ))
   
-  J <- ncol(W)
-  distW <- matrix(0, nrow = J, ncol = ncol(W.true))
-  for(j1 in seq_len(J)) 
+  distW <- matrix(0, nrow = ncol(W), ncol = ncol(W.true))
+  for(j1 in seq_len(ncol(W))) 
     for(j2 in seq_len(ncol(W.true)))
       distW[ j1, j2 ] <- sum((W[ , j1 ] - W.true[ , j2 ]) ^ 2)
   
-  matchId1 <- matrix(-1, nrow = J, ncol = 2)
+  matchId1 <- matrix(-1, nrow = ncol(W), ncol = 2)
   matchId2 <- matrix(-1, nrow = ncol(W.true), ncol = 2)
   
   numMissClass <- 0
@@ -163,7 +162,7 @@ matchCluster <- function(W, W.true, predZ, Z.true, b.prob, non.id, S) {
   Z.true[ non.id, ] <- 0
   Z.true[ non.id, ncol(W.true) + 1] <- 1
   
-  for(j in seq_len(J)) {
+  for(j in seq_len(ncol(W))) {
     matchId1[ j, 1 ] <- which.min(distW[ j, ])
     matchId1[ j, 2 ] <- j
     numMissClass <- numMissClass + sum(Z.pred[ , matchId1[ j, 2 ] ] * (1 - Z.true[ , matchId1[ j, 1 ] ]))
@@ -175,8 +174,8 @@ matchCluster <- function(W, W.true, predZ, Z.true, b.prob, non.id, S) {
     numMissClass <- numMissClass + sum((1 - Z.pred[ , matchId2[ j, 2 ] ]) * Z.true[ , matchId2[ j, 1 ] ])
   }
   
-  numMissClass <- numMissClass + sum(Z.pred[ , J + 1 ] * (1 - Z.true[ , ncol(W.true) + 1 ]))
-  numMissClass <- numMissClass + sum((1 - Z.pred[ , J + 1 ]) * Z.true[ , ncol(W.true) + 1 ])
+  numMissClass <- numMissClass + sum(Z.pred[ , ncol(W) + 1 ] * (1 - Z.true[ , ncol(W.true) + 1 ]))
+  numMissClass <- numMissClass + sum((1 - Z.pred[ , ncol(W) + 1 ]) * Z.true[ , ncol(W.true) + 1 ])
 
   mcr <- numMissClass / 2/ nrow(Z.true)
   
@@ -184,7 +183,7 @@ matchCluster <- function(W, W.true, predZ, Z.true, b.prob, non.id, S) {
                 (
                  sum((W[, matchId1[ ,2] ] -W.true[ , matchId1 [,1] ]) ^ 2) +
                  sum((W[, matchId2[ ,2] ] -W.true[ , matchId2 [,1] ]) ^ 2)
-                ) / 2 / K / J / (S - 1)
+                ) / (ncol(W) + ncol(W.true)) / K / (S - 1)
                )
 
   ari <- adjustedRandIndex(
@@ -206,4 +205,20 @@ extract <- function(x, head, tail) {
             )
   }
   return(res)
+}
+
+trimLogValue <- function(x) {
+  x[x > 5] <- 5
+  x[x < -5000] <- -5000
+  x[is.na(x)] <- mean(x, na.rm = TRUE)
+  return(x)
+}
+
+trimProbValue <- function(x) {
+  maxProb <- max(na.omit(x[x != 1]))
+  minProb <- min(na.omit(x[x != 0]))
+  x[x > maxProb] <- max(c(0.999, na.omit(maxProb)))
+  x[x < minProb] <- min(c(0.001, na.omit(minProb)))
+  x[is.na(x)] <- mean(x, na.rm = TRUE)
+  return(x)
 }
