@@ -135,7 +135,6 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
 
   if(method != "MBASIC") {
     ## SE-HC, PE-MC or SE-MC method
-    Pi <- matrix(1 / S, nrow = K, ncol = S)
     
     ## em step to estimate Theta
     allpar <- c(c(V), c(Mu), c(Sigma), c(Pi))
@@ -381,7 +380,7 @@ InitStates <- function() {
       F1.full[idx,] <- logdensity(Y, Mu[, m], Sigma[, m], X, family)
     }
     F1.full <- trimLogValue(F1.full)
-    F1.full <- exp(F1.full) * matrix(c(V), nrow = N * M, ncol = I)
+    F1.full <- exp(F1.full)
     ## convert into (NS) x I
     F1.tmp <- log(crossprod(unitMap, F1.full))
     
@@ -406,10 +405,13 @@ InitStates <- function() {
     ProbMat <- F1 / totalF
     ProbMat[totalF == 0] <- 1/S
     ProbMat <- trimProbValue(ProbMat)
-    
+
+    Pi <- matrix(rep(apply(stateMap, 2, sum) / M, each = K), nrow = K, ncol = S)
+
     assign("ProbMat.full", ProbMat.full, envir = parent.frame())
     assign("ProbMat", ProbMat, envir = parent.frame())
     assign("V", V, envir = parent.frame())
+    assign("Pi", Pi, envir = parent.frame())
 }
 
 InitDist <- function() {
@@ -507,14 +509,19 @@ UpdateStates <- function() {
     ProbMat.full <- trimProbValue(ProbMat.full)
 
     ## update V
-    V <- matrix(apply(F1.full, 1, sum), nrow = N)
-    V <- V / tcrossprod(V %*% stateMap, stateMap)
+    V.new <- matrix(apply(F1.full, 1, sum), nrow = N)
+    V.new <- V.new / tcrossprod(V.new %*% stateMap, stateMap)
     
     ## compute F1
-    ## convert into (NS) x I
+    ## recompute replicate density
+    for(m in seq(M)) {
+      idx <- (m - 1) * N + seq_len(N)
+      F1.full[idx, ] <- exp(logdensity(Y, Mu[, m], Sigma[, m], X, family)) * V[, m]
+    }
+    ## convert to (NS) x I
     F1.full <- log(crossprod(unitMap, F1.full))
     for(s in seq(S)) {
-      F1[(s - 1) * K + seq_len(K), ] <- crossprod(designMap, F1.full[(s - 1) * N + seq(N), ])
+      F1[(s - 1) * K + seq_len(K), ] <- crossprod(designMap, F1.full[(s - 1) * N + seq(N), ]) + log(Pi[, s])
     }
     F1 <- trimLogValue(F1)
     totalF <- matrix(0, nrow = K, ncol = I)
@@ -533,7 +540,7 @@ UpdateStates <- function() {
       Pi[,s] <- apply(ProbMat[idx,], 1 ,mean)
     }
 
-    assign("V", V, envir = parent.frame())
+    assign("V", V.new, envir = parent.frame())
     assign("Pi", Pi, envir = parent.frame())
     assign("ProbMat", ProbMat, envir = parent.frame())
     assign("ProbMat.full", ProbMat.full, envir = parent.frame())
