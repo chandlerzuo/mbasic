@@ -222,7 +222,6 @@ SEXP e_step(SEXP _W, SEXP _P, SEXP _V, SEXP _zeta, SEXP _probz, SEXP _PDF, SEXP 
 				Z_mean(j) += predZ(i, j);
 			}
 		}
-
 	}
 
 	for(i = 0; i < I; i ++)
@@ -239,9 +238,6 @@ SEXP e_step(SEXP _W, SEXP _P, SEXP _V, SEXP _zeta, SEXP _probz, SEXP _PDF, SEXP 
 			V_max(n, m) = 0;
 			for(i = 0; i < I; i ++)
 				Theta_nu(n + N * m, i) = 0;
-		}
-		for(s = 0; s < S; s ++) {
-			V_norm(n, s) = 0;
 		}
 	}
 	
@@ -273,8 +269,7 @@ SEXP e_step(SEXP _W, SEXP _P, SEXP _V, SEXP _zeta, SEXP _probz, SEXP _PDF, SEXP 
 									Theta_nu(n + N * m, i) = _LOW;
 								else if(Theta_nu(n + N * m, i) > 1 - _LOW)
 									Theta_nu(n + N * m, i) = 1 - _LOW;
-								V_max(n, m) += Theta_nu(n + N * m, i);
-								V_norm(n, s) += Theta_nu(n + N * m, i);
+								V_max(n, m) += Theta_nu(n + N * m, i) + (1 - Theta_mean(k + K * s, i)) * V(n, m);
 							}
 						}
 					}
@@ -321,11 +316,49 @@ SEXP e_step(SEXP _W, SEXP _P, SEXP _V, SEXP _zeta, SEXP _probz, SEXP _PDF, SEXP 
 	}
 	
 	for(n = 0; n < N; n ++) {
+	    for(s = 0; s < S; s ++) {
+		V_norm(n, s) = 0;
+		for(m = 0; m < M; m ++) {
+		    if(statemap[m] == s) {
+			V_norm(n, s) += V_max(n, m);
+		    }
+		}
+	    }
+	}
+
+	for(n = 0; n < N; n ++) {
 		for(s = 0; s < S; s ++) {
 			for(m = 0; m < M; m ++) {
 				if(statemap[m] == s) {
-					V_max(n, m) /= V_norm(n, s);
+					if(V_norm(n, s) < _LOW) {
+						V_max(n, m) = V(n, m);
+					} else {
+						V_max(n, m) /= V_norm(n, s);
+					}
+					if(V_max(n, m) > 1 - _LOW) {
+						V_max(n, m) = 1 - _LOW;
+					} else if(V_max(n, m) < _LOW) {
+						V_max(n, m) = _LOW;
+					}
 				}
+			}
+		}
+	}
+
+	for(k = 0; k < K; k ++) {
+		for(j = 0; j < J; j ++) {
+			double total = 0;
+			for(s = 0; s < S; s ++) {
+				total += W_max(k + K * s, j);
+			}
+			for(s = 0; s < S; s ++) {
+				W_max(k + K * s, j) /= total;
+				if(total < _LOW)
+					W_max(k + K * s, j) = 1 / (double) S;
+				else if(W_max(k + K * s, j) < _LOW)
+					W_max(k + K * s, j) = _LOW;
+				else if(W_max(k + K * s, j) > 1 - _LOW)
+					W_max(k + K * s, j) = 1 - _LOW;
 			}
 		}
 	}
@@ -339,9 +372,13 @@ SEXP e_step(SEXP _W, SEXP _P, SEXP _V, SEXP _zeta, SEXP _probz, SEXP _PDF, SEXP 
 					    Rcpp::Named("Theta_nu") = Theta_nu,
 					    Rcpp::Named("V") = V_max,
 					    Rcpp::Named("b_prob") = b_mean,
-					    Rcpp::Named("predZ") = predZ
-					   );
-	
+					    Rcpp::Named("Z") = predZ,
+					    Rcpp::Named("Zcond") = Zcond
+					    //Rcpp::Named("jointPDF") = jointPDF,
+					    //Rcpp::Named("FW") = FW,
+					    //Rcpp::Named("FV") = FV,
+					    //Rcpp::Named("FP") = FP,
+					   );	
 	return(ret);
 	
 }

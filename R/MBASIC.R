@@ -118,7 +118,6 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
   InitDist()
   
   b <- rep(0, I)
-  B <- matrix(rep(b, each = K), nrow = K)
   
   ## initialize the matrices by hierarchical clustering
   ## in constructing Z, cluster all locis
@@ -171,8 +170,11 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
       
       ## Pi is the proportion for components in the k experiment to have state s
       ## Pi is different from Z. Z is the posterior probability.
-      
-      Mu.err <- sqrt(mean((Mu - para$Mu) ^ 2))
+
+      Mu.err <- numeric(0)
+      if(prod(dim(Mu) == dim(para$Mu)) == 1) {
+        Mu.err <- sqrt(mean((Mu - para$Mu) ^ 2))
+      }
 
       write.out(out, paste("mis-class rate ", ret@MisClassRate))
       write.out(out, paste("Error for W ",  round(ret@W.err, 3)))
@@ -186,6 +188,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
                  Z = ret@Z,
                  V = V,
                  b = ret@b,
+                 clustProb = ret@clustProb,
                  lik = ret@lik,
                  alllik = ret@alllik,
                  zeta = ret@zeta,
@@ -225,7 +228,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
       W[, j] <- apply(t(ProbMat[ , id[groups == j]]), 2, mean)
     }
   }
-  predZ <- Z
+  predZ <- Zcond <- Z
   b.prob <- b
   clustOrder <- .orderCluster(W, struct)
   W <- W[, clustOrder]
@@ -252,14 +255,6 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
       break
     }
     
-    ## transform everything into matrices
-    B <- matrix(rep(b, each = K), nrow = K)
-
-    ##    W.lik <- matrix(0, nrow = K, ncol = J * S)
-    ##    for(s in seq_len(S)) {
-    ##        W.lik[, seq_len(J) + J * (s - 1)] <- W[seq_len(K) + K * (s - 1) ,]
-    ##    }
-    
     if(outitr == 1 | method == "MBASIC") {
         ## only compute the PDF once if the method is PE-MC
         PDF <- matrix(0, nrow = N * M, ncol = I)
@@ -270,7 +265,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     }
     
     oldlik <- totallik
-    totallik <- .Call("loglik", W, P, V, zeta, probz, PDF, designMap, stateMap, package="MBASIC")
+    totallik <- .Call("loglik", W, P, V, zeta, probz, PDF, fac - 1, statemap - 1, package="MBASIC")
     if(verbose) {
         write.out(out, paste("itr", outitr, "lik", round(tail(totallik, 1), 2), "zeta", round(zeta, 2)))
     }
@@ -298,6 +293,13 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     ## E step
     ## M step for some parameters
     estep.result <- .Call("e_step", W, P, V, zeta, probz, PDF, fac - 1, statemap - 1, package = "MBASIC")
+    if(FALSE) {
+        estep.r1 <- estep(W, P, V, zeta, probz, PDF, designMap, stateMap, unitMap)
+        for(s in names(estep.result)) {
+            print(s)
+            print(max(abs(estep.result[[s]] - estep.r1[[s]])))
+        }
+    }
     
     ## Expected Theta matrix
     ProbMat <- estep.result[["Theta"]]
@@ -306,7 +308,8 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     zeta <- estep.result[["zeta"]]
     W <- estep.result[["W"]]
     probz <- estep.result[["probz"]]
-    predZ <- estep.result[["predZ"]]
+    predZ <- estep.result[["Z"]]
+    Zcond <- estep.result[["Zcond"]]
     b.prob <- estep.result[["b_prob"]]
     V <- estep.result[["V"]]
     
@@ -314,6 +317,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     W <- W[, clustOrder]
     W <- .structure(W, struct)
     probz <- probz[clustOrder]
+    Zcond <- Zcond[, clustOrder]
     predZ <- predZ[, clustOrder]
     
     if(method != "PE-MC") {
@@ -321,9 +325,6 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
         ## M-step for Mu and Sigma
         UpdateDist()
     }
-    
-    ## convert everything to matrices
-    B <- matrix(rep(b, each = K), nrow = K)
     
     oldpar <- newpar
     newpar <- c(c(W), probz, zeta, c(P), c(V), c(Mu), c(Sigma))
@@ -343,6 +344,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
       V = bestV     ,
       Z = predZ,
       b = bestb,
+      clustProb = cbind(b, Zcond * b),
       aic = - 2 * tail(alllik, 1) + 2 * numpar,
       bic = - 2 * tail(alllik, 1) + log(N * I) * numpar,
       aicc = -2 * tail(alllik, 1) + 2 * numpar + 2 * numpar * (numpar + 1) / (N * I - numpar - 1),
@@ -474,6 +476,7 @@ UpdateDist <- function() {
 	}
 	MomentEstimate()
     }
+    
     ## order the means
     od <-  apply(Mu, 1, order)
     Mu <- matrix(Mu[cbind(rep(seq_len(N), each = M), c(od))], ncol = M, byrow = TRUE)
@@ -504,6 +507,8 @@ UpdateStates <- function() {
       F1.full[idx, ] <- exp(F1.full[idx, ])
       totalF.full <- totalF.full + F1.full[idx, ]
     }
+    parlik <- sum(log(totalF.full))
+    write.out(out, paste("Likelihood for component estimation: ", round(parlik, 3), sep = ""))
     totalF.full <- t(matrix(rep(c(t(totalF.full)), M), nrow = I))
     ProbMat.full <- F1.full / totalF.full
     ProbMat.full <- trimProbValue(ProbMat.full)
@@ -547,27 +552,30 @@ UpdateStates <- function() {
 }
 
 PrintUpdate <- function() {
-    Inherit()
-    allerr <- sqrt(sum((ProbMat - ProbMat.true) ^ 2) / I / K / (S - 1))
-    ## compute misclassification rate
-    W.f <- matrix(0, nrow = K * S, ncol = J)
-    for(s in seq_len(S))
-        W.f[s + S * seq(0, K - 1),] <- W[seq_len(K) + K * (s - 1),]
-    
-    mc <- matchCluster(W.f, para$W, predZ, para$Z, b.prob, para$non.id, S)
-    
-    write.out(out, paste("mis-class rate ", mc$mcr))
-    write.out(out, paste("Error for W ",  round(mc$W.err, 3)))
-    allmisclass <- c(allmisclass, mc$mcr)
-    W.err <- c(W.err, mc$W.err)
-    allari <- c(allari, mc$ari)
+  Inherit()
+  allerr <- sqrt(sum((ProbMat - ProbMat.true) ^ 2) / I / K / (S - 1))
+  ## compute misclassification rate
+  W.f <- matrix(0, nrow = K * S, ncol = J)
+  for(s in seq_len(S))
+    W.f[s + S * seq(0, K - 1),] <- W[seq_len(K) + K * (s - 1),]
+  
+  mc <- matchCluster(W.f, para$W, Zcond, para$Z, b.prob, para$non.id)
+  
+  write.out(out, paste("mis-class rate ", mc$mcr))
+  write.out(out, paste("Error for W ",  round(mc$W.err, 3)))
+  allmisclass <- c(allmisclass, mc$mcr)
+  W.err <- c(W.err, mc$W.err)
+  allari <- c(allari, mc$ari)
+  Mu.err <- numeric(0)
+  if(prod(dim(Mu) == dim(para$Mu)) == 1) {
     Mu.err <- sqrt(mean((Mu - para$Mu) ^ 2))
-    write.out(out, paste("ARI ", mc$ari))
-    write.out(out, paste("loglik", totallik, "err", round(allerr, 3)))
-    write.out(out, paste("Error for Mu", round(Mu.err, 3)))
-    for(v in c("allerr", "allari", "allmisclass", "W.err", "Mu.err")) {
-        assign(v, get(v), envir = parent.frame())
-    }
+  }
+  write.out(out, paste("ARI ", mc$ari))
+  write.out(out, paste("loglik", totallik, "err", round(allerr, 3)))
+  write.out(out, paste("Error for Mu", round(Mu.err, 3)))
+  for(v in c("allerr", "allari", "allmisclass", "W.err", "Mu.err")) {
+    assign(v, get(v), envir = parent.frame())
+  }
 }
 
 Inherit <- function() {

@@ -81,7 +81,7 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
        allwerr <- mc$W.err
        allmisclass <- mc$mcr
     } 
-    predZ <- Z
+    Zcond <- predZ <- Z
     probz <- apply(Z, 2, mean)
     
   } else {
@@ -146,7 +146,8 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
       W <- mcmc.result[["W"]]
       ##W <- W[, 1:J] / (W[, 1:J] + W[, (1:J) + J])
       probz <- mcmc.result[["probz"]]
-      predZ <- mcmc.result[["predZ"]]
+      predZ <- mcmc.result[["Z"]]
+      Zcond <- mcmc.result[["Zcond"]]
       b.prob <- mcmc.result[["b_prob"]]
       
       W.aug <- matrix(0, nrow = K * S, ncol = J)
@@ -158,6 +159,7 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
       W.aug <- .structure(W.aug, struct)
       probz <- probz[clustOrder]
       predZ <- predZ[, clustOrder]
+      Zcond <- Zcond[, clustOrder]
       
       if(!is.null(para)) {
         Z.format <- matrix(0, nrow = I, ncol = J)
@@ -200,6 +202,7 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
     return(new("MBASICFit",
                W = W,
                Z = predZ,
+               clustProb = cbind(b.prob, Zcond * (1 - b.prob)),
                b = b.prob,
                lik = tail(alllik, 1),
                alllik = alllik,
@@ -216,6 +219,7 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
     return(new("MBASICFit",
                W = W,
                Z = predZ,
+               clustProb = cbind(b.prob, Zcond * (1 - b.prob)),
                b = b.prob,
                zeta = 0,
                probz = probz,

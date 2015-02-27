@@ -170,7 +170,8 @@ SEXP e_step_theta(SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _Theta) {
 					    Rcpp::Named("probz") = Z_mean,
 					    Rcpp::Named("W") = W_max,
 					    Rcpp::Named("b_prob") = b_mean,
-					    Rcpp::Named("predZ") = predZ
+					    Rcpp::Named("Z") = predZ,
+					    Rcpp::Named("Zcond") = Zcond
 					    //,Rcpp::Named("oldlik") = oldlik
 					   );
 	

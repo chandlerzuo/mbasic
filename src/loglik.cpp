@@ -1,22 +1,22 @@
 #include "loglik.h"
 
-SEXP loglik(SEXP _W, SEXP _P, SEXP _V, SEXP _zeta, SEXP _probz, SEXP _PDF, SEXP _designMap, SEXP _stateMap) {
+SEXP loglik(SEXP _W, SEXP _P, SEXP _V, SEXP _zeta, SEXP _probz, SEXP _PDF, SEXP _factor, SEXP _statemap) {
 	NumericMatrix PDF(_PDF);
         NumericMatrix W(_W);
 	NumericMatrix P(_P);
 	NumericMatrix V(_V);
-	NumericMatrix designMap(_designMap);
-	NumericMatrix stateMap(_stateMap);
+	NumericVector factor(_factor);
+	NumericVector statemap(_statemap);
 	double zeta = as<double>(_zeta);
 	NumericVector probz(_probz);
 
 	// extract the dimensions
+	int S = P.ncol();
 	int I = P.nrow();
 	int M = V.ncol();
 	int N = V.nrow();
-	int K = designMap.ncol();
+	int K = W.nrow() / S;
 	int J = probz.size();
-	int S = P.ncol();
 
 	double loglik = 0;
 	int i, j, k, s, n, m;
@@ -30,20 +30,20 @@ SEXP loglik(SEXP _W, SEXP _P, SEXP _V, SEXP _zeta, SEXP _probz, SEXP _PDF, SEXP 
 			for(s = 0; s < S; s ++) {
 				jointPDF(k + K * s, i) = 0;
 				for(n = 0; n < N; n ++) {
-					if(designMap(n, k) == 1) {
+					if(factor[n] == k) {
 						int m1 = 0;
-						while(stateMap(m1, s) == 0) {
+						while(statemap[m1] != s) {
 							m1 ++;
 						}
 						double maxexp = PDF(n + N * m1, i);
 						for(m = m1; m < M; m ++) {
-							if(stateMap(m, s) == 1 && PDF(n + N * m, i) > maxexp) {
+							if(statemap[m] == s && PDF(n + N * m, i) > maxexp) {
 								maxexp = PDF(n + N * m, i);
 							}
 						}
 						double tmp = 0;
 						for(m = 0; m < M; m ++) {
-							if(stateMap(m, s) == 1) {
+							if(statemap[m] == s) {
 								tmp += V(n, m) * exp(PDF(n + N * m, i) - maxexp);
 							}
 						}
@@ -106,5 +106,3 @@ SEXP loglik(SEXP _W, SEXP _P, SEXP _V, SEXP _zeta, SEXP _probz, SEXP _PDF, SEXP 
 
 	return(wrap(loglik));
 }
-
-
