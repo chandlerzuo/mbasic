@@ -5,6 +5,7 @@
 #'\item{W}{A K by J matrix. The (k,j)-th element is the posterior probability that loci in the j-th group are UNENRICHED under the k-th experimental condition.}
 #'\item{V}{A K by M matrix. The (k,m)-th element is the weight of the m-th component for the k-th experimental condition. For each row, entries corresponding to the same state should sum to 1.}
 #'\item{Z}{An I by J matrix. The (i,j)-th element is the posterior probability that the i-th unit (locus) belongs to the j-th cluster.}
+#' \item{clustProb}{An I by (J + 1) matrix. The(i, j+1)-th element is the posterior probability that the i-th unit belongs to the j-th cluster, and the (i, 1)-th element is the posterior probability that the i-th unit belongs to the singleton cluster.}
 #'\item{b}{A vector of length I. The i-th element is the posterior probability that the i-th unit (locus) does not belong to any cluster.}
 #'\item{aic}{The AIC value of the fitted model.}
 #'\item{bic}{The BIC value of the fitted model.}

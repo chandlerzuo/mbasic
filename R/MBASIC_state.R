@@ -77,7 +77,7 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
     W <- W / rep(apply(matrix(W, nrow = S), 2, sum), each = S)
 
     if(!is.null(para)) {
-       mc <- matchCluster(W, para$W, Z, para$Z, b.prob, para$non.id, S)
+       mc <- matchCluster(W, para$W, Z, para$Z, b.prob, para$non.id)
        allwerr <- mc$W.err
        allmisclass <- mc$mcr
     } 
@@ -169,7 +169,7 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
           idx <- s + S * seq(0, K - 1)
           W.format[idx,] <- W.aug[seq_len(K) + K * (s - 1),]
         }
-        mc <- matchCluster(W.format, para$W, Z.format, para$Z, b.prob, para$non.id, S)
+        mc <- matchCluster(W.format, para$W, Z.format, para$Z, b.prob, para$non.id)
         allwerr <- c(allwerr, mc$W.err)
         allmisclass <- c(allmisclass, mc$mcr)
       }

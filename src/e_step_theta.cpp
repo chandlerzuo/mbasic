@@ -88,7 +88,7 @@ SEXP e_step_theta(SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _Theta) {
 		double tmpexp[ J ];
 		for(j = 0; j < J; j ++){
 			tmpexp[ j ] = log(probz[ j ]);
-			if(TW(i, j) > TP(i))
+			if(TW(i, j) > TP(i) && zeta > 0)
 				tmpexp[ j ] += log((1 - zeta) + zeta * exp(TP(i) - TW(i, j))) + TW(i, j);
 			else
 				tmpexp[ j ] += log((1 - zeta) * exp(TW(i, j) - TP(i)) + zeta) + TP(i);
@@ -172,7 +172,6 @@ SEXP e_step_theta(SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _Theta) {
 					    Rcpp::Named("b_prob") = b_mean,
 					    Rcpp::Named("Z") = predZ,
 					    Rcpp::Named("Zcond") = Zcond
-					    //,Rcpp::Named("oldlik") = oldlik
 					   );
 	
 	return(ret);

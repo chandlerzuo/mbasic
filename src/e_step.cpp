@@ -299,20 +299,22 @@ SEXP e_step(SEXP _W, SEXP _P, SEXP _V, SEXP _zeta, SEXP _probz, SEXP _PDF, SEXP 
 	}
 
 
-	for(i = 0; i < I; i ++){
+	if(zeta > 0) {
+	    for(i = 0; i < I; i ++){
 		double total = 0;
 		for(s = 0; s < S; s ++)
-			total += Theta_b(i, s);
+		    total += Theta_b(i, s);
 		for(s = 0; s < S; s ++){
-			if(Theta_b(i, s) < _LOW * total)
-				Theta_b(i, s) = _LOW;
-			else if(Theta_b(i, s) > (1-_LOW) * total)
+		    if(Theta_b(i, s) < _LOW * total)
+			Theta_b(i, s) = _LOW;
+		    else if(Theta_b(i, s) > (1-_LOW) * total)
 				Theta_b(i, s) = 1 - _LOW;
-			else if(total < _LOW)
-				Theta_b(i, s) = 1 / (double)S;
-			else
-				Theta_b(i, s) /= total;
+		    else if(total < _LOW)
+			Theta_b(i, s) = 1 / (double)S;
+		    else
+			Theta_b(i, s) /= total;
 		}
+	    }
 	}
 	
 	for(n = 0; n < N; n ++) {
