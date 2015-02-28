@@ -201,8 +201,8 @@ extract <- function(x, head, tail) {
 }
 
 trimLogValue <- function(x) {
-  x[x > 5] <- 5
-  x[x < -5000] <- -5000
+  x[x > 50] <- 50
+  x[x < -500] <- -500
   x[is.na(x)] <- mean(x, na.rm = TRUE)
   return(x)
 }
@@ -210,8 +210,8 @@ trimLogValue <- function(x) {
 trimProbValue <- function(x) {
   maxProb <- max(na.omit(x[x != 1]))
   minProb <- min(na.omit(x[x != 0]))
-  x[x > maxProb] <- max(c(0.999, na.omit(maxProb)))
-  x[x < minProb] <- min(c(0.001, na.omit(minProb)))
+  x[x > maxProb] <- max(c(1-1e-10, na.omit(maxProb)))
+  x[x < minProb] <- min(c(1e-10, na.omit(minProb)))
   x[is.na(x)] <- mean(x, na.rm = TRUE)
   return(x)
 }
