@@ -107,8 +107,10 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
 
     W <- matrix(0, nrow = K * S, ncol = J)
     for(j in seq_len(J)) {
-      if(sum(groups == j) > 0) {
+      if(sum(groups == j) > 1) {
         W[,j] <- apply(ProbMat[, id[groups == j]], 1, mean)
+      } else {
+        W[,j] <- ProbMat[, id[groups == j]]
       }
     }
 
