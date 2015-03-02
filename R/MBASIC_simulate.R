@@ -351,6 +351,12 @@ MBASIC.sim<- function(xi, family = "lognormal", struct = NULL, I, fac, J, S = 2,
   } else {
     prior.Mu <- t(matrix(rbeta(M * N, f * seq(M), f * rev(seq(M))), nrow = M))
   }
+
+  ## order the means within each replicate
+  for(n in seq(N)) {
+    od <- order(prior.Mu[n, ])
+    prior.Mu[n, ] <- prior.Mu[n, od]
+  }
   
   Mu <- matrix(0, nrow = N, ncol = I)
   for(n in 1:N)

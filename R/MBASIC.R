@@ -513,10 +513,7 @@ UpdateStates <- function() {
     ProbMat.full <- F1.full / totalF.full
     ProbMat.full <- trimProbValue(ProbMat.full)
 
-    ## update V
-    V.new <- matrix(apply(F1.full, 1, sum), nrow = N)
-    V.new <- V.new / tcrossprod(V.new %*% stateMap, stateMap)
-    
+ 
     ## compute F1
     ## recompute replicate density
     for(m in seq(M)) {
@@ -544,6 +541,23 @@ UpdateStates <- function() {
       idx <- seq_len(K) + (s-1) * K
       Pi[,s] <- apply(ProbMat[idx,], 1 ,mean)
     }
+
+    ## update V
+    tmp <- matrix(0, nrow = M * K, ncol = I)
+    for(m in seq(M)) {
+      tmp[(m - 1) * K + seq(K), ] <- ProbMat[(statemap[m] - 1) * K + seq(K), ]
+    }
+    EV <- matrix(0, nrow = N * M, ncol = I)
+    for(m in seq(M)) {
+      id1 <- (m - 1) * N + seq(N)
+      id2 <- (m - 1) * K + seq(K)
+      EV[id1, ] <- designMap %*% tmp[id2, ]
+    }
+    EV <- EV * c(V)
+    EV <- EV + ProbMat.full
+    
+    V.new <- matrix(apply(EV, 1, sum), nrow = N)
+    V.new <- V.new / tcrossprod(V.new %*% stateMap, stateMap)
 
     assign("V", V.new, envir = parent.frame())
     assign("Pi", Pi, envir = parent.frame())
