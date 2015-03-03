@@ -63,7 +63,7 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
       message("Error: the dimension of struct is inconsistent with grouping structure!")
   }
   
-  alllik <- allerr <- allwerr <- allmisclass <- P <- NULL
+  bestmc <- alllik <- allerr <- allwerr <- allmisclass <- P <- NULL
   
   if(method == "SE-HC") {
     d <- as.dist(d)
@@ -77,9 +77,9 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
     W <- W / rep(apply(matrix(W, nrow = S), 2, sum), each = S)
 
     if(!is.null(para)) {
-       mc <- matchCluster(W, para$W, Z, para$Z, b.prob, para$non.id)
-       allwerr <- mc$W.err
-       allmisclass <- mc$mcr
+       bestmc <- matchCluster(W, para$W, Z, para$Z, b.prob, para$non.id)
+       allwerr <- bestmc$W.err
+       allmisclass <- bestmc$mcr
     } 
     Zcond <- predZ <- Z
     probz <- apply(Z, 2, mean)
@@ -133,14 +133,12 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
     probz <- apply(Z, 2, mean)
 
     allpar <- c(c(W), c(P), zeta, probz)
+    oldpar <- 0
+    totallik <- oldlik <- -Inf
+    maxlik <- -Inf
     
     for(outitr in seq_len(maxitr)) {
 
-      oldpar <- allpar
-      
-      totallik <- .Call("loglik_theta", W, P, zeta, probz, PDF, package = "MBASIC")
-      alllik <- c(alllik, totallik)
-      
       mcmc.result <- .Call("e_step_theta", W, P, zeta, probz, PDF, package = "MBASIC")
       
       ## Maximizers
@@ -175,10 +173,29 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
         allwerr <- c(allwerr, mc$W.err)
         allmisclass <- c(allmisclass, mc$mcr)
       }
-
+      
+      oldpar <- allpar
       allpar <- c(c(W), c(P), zeta, probz)
-
+      oldlik <- totallik
+      totallik <- .Call("loglik_theta", W, P, zeta, probz, PDF, package = "MBASIC")
+      alllik <- c(alllik, totallik)
+      if(maxlik < totallik) {
+        bestW <- W
+        bestP <- P
+        bestZ <- predZ
+        bestb <- b.prob
+        bestzeta <- zeta
+        bestmc <- mc
+        bestprobz <- probz
+        bestZcond <- Zcond
+        maxlik <- totallik
+      }
+      
       if(max(allpar - oldpar) < tol)
+        break
+      if(outitr > 10 & totallik > oldlik & totallik - oldlik < tol)
+        break
+      if(which.max(totallik) < outitr - 10)
         break
       
     }
@@ -192,25 +209,25 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
   }
   
   mcr <- werr <- ari <- numeric(0)
-  if(!is.null(mc)) {
-    mcr <- mc$mcr
-    werr <- mc$W.err
-    ari <- mc$ari
+  if(!is.null(bestmc)) {
+    mcr <- bestmc$mcr
+    werr <- bestmc$W.err
+    ari <- bestmc$ari
   }
 
   write.out(out, "finished fitting Theta")
 
   if(method == "SE-MC") {
     return(new("MBASICFit",
-               W = W,
-               Z = predZ,
-               clustProb = cbind(b.prob, Zcond * (1 - b.prob)),
-               b = b.prob,
+               W = bestW,
+               Z = bestZ,
+               clustProb = cbind(bestb, bestZcond * (1 - bestb)),
+               b = bestb,
                lik = tail(alllik, 1),
                alllik = alllik,
-               zeta = zeta,
-               probz = probz,
-               P=P,
+               zeta = bestzeta,
+               probz = bestprobz,
+               P=bestP,
                converged = conv,
                MisClassRate = mcr,
                W.err = werr,
@@ -220,7 +237,7 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
   } else {
     return(new("MBASICFit",
                W = W,
-               Z = predZ,
+               Z = Z,
                clustProb = cbind(b.prob, Zcond * (1 - b.prob)),
                b = b.prob,
                zeta = 0,

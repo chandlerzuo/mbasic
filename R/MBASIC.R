@@ -106,8 +106,8 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
   }
   
   outitr <- 0
-  totallik <- oldlik <- 0
-  alllik <- allerr <- allzeta <- bestW <- bestV <- allmisclass <- matchId1 <- W.err <- matchId2 <- allari <- numeric(0)
+  totallik <- oldlik <- -Inf
+  alllik <- allerr <- allzeta <- bestW <- bestV <- bestP <- allmisclass <- matchId1 <- W.err <- matchId2 <- allari <- numeric(0)
   maxlik <- -Inf
   
   write.out(out, "Initialized parameters")
@@ -138,10 +138,11 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     ## em step to estimate Theta
     allpar <- c(c(V), c(Mu), c(Sigma), c(Pi))
     oldpar <- 0
-    for(itr in 1:maxitr) {
-      ## check for convergence
-      if(max(abs(oldpar - allpar))< tol)
-        break
+    alllik <- numeric(0)
+    totallik <- oldlik <- maxlik <- -Inf
+    bestProbMat <- bestV <- bestMu <- bestSigma <- bestPi <- NULL
+    for(itr in seq(maxitr)) {
+      oldlik <- totallik
       
       ## M step
       UpdateDist()
@@ -150,6 +151,23 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
       UpdateStates()
       oldpar <- allpar
       allpar <- c(c(V), c(Mu), c(Sigma), c(Pi))
+      alllik <- c(alllik, totallik)
+      if(maxlik < totallik) {
+        bestProbMat <- ProbMat
+        bestV <- V
+        bestSigma <- Sigma
+        bestMu <- Mu
+        bestPi <- Pi
+        maxlik <- totallik
+      }
+      
+      ## check for convergence
+      if(max(abs(oldpar - allpar))< tol)
+        break
+      if(itr > 10 & oldlik < totallik & totallik - oldlik < tol)
+        break
+      if(which.max(alllik) < itr - 10)
+        break
     }## finish iteration
     
     Theta <- matrix(-1, nrow = K, ncol = I)
@@ -159,7 +177,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     }
 
     if(!is.null(para))
-      allerr <- sqrt(sum((ProbMat - ProbMat.true) ^ 2) / I / K / (S - 1))
+      allerr <- sqrt(sum((ProbMat - ProbMat.true) ^ 2) / I / K / S)
     
     if(method != "PE-MC") {
       ret <- MBASIC.state(Theta, J=J, zeta = zeta, struct = struct, method = method, maxitr = maxitr, tol = tol, para = para, out = out)
@@ -172,8 +190,8 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
       ## Pi is different from Z. Z is the posterior probability.
 
       Mu.err <- numeric(0)
-      if(prod(dim(Mu) == dim(para$Mu)) == 1) {
-        Mu.err <- sqrt(mean((Mu - para$Mu) ^ 2))
+      if(prod(dim(bestMu) == dim(para$Mu)) == 1) {
+        Mu.err <- sqrt(mean((bestMu - para$Mu) ^ 2))
       }
 
       write.out(out, paste("mis-class rate ", ret@MisClassRate))
@@ -183,17 +201,17 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
       write.out(out, paste("Error for Mu", round(Mu.err, 3)))
 
       return(new("MBASICFit",
-                 Theta = ProbMat,
+                 Theta = bestProbMat,
                  W = ret@W,
                  Z = ret@Z,
-                 V = V,
+                 V = bestV,
                  b = ret@b,
                  clustProb = ret@clustProb,
                  lik = ret@lik,
                  alllik = ret@alllik,
                  zeta = ret@zeta,
-                 Mu = Mu,
-                 Sigma = Sigma,
+                 Mu = bestMu,
+                 Sigma = bestSigma,
                  probz = ret@probz,
                  P = ret@P,
                  converged = conv,
@@ -248,12 +266,10 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
   storage.mode(fac) <- "integer"
   oldpar <- 0
   newpar <- c(c(W), probz, zeta, c(P), c(V), c(Mu), c(Sigma))
-  
+  alllik <- numeric(0)
+  totallik <- oldlik <- maxlik <- -Inf
+
   for(outitr in seq_len(maxitr)) {
-    
-    if(max(abs(newpar - oldpar)) < tol) {
-      break
-    }
     
     if(outitr == 1 | method == "MBASIC") {
         ## only compute the PDF once if the method is PE-MC
@@ -264,30 +280,10 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
         PDF <- trimLogValue(PDF)
     }
     
-    oldlik <- totallik
-    totallik <- .Call("loglik", W, P, V, zeta, probz, PDF, fac - 1, statemap - 1, package="MBASIC")
-    if(verbose) {
-        write.out(out, paste("itr", outitr, "lik", round(tail(totallik, 1), 2), "zeta", round(zeta, 2)))
-    }
-    
-    alllik <- c(alllik, totallik)
-    allzeta <- c(allzeta, zeta)
     Theta <- matrix(-1, nrow = K, ncol = I)
     for(k in seq_len(K)) {
         idx <- k + K * (seq_len(S) - 1)
         Theta[k,] <- apply(ProbMat[idx,], 2, which.max)
-    }
-
-    if(length(para) > 1 & verbose) {
-        PrintUpdate()
-    }
-    
-    if(maxlik < totallik) {
-        maxlik <- totallik
-        bestb <- b.prob
-        bestW <- W
-        bestTheta <- Theta
-        bestV <- V
     }
     
     ## E step
@@ -312,6 +308,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     Zcond <- estep.result[["Zcond"]]
     b.prob <- estep.result[["b_prob"]]
     V <- estep.result[["V"]]
+    P <- estep.result[["P"]]
     
     clustOrder <- .orderCluster(W, struct)
     W <- W[, clustOrder]
@@ -326,35 +323,80 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
         UpdateDist()
     }
     
+    oldlik <- totallik
+    totallik <- .Call("loglik", W, P, V, zeta, probz, PDF, fac - 1, statemap - 1, package="MBASIC")
+    if(verbose) {
+        write.out(out, paste("itr", outitr, "lik", round(tail(totallik, 1), 2), "zeta", round(zeta, 2)))
+    }
+    
+    alllik <- c(alllik, totallik)
+    allzeta <- c(allzeta, zeta)
+    if(length(para) > 1 & verbose) {
+        PrintUpdate()
+    }
+    
+    if(maxlik < totallik) {
+        maxlik <- totallik
+        bestProbMat <- ProbMat
+        bestTheta <- Theta
+        bestW <- W
+        bestV <- V
+        bestP <- P
+        bestMu <- Mu
+        bestSigma <- Sigma
+        bestzeta <- zeta
+        bestprobz <- probz
+        bestZ <- predZ
+        bestZcond <- Zcond
+        bestb <- b.prob
+    }
     oldpar <- newpar
     newpar <- c(c(W), probz, zeta, c(P), c(V), c(Mu), c(Sigma))
+    if(max(abs(newpar - oldpar)) < tol)
+      break
+    if(outitr > 10 & oldlik < totallik & totallik - oldlik < tol)
+      break
+    if(which.max(alllik) < outitr - 10)
+      break
     
   }## finish outer loop
   
   conv <- FALSE
   if(outitr < maxitr)
       conv <- TRUE
+
+  W <- bestW
+  V <- bestV
+  P <- bestP
+  Z <- bestZ
+  Zcond <- bestZcond
+  b.prob <- bestb
+  ProbMat <- bestProbMat
+  zeta <- bestzeta
+  probz <- bestprobz
+  Mu <- bestMu
+  Sigma <- bestSigma
   
   if(length(para) > 1)
       PrintUpdate()
   
   new("MBASICFit",
-      Theta = ProbMat,
+      Theta = bestProbMat,
       W = bestW,
       V = bestV     ,
-      Z = predZ,
+      Z = bestZ,
       b = bestb,
-      clustProb = cbind(bestb, Zcond * (1 - bestb)),
-      aic = - 2 * tail(alllik, 1) + 2 * numpar,
-      bic = - 2 * tail(alllik, 1) + log(N * I) * numpar,
-      aicc = -2 * tail(alllik, 1) + 2 * numpar + 2 * numpar * (numpar + 1) / (N * I - numpar - 1),
+      clustProb = cbind(bestb, bestZcond * (1 - bestb)),
+      aic = - 2 * tail(maxlik, 1) + 2 * numpar,
+      bic = - 2 * tail(maxlik, 1) + log(N * I) * numpar,
+      aicc = -2 * tail(maxlik, 1) + 2 * numpar + 2 * numpar * (numpar + 1) / (N * I - numpar - 1),
       alllik = alllik,
-      lik = tail(alllik, 1),
-      zeta = zeta,
-      Mu = Mu,
-      Sigma = Sigma,
-      probz = probz,
-      P = P,
+      lik = maxlik,
+      zeta = bestzeta,
+      Mu = bestMu,
+      Sigma = bestSigma,
+      probz = bestprobz,
+      P = bestP,
       converged = conv,
       Theta.err = allerr,
       ARI = tail(allari, 1),
@@ -389,7 +431,6 @@ InitStates <- function() {
     ## initialize ProbMat.full
     for(m in seq(M)) {
       idx <- (m - 1) * N + seq(N)
-      F1.full[idx, ] <- exp(F1.full[idx, ])
       totalF.full <- totalF.full + F1.full[idx, ]
     }
     totalF.full <- t(matrix(rep(c(t(totalF.full)), M), nrow = I))
@@ -507,13 +548,12 @@ UpdateStates <- function() {
       F1.full[idx, ] <- exp(F1.full[idx, ])
       totalF.full <- totalF.full + F1.full[idx, ]
     }
-    parlik <- sum(log(totalF.full))
-    write.out(out, paste("Likelihood for component estimation: ", round(parlik, 3), sep = ""))
+    totallik <- sum(log(totalF.full))
+    write.out(out, paste("Likelihood for component estimation: ", round(totallik, 3), sep = ""))
     totalF.full <- t(matrix(rep(c(t(totalF.full)), M), nrow = I))
     ProbMat.full <- F1.full / totalF.full
     ProbMat.full <- trimProbValue(ProbMat.full)
 
- 
     ## compute F1
     ## recompute replicate density
     for(m in seq(M)) {
@@ -539,13 +579,17 @@ UpdateStates <- function() {
     ## update Pi
     for(s in seq_len(S)) {
       idx <- seq_len(K) + (s-1) * K
-      Pi[,s] <- apply(ProbMat[idx,], 1 ,mean)
+      if(length(idx) > 1) {
+        Pi[,s] <- apply(ProbMat[idx,], 1 ,mean)
+      } else {
+        Pi[, s] <- mean(ProbMat[idx, ])
+      }
     }
 
     ## update V
     tmp <- matrix(0, nrow = M * K, ncol = I)
     for(m in seq(M)) {
-      tmp[(m - 1) * K + seq(K), ] <- ProbMat[(statemap[m] - 1) * K + seq(K), ]
+      tmp[(m - 1) * K + seq(K), ] <- 1 - ProbMat[(statemap[m] - 1) * K + seq(K), ]
     }
     EV <- matrix(0, nrow = N * M, ncol = I)
     for(m in seq(M)) {
@@ -563,6 +607,7 @@ UpdateStates <- function() {
     assign("Pi", Pi, envir = parent.frame())
     assign("ProbMat", ProbMat, envir = parent.frame())
     assign("ProbMat.full", ProbMat.full, envir = parent.frame())
+    assign("totallik", totallik, envir = parent.frame())
 }
 
 PrintUpdate <- function() {

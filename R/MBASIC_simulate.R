@@ -335,13 +335,13 @@ MBASIC.sim<- function(xi, family = "lognormal", struct = NULL, I, fac, J, S = 2,
   
   if(family == "lognormal") {
     prior_mean <- xi + log ((seq(M) - 1) * (f - 1) + 1)
-    prior_sd <- log(f) / 10
-    sdev <- diff(exp(prior_mean))[ 1 ] / 2
-    stdev <- sqrt((log(sdev ^ 2 + exp(2 * prior_mean)) - 2 * prior_mean)/2)
-  }  else {
+    prior_sd <- log(f) / 30
+    sdev <- diff(exp(prior_mean))[1]
+    stdev <- sqrt((log(sdev ^ 2 + exp(2 * prior_mean)) - 2 * prior_mean) * 2)
+  } else {
     prior_mean <- xi * ((seq(M) - 1) * (f - 1) + 1)
-    prior_sd <- (f - 1) * xi / 6
-    sdev <- diff(prior_mean)[1] / 3
+    prior_sd <- (f - 1) * xi / 3
+    sdev <- diff(prior_mean)[1] / 2
     stdev <- prior_mean / (sdev ^ 2 / prior_mean - 1)
     stdev[ stdev < 0 ] <- 100
   }
@@ -365,7 +365,7 @@ MBASIC.sim<- function(xi, family = "lognormal", struct = NULL, I, fac, J, S = 2,
 
   X <- NULL
   if(family == "lognormal") {
-    Y <- matrix(as.integer(exp(rtnorm(N * I, mean = Mu, sd = stdev, upper = max(Mu) + 1 / max(Mu)))), nrow = N)
+    Y <- matrix(as.integer(exp(rtnorm(N * I, mean = Mu, sd = stdev, upper = max(Mu) + 1))), nrow = N)
   } else if(family == "negbin") {
     Y <- matrix(rnbinom(N * I, mu = Mu, size = stdev), nrow = N)
   } else {
