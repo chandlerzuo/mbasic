@@ -344,7 +344,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
       V = bestV     ,
       Z = predZ,
       b = bestb,
-      clustProb = cbind(b, Zcond * b),
+      clustProb = cbind(bestb, Zcond * (1 - bestb)),
       aic = - 2 * tail(alllik, 1) + 2 * numpar,
       bic = - 2 * tail(alllik, 1) + log(N * I) * numpar,
       aicc = -2 * tail(alllik, 1) + 2 * numpar + 2 * numpar * (numpar + 1) / (N * I - numpar - 1),
@@ -567,7 +567,7 @@ UpdateStates <- function() {
 
 PrintUpdate <- function() {
   Inherit()
-  allerr <- sqrt(sum((ProbMat - ProbMat.true) ^ 2) / I / K / (S - 1))
+  allerr <- sqrt(sum((ProbMat - ProbMat.true) ^ 2) / I / K / S)
   ## compute misclassification rate
   W.f <- matrix(0, nrow = K * S, ncol = J)
   for(s in seq_len(S))
@@ -604,7 +604,7 @@ logdensity <- function(y, mu, sigma, x = NULL, family) {
     y <- log(y + 1)
     return(-(y - mu) ^ 2 / sigma / 2 - log(sigma) / 2 - log(2 * pi) / 2 )
   } else if(family == "scaled-t") {
-    return(dt(y / mu, df = sigma, log = TRUE))
+    return(dt(y / mu, df = sigma, log = TRUE) - log(mu))
   } else if(family == "negbin") {
     return(dnbinom(y, mu = mu, size = sigma, log = TRUE))
   } else if(family == "gamma-binom") {
@@ -663,7 +663,7 @@ MomentEstimate <- function() {
 	## df
 	Sigma[, m] <- sapply(m1 * m1 / m2, solve)
 	## scale
-	Mu[, m] <- sqrt(m2 * (1 - 2 / Sigma[, m]))
+	Mu[, m] <- sqrt(m2 * (Sigma[, m] - 2) / Sigma[, m])
      } else if(family == "negbin") {
         Mu[, m] <- m1
         m2 <- m2 - m1 * m1
