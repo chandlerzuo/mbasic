@@ -107,7 +107,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
   
   outitr <- 0
   totallik <- oldlik <- -Inf
-  alllik <- allerr <- allzeta <- bestW <- bestV <- bestP <- allmisclass <- matchId1 <- W.err <- matchId2 <- allari <- numeric(0)
+  alllik <- allerr <- allzeta <- allmisclass <- matchId1 <- W.err <- matchId2 <- allari <- numeric(0)
   maxlik <- -Inf
   
   write.out(out, "Initialized parameters")
@@ -140,7 +140,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     oldpar <- 0
     alllik <- numeric(0)
     totallik <- oldlik <- maxlik <- -Inf
-    bestProbMat <- bestV <- bestMu <- bestSigma <- bestPi <- NULL
+    conv <- FALSE
     for(itr in seq(maxitr)) {
       oldlik <- totallik
       
@@ -153,22 +153,25 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
       allpar <- c(c(V), c(Mu), c(Sigma), c(Pi))
       alllik <- c(alllik, totallik)
       if(maxlik < totallik) {
-        bestProbMat <- ProbMat
-        bestV <- V
-        bestSigma <- Sigma
-        bestMu <- Mu
-        bestPi <- Pi
-        maxlik <- totallik
+          assignBest(c("ProbMat", "Mu", "Sigma", "Pi", "V"))
+          maxlik <- totallik
       }
-      
+
       ## check for convergence
-      if(max(abs(oldpar - allpar))< tol)
+      if(max(abs(oldpar - allpar))< tol) {
+        conv <- TRUE
         break
-      if(itr > 10 & oldlik < totallik & totallik - oldlik < tol)
+      }
+      if(itr > 10 & oldlik < totallik & totallik - oldlik < tol) {
+        conv <- TRUE
         break
-      if(which.max(alllik) < itr - 10)
+      }
+      if(which.max(alllik) < itr - 10) {
+        conv <- TRUE
         break
+      }
     }## finish iteration
+    getBest(c("ProbMat", "Mu", "Sigma", "Pi", "V"))
     
     Theta <- matrix(-1, nrow = K, ncol = I)
     for(k in seq_len(K)) {
@@ -182,16 +185,14 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     if(method != "PE-MC") {
       ret <- MBASIC.state(Theta, J=J, zeta = zeta, struct = struct, method = method, maxitr = maxitr, tol = tol, para = para, out = out)
       
-      conv <- FALSE
-      if(ret@converged & itr < maxitr)
-        conv <- TRUE
+      conv <- (conv & ret@converged)
       
       ## Pi is the proportion for components in the k experiment to have state s
       ## Pi is different from Z. Z is the posterior probability.
 
       Mu.err <- numeric(0)
-      if(prod(dim(bestMu) == dim(para$Mu)) == 1) {
-        Mu.err <- sqrt(mean((bestMu - para$Mu) ^ 2))
+      if(prod(dim(Mu) == dim(para$Mu)) == 1) {
+        Mu.err <- sqrt(mean((Mu - para$Mu) ^ 2))
       }
 
       write.out(out, paste("mis-class rate ", ret@MisClassRate))
@@ -201,17 +202,17 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
       write.out(out, paste("Error for Mu", round(Mu.err, 3)))
 
       return(new("MBASICFit",
-                 Theta = bestProbMat,
+                 Theta = ProbMat,
                  W = ret@W,
                  Z = ret@Z,
-                 V = bestV,
+                 V = V,
                  b = ret@b,
                  clustProb = ret@clustProb,
                  lik = ret@lik,
                  alllik = ret@alllik,
                  zeta = ret@zeta,
-                 Mu = bestMu,
-                 Sigma = bestSigma,
+                 Mu = Mu,
+                 Sigma = Sigma,
                  probz = ret@probz,
                  P = ret@P,
                  converged = conv,
@@ -224,7 +225,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
              )
     }
   }
-  
+
   ## initialize W, Z, b
   ## ProbMat <- D.rep %*% ProbMat
   d <- dist(t(ProbMat))
@@ -268,6 +269,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
   newpar <- c(c(W), probz, zeta, c(P), c(V), c(Mu), c(Sigma))
   alllik <- numeric(0)
   totallik <- oldlik <- maxlik <- -Inf
+  conv <- FALSE
 
   for(outitr in seq_len(maxitr)) {
     
@@ -337,66 +339,47 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     
     if(maxlik < totallik) {
         maxlik <- totallik
-        bestProbMat <- ProbMat
-        bestTheta <- Theta
-        bestW <- W
-        bestV <- V
-        bestP <- P
-        bestMu <- Mu
-        bestSigma <- Sigma
-        bestzeta <- zeta
-        bestprobz <- probz
-        bestZ <- predZ
-        bestZcond <- Zcond
-        bestb <- b.prob
+        assignBest(c("ProbMat", "Theta", "W", "V", "P", "Mu", "Sigma", "zeta", "probz", "predZ", "Zcond", "b.prob"))
     }
     oldpar <- newpar
     newpar <- c(c(W), probz, zeta, c(P), c(V), c(Mu), c(Sigma))
-    if(max(abs(newpar - oldpar)) < tol)
+    if(max(abs(newpar - oldpar)) < tol) {
+      conv <- TRUE
       break
-    if(outitr > 10 & oldlik < totallik & totallik - oldlik < tol)
+    }
+    if(outitr > 10 & oldlik < totallik & totallik - oldlik < tol) {
+      conv <- TRUE
       break
-    if(which.max(alllik) < outitr - 10)
+    }
+    if(which.max(alllik) < outitr - 10) {
+      conv <- TRUE
       break
+    }
     
   }## finish outer loop
   
-  conv <- FALSE
-  if(outitr < maxitr)
-      conv <- TRUE
-
-  W <- bestW
-  V <- bestV
-  P <- bestP
-  Z <- bestZ
-  Zcond <- bestZcond
-  b.prob <- bestb
-  ProbMat <- bestProbMat
-  zeta <- bestzeta
-  probz <- bestprobz
-  Mu <- bestMu
-  Sigma <- bestSigma
+  getBest(c("ProbMat", "Theta", "W", "V", "P", "Mu", "Sigma", "zeta", "probz", "predZ", "Zcond", "b.prob"))
   
   if(length(para) > 1)
       PrintUpdate()
   
   new("MBASICFit",
-      Theta = bestProbMat,
-      W = bestW,
-      V = bestV     ,
-      Z = bestZ,
-      b = bestb,
-      clustProb = cbind(bestb, bestZcond * (1 - bestb)),
+      Theta = ProbMat,
+      W = W,
+      V = V     ,
+      Z = Z,
+      b = b.prob,
+      clustProb = cbind(b.prob, Zcond * (1 - b.prob)),
       aic = - 2 * tail(maxlik, 1) + 2 * numpar,
       bic = - 2 * tail(maxlik, 1) + log(N * I) * numpar,
       aicc = -2 * tail(maxlik, 1) + 2 * numpar + 2 * numpar * (numpar + 1) / (N * I - numpar - 1),
       alllik = alllik,
       lik = maxlik,
-      zeta = bestzeta,
-      Mu = bestMu,
-      Sigma = bestSigma,
-      probz = bestprobz,
-      P = bestP,
+      zeta = zeta,
+      Mu = Mu,
+      Sigma = Sigma,
+      probz = probz,
+      P = P,
       converged = conv,
       Theta.err = allerr,
       ARI = tail(allari, 1),
@@ -531,28 +514,6 @@ UpdateStates <- function() {
     Inherit()
     F1  <- matrix(0, nrow = K * S, ncol = I)
     F1.full <- matrix(0, nrow = N * M, ncol = I)
-    Pi.full <- crossprod(t(designMap), Pi) ## N by S
-    Pi.full <- tcrossprod(Pi.full, stateMap) ## N by M
-    Pi.full <- Pi.full * V
-
-    ## joint likelihood for each replicate and component
-    for(m in seq(M)) {
-      idx <- (m - 1) * N + seq_len(N)
-      F1.full[idx, ] <- logdensity(Y, Mu[, m], Sigma[, m], X, family) + log(Pi.full[, m])
-    }
-    F1.full <- trimLogValue(F1.full)
-    ##Update ProbMat.full
-    totalF.full <- matrix(0, nrow = N, ncol = I)
-    for(m in seq(M)) {
-      idx <- seq(N) + (m - 1) * N
-      F1.full[idx, ] <- exp(F1.full[idx, ])
-      totalF.full <- totalF.full + F1.full[idx, ]
-    }
-    totallik <- sum(log(totalF.full))
-    write.out(out, paste("Likelihood for component estimation: ", round(totallik, 3), sep = ""))
-    totalF.full <- t(matrix(rep(c(t(totalF.full)), M), nrow = I))
-    ProbMat.full <- F1.full / totalF.full
-    ProbMat.full <- trimProbValue(ProbMat.full)
 
     ## compute F1
     ## recompute replicate density
@@ -560,6 +521,7 @@ UpdateStates <- function() {
       idx <- (m - 1) * N + seq_len(N)
       F1.full[idx, ] <- exp(logdensity(Y, Mu[, m], Sigma[, m], X, family)) * V[, m]
     }
+    F1.tmp <- F1.full
     ## convert to (NS) x I
     F1.full <- log(crossprod(unitMap, F1.full))
     for(s in seq(S)) {
@@ -576,6 +538,29 @@ UpdateStates <- function() {
     ProbMat <- F1 / totalF
     ProbMat <- trimProbValue(ProbMat)
 
+    ## joint likelihood for each replicate and component
+    totallik <- sum(log(totalF))
+    write.out(out, paste("Likelihood for component estimation: ", round(totallik, 3), sep = ""))
+
+    ## ProbMat.full
+    ProbMat.full <- F1.tmp
+    for(s in seq(S)) {
+      Vwei <- 0
+      for(m in which(statemap == s)) {
+        Vwei <- Vwei + ProbMat.full[(m - 1) * N + seq(N), ]
+      }
+      for(m in which(statemap == s)) {
+        ProbMat.full[(m - 1) * N + seq(N), ] <- ProbMat.full[(m - 1) * N + seq(N), ] / Vwei
+      }
+    }
+    ProbMat.aug <- matrix(0, nrow = N * M, ncol = I)
+    for(m in seq(M)) {
+      ProbMat.aug[(m - 1) * N + seq(N), ] <- designMap %*% ProbMat[(statemap[m] - 1) * K + seq(K), ]
+    }
+    ProbMat.aug <- trimProbValue(ProbMat.aug)
+    ProbMat.full <- ProbMat.full * ProbMat.aug
+    ProbMat.full <- trimProbValue(ProbMat.full)
+
     ## update Pi
     for(s in seq_len(S)) {
       idx <- seq_len(K) + (s-1) * K
@@ -587,19 +572,7 @@ UpdateStates <- function() {
     }
 
     ## update V
-    tmp <- matrix(0, nrow = M * K, ncol = I)
-    for(m in seq(M)) {
-      tmp[(m - 1) * K + seq(K), ] <- 1 - ProbMat[(statemap[m] - 1) * K + seq(K), ]
-    }
-    EV <- matrix(0, nrow = N * M, ncol = I)
-    for(m in seq(M)) {
-      id1 <- (m - 1) * N + seq(N)
-      id2 <- (m - 1) * K + seq(K)
-      EV[id1, ] <- designMap %*% tmp[id2, ]
-    }
-    EV <- EV * c(V)
-    EV <- EV + ProbMat.full
-    
+    EV <- ProbMat.aug * c(V) + ProbMat.full
     V.new <- matrix(apply(EV, 1, sum), nrow = N)
     V.new <- V.new / tcrossprod(V.new %*% stateMap, stateMap)
 
@@ -730,4 +703,18 @@ MomentEstimate <- function() {
     }
     assign("Mu", Mu, envir = parent.frame())
     assign("Sigma", Sigma, envir = parent.frame())
+}
+
+assignBest <- function(varnames) {
+    for(v in varnames) {
+        bestname <- paste("best", v, sep = "")
+        assign(bestname, get(v, envir = parent.frame()), envir = parent.frame())
+    }
+}
+
+getBest <- function(varnames) {
+    for(v in varnames) {
+        bestname <- paste("best", v, sep = "")
+        assign(v, get(bestname, envir = parent.frame()), envir = parent.frame())
+    }
 }

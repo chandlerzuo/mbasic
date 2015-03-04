@@ -136,6 +136,7 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
     oldpar <- 0
     totallik <- oldlik <- -Inf
     maxlik <- -Inf
+    conv <- FALSE
     
     for(outitr in seq_len(maxitr)) {
 
@@ -180,34 +181,26 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
       totallik <- .Call("loglik_theta", W, P, zeta, probz, PDF, package = "MBASIC")
       alllik <- c(alllik, totallik)
       if(maxlik < totallik) {
-        bestW <- W
-        bestP <- P
-        bestZ <- predZ
-        bestb <- b.prob
-        bestzeta <- zeta
-        bestmc <- mc
-        bestprobz <- probz
-        bestZcond <- Zcond
-        maxlik <- totallik
+          assignBest(c("W", "P", "predZ", "b.prob", "zeta", "mc", "probz", "Zcond"))
+          maxlik <- totallik
       }
       
-      if(max(allpar - oldpar) < tol)
+      if(max(allpar - oldpar) < tol) {
+        conv <- TRUE
         break
-      if(outitr > 10 & totallik > oldlik & totallik - oldlik < tol)
+      }
+      if(outitr > 10 & totallik > oldlik & totallik - oldlik < tol) {
+        conv <- TRUE
         break
-      if(which.max(totallik) < outitr - 10)
+      }
+      if(which.max(totallik) < outitr - 10) {
+        conv <- TRUE
         break
-      
+      }
     }
-    
+    getBest(c("W", "P", "predZ", "b.prob", "zeta", "mc", "probz", "Zcond"))
   }
 
-  conv <- TRUE
-  if(method == "SE-MC") {
-    if(outitr >= maxitr)
-      conv <- FALSE
-  }
-  
   mcr <- werr <- ari <- numeric(0)
   if(!is.null(bestmc)) {
     mcr <- bestmc$mcr
@@ -216,18 +209,18 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
   }
 
   write.out(out, "finished fitting Theta")
-
+  
   if(method == "SE-MC") {
     return(new("MBASICFit",
-               W = bestW,
-               Z = bestZ,
-               clustProb = cbind(bestb, bestZcond * (1 - bestb)),
-               b = bestb,
+               W = W,
+               Z = predZ,
+               clustProb = cbind(b.prob, Zcond * (1 - b.prob)),
+               b = b.prob,
                lik = tail(alllik, 1),
                alllik = alllik,
-               zeta = bestzeta,
-               probz = bestprobz,
-               P=bestP,
+               zeta = zeta,
+               probz = probz,
+               P=P,
                converged = conv,
                MisClassRate = mcr,
                W.err = werr,
@@ -242,7 +235,7 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
                b = b.prob,
                zeta = 0,
                probz = probz,
-               converged = conv,
+               converged = TRUE,
                MisClassRate = mcr,
                W.err = werr,
                ARI = ari,
