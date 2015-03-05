@@ -27,7 +27,7 @@
 #' state.sim.fit <- MBASIC.state(Theta = state.sim$Theta, J = 4, method = "SE-MC", zeta = 0.1, maxitr = 100, tol = 1e-04)
 #' @useDynLib MBASIC
 #' @export
-MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, maxitr = 100, tol = 1e-4, para = NULL, out = NULL) {
+MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, maxitr = 100, tol = 1e-4, para = NULL, out = NULL, W.init = NULL, Z.init = NULL, P.init = NULL, b.init = NULL) {
 
   mc <- NULL
   if(!method %in% c("SE-HC", "SE-MC")) {
@@ -89,44 +89,56 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
     ## iteratively using the EM algorithm
 
     ## initialize groups
-    
-    mind <- apply(d, 1, function(x) min(x[x > 0]))
-    thr <- quantile(mind, 1 - zeta)
-    id <- which(mind <= thr)
-    b <- rep(1, I)
-    b[id] <- 0
-    d <- .Call("hamming", Theta[, id], package="MBASIC")
-    d <- as.dist(d + t(d))
-    fit <- hclust(d)
-    groups <- cutree(fit, k = J)
-    
-    Z <- matrix(0, nrow = I, ncol = J)
-    Z[cbind(1:I, sample(1:J, I, replace = TRUE))] <- 1
-    Z[id,] <- 0
-    Z[cbind(id, groups)] <- 1
 
-    W <- matrix(0, nrow = K * S, ncol = J)
-    for(j in seq_len(J)) {
-      if(sum(groups == j) > 1) {
-        W[,j] <- apply(ProbMat[, id[groups == j]], 1, mean)
-      } else {
-        W[,j] <- ProbMat[, id[groups == j]]
+    if(is.null(W.init) | is.null(Z.init)) {
+      mind <- apply(d, 1, function(x) min(x[x > 0]))
+      thr <- quantile(mind, 1 - zeta)
+      id <- which(mind <= thr)
+      b <- rep(1, I)
+      b[id] <- 0
+      d <- .Call("hamming", Theta[, id], package="MBASIC")
+      d <- as.dist(d + t(d))
+      fit <- hclust(d)
+      groups <- cutree(fit, k = J)
+      
+      Z <- matrix(0, nrow = I, ncol = J)
+      Z[cbind(1:I, sample(1:J, I, replace = TRUE))] <- 1
+      Z[id,] <- 0
+      Z[cbind(id, groups)] <- 1
+      
+      W <- matrix(0, nrow = K * S, ncol = J)
+      for(j in seq_len(J)) {
+        if(sum(groups == j) > 1) {
+          W[,j] <- apply(ProbMat[, id[groups == j]], 1, mean)
+        } else {
+          W[,j] <- ProbMat[, id[groups == j]]
+        }
       }
+      
+      W[W < tol] <- tol
+      W[W > 1-tol] <- 1 - tol
+    } else {
+      W <- W.init
+      Z <- Z.init
     }
 
-    W[W < tol] <- tol
-    W[W > 1-tol] <- 1 - tol
+    if(is.null(P.init)) {
+      P <- matrix(0, nrow = I, ncol = S)
+      for(i in seq_len(I))
+        P[i,] <- apply(matrix(ProbMat[, i], nrow = S), 1, mean)
+    } else {
+      P <- P.init
+    }
 
-    P <- matrix(0, nrow = I, ncol = S)
-    for(i in seq_len(I))
-      P[i,] <- apply(matrix(ProbMat[, i], nrow = S), 1, mean)
-
-    oldW <- W
+    if(!is.null(b.init)) {
+      b.prob <- b.init
+    }
     
-    W  <- matrix(0, nrow = K, ncol = J * S)
+    ##    oldW <- W
+    ##    W  <- matrix(0, nrow = K, ncol = J * S)
     PDF <- matrix(0, nrow = K, ncol = I * S)
     for(s in seq_len(S)) {
-      W[, seq_len(J) + J * (s - 1)] <- oldW[s + S * (seq_len(K) - 1), ]
+      ##      W[, seq_len(J) + J * (s - 1)] <- oldW[s + S * (seq_len(K) - 1), ]
       PDF[, seq_len(I) + I * (s - 1)] <- ProbMat[s + S * (seq_len(K) - 1), ]
     }
 
@@ -150,14 +162,16 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
       predZ <- mcmc.result[["Z"]]
       Zcond <- mcmc.result[["Zcond"]]
       b.prob <- mcmc.result[["b_prob"]]
-      
-      W.aug <- matrix(0, nrow = K * S, ncol = J)
-      for(s in 1:S) {
-        W.aug[seq_len(K) + K * (s - 1),] <- W[,  seq_len(J) + J * (s - 1)]
+
+      if(FALSE) {
+        W.aug <- matrix(0, nrow = K * S, ncol = J)
+        for(s in 1:S) {
+          W.aug[seq_len(K) + K * (s - 1),] <- W[,  seq_len(J) + J * (s - 1)]
+        }
       }
-      clustOrder <- .orderCluster(W.aug, struct)
-      W.aug <- W.aug[, clustOrder]
-      W.aug <- .structure(W.aug, struct)
+      clustOrder <- .orderCluster(W, struct)
+      W <- W[, clustOrder]
+      W <- .structure(W, struct)
       probz <- probz[clustOrder]
       predZ <- predZ[, clustOrder]
       Zcond <- Zcond[, clustOrder]
@@ -165,12 +179,14 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
       if(!is.null(para)) {
         Z.format <- matrix(0, nrow = I, ncol = J)
         Z.format[cbind(1:I, apply(predZ, 1, which.max))] <- 1
-        W.format <- matrix(0, nrow = K * S, ncol = J)
-        for(s in 1:S) {
-          idx <- s + S * seq(0, K - 1)
-          W.format[idx,] <- W.aug[seq_len(K) + K * (s - 1),]
+        if(FALSE) {
+          W.format <- matrix(0, nrow = K * S, ncol = J)
+          for(s in 1:S) {
+            idx <- s + S * seq(0, K - 1)
+            W.format[idx,] <- W.aug[seq_len(K) + K * (s - 1),]
+          }
         }
-        mc <- matchCluster(W.format, para$W, Z.format, para$Z, b.prob, para$non.id)
+        mc <- matchCluster(W, para$W, Z.format, para$Z, b.prob, para$non.id)
         allwerr <- c(allwerr, mc$W.err)
         allmisclass <- c(allmisclass, mc$mcr)
       }
@@ -225,7 +241,8 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
                MisClassRate = mcr,
                W.err = werr,
                ARI = ari,
-               Struct = struct
+               Struct = struct,
+               Iter = outitr
                ))
   } else {
     return(new("MBASICFit",

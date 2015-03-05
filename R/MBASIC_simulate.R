@@ -335,15 +335,17 @@ MBASIC.sim<- function(xi, family = "lognormal", struct = NULL, I, fac, J, S = 2,
   
   if(family == "lognormal") {
     prior_mean <- xi + log ((seq(M) - 1) * (f - 1) + 1)
-    prior_sd <- log(f) / 30
-    sdev <- diff(exp(prior_mean))[1]
-    stdev <- sqrt((log(sdev ^ 2 + exp(2 * prior_mean)) - 2 * prior_mean) * 2)
+    prior_sd <- 0.05
+    ## sdev <- diff(exp(prior_mean))[1]
+    ## stdev <- sqrt((log(sdev ^ 2 + exp(2 * prior_mean)) - 2 * prior_mean) / 2)
+    stdev <- 1
   } else {
     prior_mean <- xi * ((seq(M) - 1) * (f - 1) + 1)
-    prior_sd <- (f - 1) * xi / 3
-    sdev <- diff(prior_mean)[1] / 2
-    stdev <- prior_mean / (sdev ^ 2 / prior_mean - 1)
-    stdev[ stdev < 0 ] <- 100
+    prior_sd <- 0.5
+    sdev <- prior_mean + sqrt(prior_mean)
+    stdev <- prior_mean / (sdev / prior_mean - 1)
+    stdev[stdev < 0] <- 5
+    stdev[stdev > 5] <- 5
   }
     
   if(family != "binom") {  

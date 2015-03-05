@@ -14,7 +14,7 @@ SEXP e_step_theta(SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _Theta) {
 	// extract the dimensions
 	int I = P.nrow();
 	int S = P.ncol();
-	int K = W.nrow();
+	int K = W.nrow() / S;
 	int J = probz.size();
 
 	double _LOW = 1e-10;
@@ -22,7 +22,7 @@ SEXP e_step_theta(SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _Theta) {
 	// the following quantities are outputs
 	NumericVector b_mean(I);
 	NumericVector Z_mean(J);
-	NumericMatrix W_max(K, J*S);
+	NumericMatrix W_max(K * S, J);
 	NumericMatrix predZ(I, J);
 
 	// iterators
@@ -42,7 +42,7 @@ SEXP e_step_theta(SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _Theta) {
 				if(Theta(k, i + I * s) > 0){
 					TP(i) += log(P(i, s));
 					for(j = 0; j < J; j ++)
-						TW(i, j) += log(W(k, j + J * s));
+						TW(i, j) += log(W(k + K * s, j));
 				}
 			}
 		}
@@ -51,7 +51,7 @@ SEXP e_step_theta(SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _Theta) {
 	for(k = 0; k < K; k ++)
 		for(j = 0; j < J; j ++)
 			for(s = 0; s < S; s ++)
-				W_max(k, j + s * J) = 0;
+				W_max(k + K * s, j) = 0;
 	
 	for(j = 0; j < J; j ++)
 		Z_mean(j) = 0;
@@ -121,7 +121,7 @@ SEXP e_step_theta(SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _Theta) {
 			for(k = 0; k < K; k ++)
 				for(s = 0; s < S; s ++){
 					if(Theta(k, i + I * s) > 0){
-						W_max(k, j + J * s) += Zcond(i, j);
+						W_max(k + K * s, j) += Zcond(i, j);
 						break;
 					}
 				}
@@ -152,16 +152,16 @@ SEXP e_step_theta(SEXP _W, SEXP _P, SEXP _zeta, SEXP _probz, SEXP _Theta) {
 		for(j = 0; j < J; j ++){
 			double total = 0;
 			for(s = 0; s < S; s ++)
-				total += W_max(k, j + J * s);
+				total += W_max(k + K * s, j);
 			for(s = 0; s < S; s ++){
 				if(total == 0)
-					W_max(k, j + s * J) = 1 / S;
-				else if(W_max(k, j + s * J) < _LOW * total)
-					W_max(k, j + s * J) = _LOW;
-				else if(W_max(k, j + s * J) > (1 - _LOW) * total)
-					W_max(k, j + s * J) = 1 - _LOW;
+					W_max(k + K * s, j) = 1 / S;
+				else if(W_max(k + K * s, j) < _LOW * total)
+					W_max(k + K * s, j) = _LOW;
+				else if(W_max(k + K * s, j) > (1 - _LOW) * total)
+					W_max(k + K * s, j) = 1 - _LOW;
 				else 
-					W_max(k, j + s * J) /= total;
+					W_max(k + K * s, j) /= total;
 			}
 		}
 	

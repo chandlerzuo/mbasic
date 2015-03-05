@@ -38,7 +38,7 @@
 #' dat.sim.fit <- MBASIC(Y = dat.sim$Y, S = 3, fac = rep(1:10, each = 2), J = 3, maxitr = 3, para = NULL, family = "lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-04)
 #' @useDynLib MBASIC
 #' @export
-MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL,  family="lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-4, out = NULL, X = NULL, verbose = FALSE, statemap = NULL) {
+MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL,  family="lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-4, out = NULL, X = NULL, verbose = FALSE, statemap = NULL, Mu.init = NULL, Sigma.init = NULL, V.init = NULL, ProbMat.init = NULL, W.init = NULL, Z.init = NULL, b.init = NULL, P.init = NULL) {
 
   write.out(out, "Started")
   if(! method %in% c("SE-HC", "SE-MC", "PE-MC", "MBASIC")) {
@@ -115,7 +115,12 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
   ## initialize distributions
   V <- Sigma <- Mu <- matrix(0, nrow = N, ncol = M)
 
-  InitDist()
+  if(is.null(Mu.init) | is.null(Sigma.init)) {
+    InitDist()
+  } else {
+    Mu <- Mu.init
+    Sigma <- Sigma.init
+  }
   
   b <- rep(0, I)
   
@@ -123,13 +128,35 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
   ## in constructing Z, cluster all locis
   ## This gives deterministic initialization
   ProbMat <- matrix(0, nrow = K * S, ncol = I)
-  InitStates()
+  if(is.null(ProbMat.init) | is.null(V.init)) {
+    InitStates()
+  } else {
+    ProbMat <- ProbMat.init
+    V <- V.init
+    Pi <- matrix(0, nrow = K, ncol = S)
+    for(s in seq_len(S)) {
+      idx <- seq_len(K) + (s-1) * K
+      if(length(idx) > 1) {
+        Pi[,s] <- apply(ProbMat[idx,], 1 ,mean)
+      } else {
+        Pi[, s] <- mean(ProbMat[idx, ])
+      }
+    }
+    ProbMat.full <- matrix(0, nrow = M * N, ncol = I)
+    for(m in seq(M)) {
+      ProbMat.full[(m - 1) * N + seq(N), ] <- V[, m] * (designMap %*% ProbMat[(statemap[m] - 1) * K + seq(K), ])
+    }
+  }
 
   if(!is.null(para)) {
     ProbMat.true <- matrix(0, nrow = S * K, ncol = I)
     for(s in seq(S)) {
         ProbMat.true[(s - 1) * K + seq(K), ] <- as.numeric(para$Theta == s)
     }
+    W.true <- para$W
+    Z.true <- para$Z
+    nonid.true <- para$non.id
+    Mu.true <- para$Mu
   }
 
   if(method != "MBASIC") {
@@ -183,7 +210,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
       allerr <- sqrt(sum((ProbMat - ProbMat.true) ^ 2) / I / K / S)
     
     if(method != "PE-MC") {
-      ret <- MBASIC.state(Theta, J=J, zeta = zeta, struct = struct, method = method, maxitr = maxitr, tol = tol, para = para, out = out)
+      ret <- MBASIC.state(Theta, J=J, zeta = zeta, struct = struct, method = method, maxitr = maxitr, tol = tol, para = para, out = out, W.init = W.init, Z.init = Z.init, P.init = P.init, b.init = b.init)
       
       conv <- (conv & ret@converged)
       
@@ -191,8 +218,8 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
       ## Pi is different from Z. Z is the posterior probability.
 
       Mu.err <- numeric(0)
-      if(prod(dim(Mu) == dim(para$Mu)) == 1) {
-        Mu.err <- sqrt(mean((Mu - para$Mu) ^ 2))
+      if(prod(dim(Mu) == dim(Mu.true)) == 1) {
+        Mu.err <- sqrt(mean((Mu - Mu.true) ^ 2))
       }
 
       write.out(out, paste("mis-class rate ", ret@MisClassRate))
@@ -220,7 +247,8 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
                  ARI = ret@ARI,
                  W.err = ret@W.err,
                  MisClassRate = ret@MisClassRate,
-                 Mu.err = Mu.err
+                 Mu.err = Mu.err,
+                 Iter = ret@Iter
                  )
              )
     }
@@ -228,36 +256,25 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
 
   ## initialize W, Z, b
   ## ProbMat <- D.rep %*% ProbMat
-  d <- dist(t(ProbMat))
-  mind <- apply(as.matrix(d), 1, function(x) min(x[x>0]))
-  thr <- quantile(mind, 1 - zeta)
-  id <- which(mind < thr)
-  b <- rep(1, I)
-  b[id] <- 0
-  d <- dist(t(ProbMat[,id]))
-  fit <- hclust(d)
-  groups <- cutree(fit, k = J)
-  Z <- matrix(0, nrow = I, ncol = J)
-  Z[cbind(1:I, sample(1:J, I, replace = TRUE))] <- 1
-  Z[id,] <- 0
-  Z[cbind(id, groups)] <- 1
-  W <- matrix(1/S, nrow = K * S, ncol = J)
-  for(j in seq_len(J)) {
-    if(length(id[groups == j]) > 0) {
-      W[, j] <- apply(t(ProbMat[ , id[groups == j]]), 2, mean)
-    }
+  if(is.null(W.init) | is.null(Z.init)) {
+    InitWZb()
+  } else {
+    W <- W.init
+    Z <- Z.init
+  }
+  if(!is.null(b.init)) {
   }
   predZ <- Zcond <- Z
-  b.prob <- b
-  clustOrder <- .orderCluster(W, struct)
-  W <- W[, clustOrder]
-  Z <- Z[, clustOrder]
-  W <- .structure(W, struct)
+  
   ## initialize p, probz
-  P <- matrix(0, nrow = I, ncol = S)
-  for(s in seq_len(S)) {
-    idx <- seq_len(K) + K * (s - 1)
-    P[, s] <- apply(ProbMat[idx, ], 2, mean)
+  if(is.null(P.init)) {
+    P <- matrix(0, nrow = I, ncol = S)
+    for(s in seq_len(S)) {
+      idx <- seq_len(K) + K * (s - 1)
+      P[, s] <- apply(ProbMat[idx, ], 2, mean)
+    }
+  } else {
+    P <- P.init
   }
   probz <- apply(rbind(Z, diag(rep(1, J))), 2, mean)
   
@@ -366,7 +383,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
   new("MBASICFit",
       Theta = ProbMat,
       W = W,
-      V = V     ,
+      V = V,
       Z = Z,
       b = b.prob,
       clustProb = cbind(b.prob, Zcond * (1 - b.prob)),
@@ -386,12 +403,13 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
       W.err = tail(W.err, 1),
       MisClassRate = tail(allmisclass, 1),
       Struct = struct,
-      Mu.err = Mu.err
+      Mu.err = Mu.err,
+      Iter = outitr
     )
 }
 
 InitStates <- function() {
-    Inherit()
+    Inherit(c("S", "statemap", "V", "K", "M", "I", "N", "Y", "Sigma", "Mu", "X", "family", "unitMap", "designMap", "stateMap"))
     ## initialize V
     for(s in seq(S)) {
       ids <- which(statemap == s)
@@ -434,14 +452,11 @@ InitStates <- function() {
 
     Pi <- matrix(rep(apply(stateMap, 2, sum) / M, each = K), nrow = K, ncol = S)
 
-    assign("ProbMat.full", ProbMat.full, envir = parent.frame())
-    assign("ProbMat", ProbMat, envir = parent.frame())
-    assign("V", V, envir = parent.frame())
-    assign("Pi", Pi, envir = parent.frame())
+    Return(c("ProbMat.full", "ProbMat", "V", "Pi"))
 }
 
 InitDist <- function() {
-    Inherit()
+    Inherit(c("M", "Y", "family", "Mu", "Sigma", "X"))
     for(m in seq(M)) {
         if(family == "lognormal") {
             Y.sec <- c(Y)[c(Y) <= quantile(c(Y), m / M) & c(Y) >= quantile(c(Y), (m - 1) / M)]
@@ -467,12 +482,11 @@ InitDist <- function() {
         m2 <- mean(Y.sec * Y.sec)
         MomentEstimate()
     }
-    assign("Mu", Mu, envir = parent.frame())
-    assign("Sigma", Sigma, envir = parent.frame())
+    Return(c("Mu", "Sigma"))
 }
 
 UpdateDist <- function() {
-    Inherit()
+    Inherit(c("M", "N", "family", "Y", "ProbMat.full", "X", "Mu", "Sigma"))
     
     for(m in seq_len(M)) {
         idx <- seq(N) + (m - 1) * N
@@ -506,12 +520,11 @@ UpdateDist <- function() {
     Mu <- matrix(Mu[cbind(rep(seq_len(N), each = M), c(od))], ncol = M, byrow = TRUE)
     Sigma <- matrix(Sigma[cbind(rep(seq_len(N), each = M), c(od))], ncol = M, byrow = TRUE)
 
-    assign("Mu", Mu, envir = parent.frame())
-    assign("Sigma", Sigma, envir = parent.frame())
+    Return(c("Mu", "Sigma"))
 }
 
 UpdateStates <- function() {
-    Inherit()
+    Inherit(c("K", "S", "I", "M", "N", "Y", "Mu", "Sigma", "X", "family", "V", "unitMap", "designMap", "stateMap", "Pi", "statemap", "out", "verbose"))
     F1  <- matrix(0, nrow = K * S, ncol = I)
     F1.full <- matrix(0, nrow = N * M, ncol = I)
 
@@ -540,7 +553,8 @@ UpdateStates <- function() {
 
     ## joint likelihood for each replicate and component
     totallik <- sum(log(totalF))
-    write.out(out, paste("Likelihood for component estimation: ", round(totallik, 3), sep = ""))
+    if(verbose)
+      write.out(out, paste("Likelihood for component estimation: ", round(totallik, 3), sep = ""))
 
     ## ProbMat.full
     ProbMat.full <- F1.tmp
@@ -576,22 +590,18 @@ UpdateStates <- function() {
     V.new <- matrix(apply(EV, 1, sum), nrow = N)
     V.new <- V.new / tcrossprod(V.new %*% stateMap, stateMap)
 
-    assign("V", V.new, envir = parent.frame())
-    assign("Pi", Pi, envir = parent.frame())
-    assign("ProbMat", ProbMat, envir = parent.frame())
-    assign("ProbMat.full", ProbMat.full, envir = parent.frame())
-    assign("totallik", totallik, envir = parent.frame())
+    Return(c("V", "Pi", "ProbMat", "ProbMat.full", "totallik"))
 }
 
 PrintUpdate <- function() {
-  Inherit()
+  Inherit(c("ProbMat", "ProbMat.true", "I", "K", "S", "J", "W", "W.true", "Z.true", "nonid.true", "b.prob", "Zcond", "allmisclass", "W.err", "allari", "Mu", "Mu.true", "totallik", "out"))
   allerr <- sqrt(sum((ProbMat - ProbMat.true) ^ 2) / I / K / S)
   ## compute misclassification rate
   W.f <- matrix(0, nrow = K * S, ncol = J)
   for(s in seq_len(S))
     W.f[s + S * seq(0, K - 1),] <- W[seq_len(K) + K * (s - 1),]
   
-  mc <- matchCluster(W.f, para$W, Zcond, para$Z, b.prob, para$non.id)
+  mc <- matchCluster(W.f, W.true, Zcond, Z.true, b.prob, nonid.true)
   
   write.out(out, paste("mis-class rate ", mc$mcr))
   write.out(out, paste("Error for W ",  round(mc$W.err, 3)))
@@ -599,22 +609,33 @@ PrintUpdate <- function() {
   W.err <- c(W.err, mc$W.err)
   allari <- c(allari, mc$ari)
   Mu.err <- numeric(0)
-  if(prod(dim(Mu) == dim(para$Mu)) == 1) {
-    Mu.err <- sqrt(mean((Mu - para$Mu) ^ 2))
+  if(prod(dim(Mu) == dim(Mu.true)) == 1) {
+    Mu.err <- sqrt(mean((Mu - Mu.true) ^ 2))
   }
   write.out(out, paste("ARI ", mc$ari))
   write.out(out, paste("loglik", totallik, "err", round(allerr, 3)))
   write.out(out, paste("Error for Mu", round(Mu.err, 3)))
-  for(v in c("allerr", "allari", "allmisclass", "W.err", "Mu.err")) {
-    assign(v, get(v), envir = parent.frame())
+  Return(c("allerr", "allari", "allmisclass", "W.err", "Mu.err"))
+}
+
+Inherit <- function(vnames = NULL) {
+  if(is.null(vnames)) {
+    vnames <- ls(envir = parent.frame(2))
+  }
+  for(v in vnames) {
+    ## do not use get() since it will cause error for non-defined variables
+    assign(v, parent.frame(2)[[v]], envir = parent.frame())
   }
 }
 
-Inherit <- function() {
-    for(v in ls(envir = parent.frame(2))) {
-        ## do not use get() since it will cause error for non-defined variables
-        assign(v, parent.frame(2)[[v]], envir = parent.frame())
-    }
+Return <- function(vnames = NULL) {
+  if(is.null(vnames)) {
+    vnames <- ls(envir = parent.frame())
+  }
+  for(v in vnames) {
+    ## do not use get() since it will cause error for non-defined variables
+    assign(v, parent.frame()[[v]], envir = parent.frame(2))
+  }
 }
 
 logdensity <- function(y, mu, sigma, x = NULL, family) {
@@ -638,9 +659,8 @@ logdensity <- function(y, mu, sigma, x = NULL, family) {
 }
 
 MomentEstimate <- function() {
-    for(v in c("m1", "m2", "Mu", "Sigma", "family", "m")) {
-        assign(v, parent.frame()[[v]])
-    }
+  Inherit(c("m1", "m2", "Mu", "Sigma", "family", "m"))
+##    for(v in c("m1", "m2", "Mu", "Sigma", "family", "m")) {     assign(v, parent.frame()[[v]])    }
     if(family == "lognormal") {
         Mu[, m] <- m1
         m2 <- m2 - m1 * m1
@@ -701,8 +721,7 @@ MomentEstimate <- function() {
         Mu[, m] <- m1
 	Sigma[, m] <- 0
     }
-    assign("Mu", Mu, envir = parent.frame())
-    assign("Sigma", Sigma, envir = parent.frame())
+  Return(c("Mu", "Sigma"))
 }
 
 assignBest <- function(varnames) {
@@ -717,4 +736,35 @@ getBest <- function(varnames) {
         bestname <- paste("best", v, sep = "")
         assign(v, get(bestname, envir = parent.frame()), envir = parent.frame())
     }
+}
+
+InitWZb <- function() {
+  Inherit(c("ProbMat", "zeta", "I", "J", "S", "K", "struct"))
+  d <- dist(t(ProbMat))
+  mind <- apply(as.matrix(d), 1, function(x) min(x[x>0]))
+  thr <- quantile(mind, 1 - zeta)
+  id <- which(mind < thr)
+  b <- rep(1, I)
+  b[id] <- 0
+  d <- dist(t(ProbMat[,id]))
+  fit <- hclust(d)
+  groups <- cutree(fit, k = J)
+  Z <- matrix(0, nrow = I, ncol = J)
+  Z[cbind(1:I, sample(1:J, I, replace = TRUE))] <- 1
+  Z[id,] <- 0
+  Z[cbind(id, groups)] <- 1
+  W <- matrix(1/S, nrow = K * S, ncol = J)
+  for(j in seq_len(J)) {
+    if(length(id[groups == j]) > 0) {
+      W[, j] <- apply(t(ProbMat[ , id[groups == j]]), 2, mean)
+    }
+  }
+  clustOrder <- .orderCluster(W, struct)
+  W <- W[, clustOrder]
+  Z <- Z[, clustOrder]
+  W <- .structure(W, struct)
+  b.prob <- b
+
+  Return(c("W", "Z", "b.prob"))
+
 }
