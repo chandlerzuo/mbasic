@@ -19,6 +19,7 @@
 #'}
 #' @examples \dontrun{ ChIPInputMatch(c("ChIPDataDir/", "inputDataDir/"), suffices = ".tagAlign", depth = 2) }
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
+#' @import GenomicRanges
 #' @export
 ChIPInputMatch <- function(dir, suffices, depth = 5) {
   if(length(dir) != 2) {
@@ -283,6 +284,7 @@ generateReadMatrices <- function(chipfile, inputfile, input.suffix, target, chip
 #' GC \tab The average GC scores for the sorted elements of 'target'.\cr
 #' }
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
+#' @import GenomicRanges
 #' @useDynLib MBASIC
 #' @export
 averageMGC <- function(target, m.prefix, m.suffix = NULL, gc.prefix, gc.suffix = NULL) {
@@ -351,6 +353,7 @@ averageMGC <- function(target, m.prefix, m.suffix = NULL, gc.prefix, gc.suffix =
 #' @param family A string for the distributional family. Must be either "lognormal" (default) or "negbin".
 #' @return A numeric matrix for the background counts at each locus (column) for each experiment (row).
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
+#' @import GenomicRanges
 #' @export
 bkng_mean <- function(inputdat, target, nknots = 2, family = "lognormal") {
   options(warn = -1)
@@ -392,6 +395,7 @@ bkng_mean <- function(inputdat, target, nknots = 2, family = "lognormal") {
 #' @param use.names A boolean value to be passed to \link{GenomicRanges} functions.
 #' @param format A string of file format. Must be either "BAM" or "BED".
 #' @return A \link{GRanges} object.
+#' @import GenomicRanges
 #' @author Samuel Younkin \email{syounkin@@stat.wisc.edu}
 #' @export
 readReads <- function(reads, extended, fragLen = 200, pairedEnd = FALSE, use.names = FALSE, format) {

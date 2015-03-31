@@ -209,7 +209,7 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
         conv <- TRUE
         break
       }
-      if(which.max(totallik) < outitr - 10) {
+      if(outitr > 100 & which.max(totallik) < outitr - 100) {
         conv <- TRUE
         break
       }

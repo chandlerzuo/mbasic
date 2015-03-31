@@ -29,6 +29,7 @@
 #' @examples
 #' dat.sim <- MBASIC.sim.binary(I = 100, fac = rep(1:5, each = 2), J = 3, f = 5)
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
+#' @import gtools msm
 #' @export
 MBASIC.sim.binary <- function(I, fac, J, f, struct=NULL, beta=0.1, zeta = 0.1, beta.non=0.1, xi = 6, family="lognormal") {
   
@@ -190,6 +191,7 @@ MBASIC.sim.binary <- function(I, fac, J, f, struct=NULL, beta=0.1, zeta = 0.1, b
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @examples
 #' dat.sim <- MBASIC.sim.state(I = 100, K = 10, J = 3)
+#' @import gtools
 #' @export
 MBASIC.sim.state <- function(I, K, J, S = 2, struct = NULL, delta = NULL, delta.non = NULL, zeta = 0.1, statemap = NULL) {
   
@@ -289,6 +291,7 @@ MBASIC.sim.state <- function(I, K, J, S = 2, struct = NULL, delta = NULL, delta.
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @examples
 #' dat.sim <- MBASIC.sim(xi = 2, I = 100, fac = rep(1:5, each = 2), J = 3)
+#' @import gtools msm
 #' @export
 MBASIC.sim<- function(xi, family = "lognormal", struct = NULL, I, fac, J, S = 2, f = 5, delta = NULL, delta.non = NULL, zeta = 0.1, statemap = NULL) {
   
@@ -338,7 +341,7 @@ MBASIC.sim<- function(xi, family = "lognormal", struct = NULL, I, fac, J, S = 2,
     prior_sd <- 0.05
     ## sdev <- diff(exp(prior_mean))[1]
     ## stdev <- sqrt((log(sdev ^ 2 + exp(2 * prior_mean)) - 2 * prior_mean) / 2)
-    stdev <- 1
+    stdev <- 0.5
   } else {
     prior_mean <- xi * ((seq(M) - 1) * (f - 1) + 1)
     prior_sd <- 0.5

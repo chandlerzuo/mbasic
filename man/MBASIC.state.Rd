@@ -5,7 +5,8 @@
 \title{Bayesian clustering model for a state-space matrix.}
 \usage{
 MBASIC.state(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1,
-  maxitr = 100, tol = 1e-04, para = NULL, out = NULL)
+  maxitr = 100, tol = 1e-04, para = NULL, out = NULL, W.init = NULL,
+  Z.init = NULL, P.init = NULL, b.init = NULL)
 }
 \arguments{
 \item{Theta}{A K by I matrix. The (k,i)-th entry is the state of the i-th unit under condition k. Notice that the sorted distinct values of entries in this matrix must be 1,2,...,S, where S is the total number of states.}

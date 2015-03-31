@@ -6,7 +6,9 @@
 \usage{
 MBASIC(Y, S, fac, J = NULL, maxitr = 100, struct = NULL, para = NULL,
   family = "lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-04,
-  out = NULL, X = NULL, verbose = FALSE, statemap = NULL)
+  out = NULL, X = NULL, verbose = FALSE, statemap = NULL,
+  Mu.init = NULL, Sigma.init = NULL, V.init = NULL, ProbMat.init = NULL,
+  W.init = NULL, Z.init = NULL, b.init = NULL, P.init = NULL)
 }
 \arguments{
 \item{Y}{An N by I matrix containing the data from N experiments across I observation units.}

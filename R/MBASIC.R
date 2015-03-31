@@ -193,7 +193,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
         conv <- TRUE
         break
       }
-      if(which.max(alllik) < itr - 10) {
+      if(itr > 100 & which.max(alllik) < itr / 2) {
         conv <- TRUE
         break
       }
@@ -368,7 +368,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
       conv <- TRUE
       break
     }
-    if(which.max(alllik) < outitr - 10) {
+    if(outitr > 100 & which.max(alllik) < outitr  - 100) {
       conv <- TRUE
       break
     }
