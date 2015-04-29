@@ -4,18 +4,16 @@
 \alias{MBASIC.MADBayes}
 \title{MAD-Bayes method to fit the MBASIC model.}
 \usage{
-MBASIC.MADBayes(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 5,
-  maxitr = 100, S = 2, tol = 0.01, zeta = 0.1, verbose = TRUE,
-  para = NULL)
+MBASIC.MADBayes(Y, Gamma, fac, lambdaw = 0.2, lambda = 200, maxitr = 100,
+  S = 2, tol = 1e-06, verbose = TRUE, para = NULL,
+  initialize = "kmeans")
 }
 \arguments{
 \item{Y}{An N by I matrix containing the data from N experiments across I observation units (loci).}
 
-\item{Mu0}{An N by I matrix for the prior estimated mean for the background state, for N experiments across the I observation units (loci).}
+\item{Gamma}{An N by I matrix for the prior esti1mated mean for the background state, for N experiments across the I observation units (loci).}
 
 \item{fac}{A vector of length N denoting the experimental condition for each replicate.}
-
-\item{lambdap,lambdaw,lambda}{Tuning parameters.}
 
 \item{maxitr}{The maximum number of iterations in the E-M algorithm. Default: 100.}
 
@@ -23,11 +21,11 @@ MBASIC.MADBayes(Y, Mu0, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 5,
 
 \item{tol}{Tolerance for error in checking the E-M algorithm's convergence. Default: 1e-04.}
 
-\item{zeta}{The initial value of the proportion of unclustered units. Default: 0.2.}
-
 \item{verbose}{Boolean variable for whether the model fitting messages are printed.}
 
 \item{para}{A list of true paramters.}
+
+\item{lambdap,lambdaw,lambda}{Tuning parameters.}
 
 \item{family}{The distribution of family to be used. Either "lognormal" or "negbin". See details for more information.}
 }

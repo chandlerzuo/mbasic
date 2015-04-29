@@ -78,7 +78,7 @@ orderCluster <- function(W, struct) {
   S <- nrow(W) / nrow(struct)
   ret <- NULL
   for(j in seq_len(ncol(struct) - 1)) {
-    Wtemp <- W[, workSet]
+    Wtemp <- W[, workSet, drop = FALSE]
     r2 <- apply(Wtemp,
                 2,
                 function(x)

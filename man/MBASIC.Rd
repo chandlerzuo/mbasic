@@ -5,10 +5,11 @@
 \title{Bayesian clustering model for a state-space matrix.}
 \usage{
 MBASIC(Y, S, fac, J = NULL, maxitr = 100, struct = NULL, para = NULL,
-  family = "lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-04,
-  out = NULL, X = NULL, verbose = FALSE, statemap = NULL,
-  Mu.init = NULL, Sigma.init = NULL, V.init = NULL, ProbMat.init = NULL,
-  W.init = NULL, Z.init = NULL, b.init = NULL, P.init = NULL)
+  family = "lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-10,
+  tol.par = 0.001, out = NULL, X = NULL, verbose = FALSE,
+  statemap = NULL, Mu.init = NULL, Sigma.init = NULL, V.init = NULL,
+  ProbMat.init = NULL, W.init = NULL, Z.init = NULL, b.init = NULL,
+  P.init = NULL)
 }
 \arguments{
 \item{Y}{An N by I matrix containing the data from N experiments across I observation units.}
@@ -63,7 +64,7 @@ This argument is intended to carry the true parameters in simulation studies. If
 ## Simulate a dataset
 dat.sim <- MBASIC.sim(xi = 2, family = "lognormal", I = 1000, fac = rep(1:10, each = 2), J = 3, S = 3, zeta = 0.1)
 ## Fit the model
-dat.sim.fit <- MBASIC(Y = dat.sim$Y, S = 3, fac = rep(1:10, each = 2), J = 3, maxitr = 3, para = NULL, family = "lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-04)
+dat.sim.fit <- MBASIC(Y = dat.sim$Y, S = 3, fac = rep(1:10, each = 2), J = 3, maxitr = 3, para = NULL, family = "lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-6)
 }
 \author{
 Chandler Zuo \email{zuo@stat.wisc.edu}

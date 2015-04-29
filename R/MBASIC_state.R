@@ -24,10 +24,10 @@
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @examples
 #' state.sim <- MBASIC.sim.state(I = 1000, K = 10, J = 4, S = 3, zeta = 0.1)
-#' state.sim.fit <- MBASIC.state(Theta = state.sim$Theta, J = 4, method = "SE-MC", zeta = 0.1, maxitr = 100, tol = 1e-04)
+#' state.sim.fit <- MBASIC.state(Theta = state.sim$Theta, J = 4, method = "SE-MC", zeta = 0.1, maxitr = 100, tol = 1e-6)
 #' @useDynLib MBASIC
 #' @export
-MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, maxitr = 100, tol = 1e-4, para = NULL, out = NULL, W.init = NULL, Z.init = NULL, P.init = NULL, b.init = NULL) {
+MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, maxitr = 100, tol = 1e-10, tol.par = 0.001, para = NULL, out = NULL, W.init = NULL, Z.init = NULL, P.init = NULL, b.init = NULL) {
 
   mc <- NULL
   if(!method %in% c("SE-HC", "SE-MC")) {
@@ -201,11 +201,11 @@ MBASIC.state <- function(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1, 
           maxlik <- totallik
       }
       
-      if(max(allpar - oldpar) < tol) {
+      if(max(na.omit(abs(allpar / oldpar - 1))) < tol.par) {
         conv <- TRUE
         break
       }
-      if(outitr > 10 & totallik > oldlik & totallik - oldlik < tol) {
+      if(outitr > 10 & totallik > oldlik & totallik - oldlik < tol * abs(oldlik)) {
         conv <- TRUE
         break
       }

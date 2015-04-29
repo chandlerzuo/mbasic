@@ -8,114 +8,84 @@
 #' @param maxitr The maximum number of iterations in the E-M algorithm. Default: 100.
 #' @param tol Tolerance for error in checking the E-M algorithm's convergence. Default: 1e-04.
 #' @param S The number of different states.
-#' @param zeta The initial value of the proportion of unclustered units. Default: 0.2.
 #' @param verbose Boolean variable for whether the model fitting messages are printed.
 #' @param para A list of true paramters.
 #' @details
 #' TODO.
 #' @useDynLib MBASIC
 #' @return A list object.
-#' @import cluster
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @export
-MBASIC.MADBayes <- function(Y, Gamma, fac, lambdap = 0.5, lambdaw = 0.2, lambda = 5, maxitr = 100, S = 2, tol = 0.01, zeta = 0.1, verbose = TRUE, para = NULL) {
-  ## Initialize
-  ## prespecified
-  K <- length(unique(fac))
-  I <- ncol(Y)
-  N <- nrow(Y)
-  if(length(fac) != N)
-    stop("Error: total number of replicates do not match with the number of rows in Y")
+MBASIC.MADBayes <- function(Y, Gamma, fac, lambdaw = 0.2, lambda = 200, maxitr = 100, S = 2, tol = 1e-6, verbose = TRUE, para = NULL, initialize = "kmeans") {
 
-  if(prod(dim(Y) == dim(Gamma)) != 1)
-    stop("Error: dimensions for Y and Gamma must be the same.")
+  ## Normalize Data
+  NormalizeData()
+  fit <- MBASIC.MADBayes.internal(Y = Y, Gamma = Gamma, fac = fac, lambdaw = lambdaw, lambda = lambda, maxitr = maxitr, S = S, tol = tol, verbose = verbose, para = para, initialize = initialize, Theta.init = NULL, Mu.init = NULL, Sigma.init = NULL, clusterLabels.init = NULL, scaleFactor = scaleFactor)
+  return(fit)
+}
 
-  ## design matrix is N by K
-  designMat <- matrix(0, ncol = K, nrow = N)
-  for(k in 1:K) {
-    designMat[fac == unique(fac)[k], k] <- 1
+#' @import cluster
+MBASIC.MADBayes.internal <- function(Y, Gamma, fac, lambdaw = NULL, lambda = NULL, maxitr = 20, S, tol = 1e-8, verbose = TRUE, para = NULL, initialize = "kmeans", Theta.init = NULL, Mu.init = NULL, Sigma.init = NULL, clusterLabels.init = NULL, scaleFactor) {
+
+  GetModelStructure()
+
+  ## Initialize Mu, Sigma, Theta
+
+  if(is.null(Mu.init) | is.null(Sigma.init) | is.null(Theta.init)) {
+    InitializeTheta.MADBayes()
+  } else {
+    Theta <- Theta.init
+    Mu <- Mu.init
+    Sigma <- Sigma.init
   }
 
-  ## Scale the data from different replicates
-  scaleFactor <- apply(Y, 1, mean)
-  
-  if(is.null(Gamma)) {
-    Gamma <- Y - Y + 1
+  if(is.null(lambdaw)) {
+    lambdaw <- 2 * mean(na.omit(Sigma))
   }
-  ## normalize the Gamma
-  Gamma <- Gamma / rep(apply(Gamma, 1, mean), ncol(Gamma))
-  Y <- Y / scaleFactor
-  Gamma <- rbind(Gamma, matrix(0, ncol = ncol(Gamma), nrow = nrow(Gamma) * (S - 1)))
-  for(s in seq(S)[-1]) {
-    Gamma[(s - 1) * N + seq(N), ] <- rep(apply(Gamma[seq(N), ], 1, mean), I)
-  }
-  
-  ## Initialize
-  Mu <- Sigma <- matrix(0, nrow = N, ncol = S)
-  Theta <- matrix(0, nrow = K, ncol = I)
-  storage.mode(Theta) <- "integer"
-  foldChange <- Y / Gamma[seq(N), ]
-  foldChange[Gamma[seq(N), ] == 0] <- 1
-  avgFoldChange <- crossprod(foldChange, designMat) / rep(apply(designMat, 2, sum), each = I)
-  for(k in seq(K)) {
-    for(s in seq(S, 1)) {
-      Theta[k, rank(avgFoldChange[, k]) <= s / S * I] <- s - 1
-    }
-  }
-  ## DTheta: N by I
-  DTheta <- designMat %*% Theta
-  for(n in seq(N)) {
-    for(s in seq(S)) {
-      Mu[n, s] <- mean(foldChange[n, DTheta[n, ] == s - 1])
-      Sigma[n, s] <- var(foldChange[n, DTheta[n, ] == s - 1])
-    }
-  }
-  Sigma[Sigma <= 0] <- min(Sigma[Sigma > 0])
+  lambda <- lambda * lambdaw
   
   ## Initialize cluster
-  if(verbose)
-    message("Initialize clusters...")
-  J <- max(c(as.integer(sqrt(I) / 4), 2))
-  b <- sample(c(0, 1), I, prob = c(1 - zeta, zeta), replace = TRUE)
-  clusterLabels <- sample(seq(J), I, replace = TRUE) - 1
+  if(is.null(clusterLabels.init)) {
+    InitializeClusters.MADBayes()
+  } else {
+    clusterLabels <- clusterLabels.init
+  }
   
-  D <- apply(designMat, 1, function(x) which(x == 1)) - 1
-  storage.mode(D) <- "integer"
-  storage.mode(Theta) <- "integer"
-  zeta <- mean(b)
+  b <- rep(0, I)
+  
+  ##  zeta <- mean(b)
 
-  ret <- .Call("MADBayes", b, clusterLabels, Theta, Mu, D, Gamma, Y, lambdap, lambdaw, lambda, package = "MBASIC")
+  ret <- .Call("madbayes", b, clusterLabels, Theta, Mu, D, Gamma, Y, 10, lambdaw, lambda, 2, 2, maxitr, tol, package = "MBASIC")
 
-  allloss <- NULL
-  allnclusters <- NULL
-
-  associationMatrix <- matrix(0, nrow = I, ncol = I)
-  maxId <- 0
   t0 <- Sys.time()
-  mixed <- FALSE
-  outliers <- rep(0, I)
   if(verbose)
     message("start iteration...")
-  
-  for(itr in seq(maxitr)) {
-    ret <- .Call("MADBayes", ret$b, ret$clusterLabels, ret$Theta, ret$Mu, D, Gamma, Y, lambdap, lambdaw, lambda, package = "MBASIC")
-    allloss <- c(allloss, ret$loss)
-    allnclusters <- c(allnclusters, max(ret$clusterLabels) + 1)
-    if(verbose & itr %% 10 == 0) {
-      message(Sys.time() - t0, " have passed, number of iterations = ", itr)
-    }
-    if(length(unique(ret$clusterLabels)) != max(ret$clusterLabels) + 1)
-      stop("Number of states is not equivalent to the maximum state index.")
-    if(length(allloss) > 2)
-      if(abs(diff(tail(allloss, 2))) < tol)
+
+  if(FALSE) {
+    allloss <- NULL
+    allnclusters <- NULL
+    for(itr in seq(maxitr)) {
+      ret <- .Call("madbayes", ret$b, ret$clusterLabels, ret$Theta, ret$Mu, D, Gamma, Y, 10, lambdaw, lambda, 2, 2, package = "MBASIC")
+      allloss <- c(allloss, ret$loss)
+      allnclusters <- c(allnclusters, max(ret$clusterLabels) + 1)
+      if(verbose & itr %% 10 == 0) {
+        message(Sys.time() - t0, " have passed, number of iterations = ", itr)
+      }
+      if(length(unique(ret$clusterLabels)) != max(ret$clusterLabels) + 1)
+        stop("Number of states is not equivalent to the maximum state index.")
+      if(length(allloss) > 2)
+        if(abs(diff(tail(allloss, 2))) < tol)
+          break
+      if(max(ret$clusterLabels) >= I / 4) {
+        warning("Too many clusters identified. Consider increasing the lambda value.")
+        itr <- maxitr
         break
+      }
+    }
   }
 
-  if(maxitr <= itr)
+  if(maxitr <= ret$Iter) {
     warning("MADBAYES procedure not converged.")
-
-  for(j in unique(ret$clusterLabels)) {
-    associationMatrix[ret$clusterLabels == j, ret$clusterLabels == j] <- 1
   }
 
   J <- max(ret$clusterLabels) + 1
@@ -132,26 +102,21 @@ MBASIC.MADBayes <- function(Y, Gamma, fac, lambdap = 0.5, lambdaw = 0.2, lambda 
       W.f[ s + S * seq(0, K - 1), ] <- W[ seq_len(K) + K * (s - 1), ]
     mc <- matchCluster(W.f, para$W, Z, para$Z, ret$b, para$non.id)
     W.err <- mc$W.err
-    ari <- mc$ari
     mcr <- mc$mcr
-  }
-
-  if(J == I) {
-    sil.theta <- 0
-  } else {
-    sil.theta <- mean(silhouette(ret$clusterLabels, dist(t(ret$Theta), method = "manhattan"))[, 3])
+    ## recompute ARI
+    trueLabels <- apply(para$Z, 1, which.max)
+    trueLabels[para$non.id] <- max(trueLabels) + seq(length(para$non.id))
+    ari <- adjustedRandIndex(ret$clusterLabels, trueLabels)
   }
 
   ## Compute the loss of each term
-  Theta.aug <- P.aug <- W.aug <- matrix(0, nrow = K * S, ncol = I)
+  Theta.aug <- W.aug <- matrix(0, nrow = K * S, ncol = I)
   for(s in seq(S)) {
     Theta.aug[seq(K) + K * (s-1), ] <- as.integer(ret$Theta == s - 1)
-    P.aug[seq(K) + K * (s-1), ] <- rep(ret$P[, s], each = K)
   }
   W.aug <- tcrossprod(W, Z)
-  loss.p <- mean(abs(Theta.aug - P.aug)[, ret$b == 1])
-  loss.w <- mean(abs(Theta.aug - W.aug)[, ret$b == 0])
-
+  loss.w <- mean((Theta.aug - W.aug) ^ 2)
+  
   ## compute the loss of data fitting
   Theta.Y <- designMat %*% ret$Theta
   Mu.Y <- Sigma.Y <- Y - Y
@@ -179,42 +144,39 @@ MBASIC.MADBayes <- function(Y, Gamma, fac, lambdap = 0.5, lambdaw = 0.2, lambda 
     Theta.total <- Theta.total + Theta.norm[(s - 1) * K + seq(K), ]
   }
   Theta.norm <- Theta.norm / t(matrix(rep(t(Theta.total), S), nrow = I))
-  dist.norm <- dist(t(Theta.norm), method = "manhattan")
-  sil.norm <- mean(silhouette(ret$clusterLabels, dist.norm)[, 3])
-  
-  ## compute sihouette score from composite distance
   if(J == I) {
-    sil.comp <- 0
+    sil.norm <- 0
   } else {
-    dist.Y <- dist(t(Y - Mu.Y))
-    dist.Theta <- dist(t(Theta.aug), method = "manhattan")
-    sil.comp <- mean(silhouette(ret$clusterLabels, dmatrix = as.matrix(dist.Y) + lambdaw * as.matrix(dist.Theta))[, 3])
+    dist.norm <- dist(t(Theta.norm), method = "manhattan")
+    sil.norm <- mean(cluster::silhouette(ret$clusterLabels, dist.norm)[, 3])
   }
+
+  clustProb <- cbind(b, Z * (1 - b))
   
   new("MBASICFit",
       Theta = t(ret$Theta) + 1,
       W = W,
-      P = ret$P,
-      b = ret$b,
-      alllik = allloss,
+      clustProb = clustProb,
+      ##      P = ret$P,
+      alllik = ret$loss,
       Mu = ret$Mu * scaleFactor,
-      converged = (itr <= maxitr),
+      Sigma = ret$Sigma * scaleFactor * scaleFactor,
+      converged = (ret$Iter <= maxitr),
       Z = Z,
-      AssociationMatrix = associationMatrix,
-      Iter = itr,
+      Iter = ret$Iter,
       Theta.err = Theta.err,
       W.err = W.err,
       ARI = ari,
       MisClassRate = mcr,
       Loss = list(
+        lambdaw = lambdaw,
+        lambda = lambda,
         Y = loss.y,
         W = loss.w,
-        P = loss.p,
-        Silhouette.theta = sil.theta,
-        Silhouette.norm = sil.norm,
-        Silhouette.comp = sil.comp)
+        Silhouette = sil.norm)
     )
 }
+
 
 #' @name MBASIC.MADBayes.full
 #' @title MAD-Bayes method to fit the MBASIC model.
@@ -226,50 +188,244 @@ MBASIC.MADBayes <- function(Y, Gamma, fac, lambdap = 0.5, lambdaw = 0.2, lambda 
 #' @param maxitr The maximum number of iterations in the E-M algorithm. Default: 100.
 #' @param tol Tolerance for error in checking the E-M algorithm's convergence. Default: 1e-04.
 #' @param S The number of different states.
-#' @param zeta The initial value of the proportion of unclustered units. Default: 0.2.
-#' @param ncore The number of CPUs to be used for parallelization.
+#' @param ncores The number of CPUs to be used for parallelization.
 #' @param nfits The number of random restarts of the model.
 #' @details
 #' TODO.
 #' @useDynLib MBASIC
-#' @return A list object.
+#' @return A list object including the following fields:
+#' \tabular{ll}{
+#' allFits \tab A list of 'MBASICFit' objects for the best model fit with each lambda.\cr
+#' lambda \tab A vector of all lambdas corresponding to 'allFits'.\cr
+#' Loss \tab A vector for the loss corresponding to 'allFits'.\cr
+#' BestFit \tab The 'MBASICFit' object with largest Silhouette score.\cr
+#' Iter \tab Number of iterations for 'BestFit'.\cr
+#' Time \tab Time in seconds used to fit the model.\cr
+#' }
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @import doMC
 #' @export
-MBASIC.MADBayes.full <- function(Y, Gamma, fac, lambdap = 15, lambdaw = 0.5, lambda = 20, maxitr = 100, S = 2, tol = 0.01, zeta = 0.1, ncore = 8, nfits = 1000, para = NULL) {
-  require(doMC)
-  registerDoMC(ncore)
-  results <- foreach(i = seq(ncore)) %dopar% {
-    set.seed(i + Sys.time())
-    bestFit <-
-      MBASIC.MADBayes(Y, Gamma, fac, lambdap = lambdap, lambdaw = lambdaw, lambda = lambda, maxitr = maxitr, S = S, tol = tol, zeta = zeta, verbose = FALSE, para = para)
-    allLoss <- tail(bestFit@alllik, 1)
-    allIter <- bestFit@Iter
-    for(i in seq(as.integer(nfits / ncore))[-1]) {
-      fit <-
-        MBASIC.MADBayes(Y, Gamma, fac, lambdap = lambdap, lambdaw = lambdaw, lambda = lambda, maxitr = maxitr, S = S, tol = tol, zeta = zeta, verbose = FALSE, para = para)
-      if(tail(fit@alllik, 1) < tail(bestFit@alllik, 1)) {
-        bestFit <- fit
+MBASIC.MADBayes.full <- function(Y, Gamma = NULL, fac, lambdaw = NULL, lambda = NULL, maxitr = 30, S = 2, tol = 1e-10, ncores = 15, nfits = 3, nlambdas = 30, para = NULL, initialize = "madbayes") {
+  t0 <- Sys.time()
+  if(!is.null(lambda)) {
+    ncores <- min(c(ncores, length(lambda) * nfits))
+  }
+  registerDoMC(ncores)
+    
+  if(!is.null(lambda)) {
+    lambda <- sort(unique(lambda))
+    alllambdas <- rep(lambda, each = nfits)
+    results <- foreach(i = seq_along(alllambdas)) %dopar% {
+      set.seed(i + Sys.time())
+      fit <- MBASIC.MADBayes(Y, Gamma, fac, lambdaw = lambdaw, lambda = alllambdas[i], maxitr = maxitr, S = S, tol = tol, verbose = FALSE, para = para, initialize = initialize)
+      list(fit = fit, lambda = alllambdas[i])
+    }
+  } else {
+    if(!is.numeric(nlambdas)) {
+      stop("Error: 'nlambdas' must take a numeric value.")
+    }
+    NormalizeData()
+    GetModelStructure()
+    ## Initialize Theta, Mu, Sigma
+    InitializeTheta.MADBayes()
+    ## Initialize clusters and pick a range of lambda values
+    if(initialize == "madbayes") {
+      ret <- foreach(i = seq(as.integer(sqrt(I)) + 1)) %dopar% {
+        .Call("madbayes_init", Theta, 0, as.integer(S - 1), i, package = "MBASIC")
       }
-      allLoss <- c(allLoss, tail(fit@alllik, 1))
-      allIter <- c(allIter, bestFit@Iter)
+    } else if(initialize == "kmeans++") {
+      ret <- foreach(i = seq(as.integer(sqrt(I)) + 1)) %dopar% {
+        .Call("madbayes_init_kmeanspp", Theta, as.integer(S - 1), i, package = "MBASIC")
+      }
+    } else if(initialize == "kmeans") {
+      Theta.aug <- matrix(0, nrow = K * S, ncol = I)
+      for(s in seq(S)) {
+        Theta.aug[seq(K) + (s - 1) * K, ] <- (Theta == s)
+      }
+      ret <- foreach(i = seq(as.integer(sqrt(I)) + 1)) %dopar% {
+        fit.kmeans <- kmeans(t(Theta.aug), i)
+        return(list(loss = fit.kmeans$tot.withinss, clusterLabels = fit.kmeans$cluster - 1))
+      }
+    } else {
+      stop("Error: a vector for 'lambda' values must be provided.")
     }
-    list(BestFit = bestFit,
-         Iter = allIter,
-         Loss = allLoss)
-  }
-  bestFit <- results[[1]]$BestFit
-  allIter <- results[[1]]$Iter
-  allLoss <- results[[1]]$Loss
-  for(i in seq(ncore)[-1]) {
-    if(tail(bestFit@alllik, 1) > tail(results[[i]]$BestFit@alllik, 1)) {
-      bestFit <- results[[i]]$BestFit
+
+    message("Initialized clusters")
+    
+    initLosses <- rep(0, length(ret))
+    allClusterLabels <- list()
+    for(i in seq_along(ret)) {
+      initLosses[i] = ret[[i]]$loss
+      allClusterLabels[[i]] <- ret[[i]]$clusterLabels
     }
-    allIter <- c(allIter, results[[i]]$Iter)
-    allLoss <- c(allLoss, results[[i]]$Loss)
+
+    slopes <- abs(diff(sort(initLosses, decreasing = TRUE)))
+    allLambdas <- (slopes[-1] + slopes[-length(slopes)]) / 2
+    allLambdas <- sort(allLambdas, decreasing = TRUE)
+    minLambda <- min(allLambdas)
+    maxLambda <- max(allLambdas)
+    lambdas <- seq(minLambda, maxLambda, length = nlambdas + 2)
+    lambdas <- lambdas[-c(1, length(lambdas))]
+    alllambdas <- rep(lambdas, each = nfits)
+
+    initClusterLabels <- list()
+    usedids <- numeric(0)
+    freeids <- seq_along(allLambdas)
+    for(i in seq_along(alllambdas)) {
+      j <- freeids[which.min(abs(allLambdas[freeids] - alllambdas[i]))[1]]
+      initClusterLabels[[i]] <- allClusterLabels[[j + 1]]
+      usedids <- c(usedids, j)
+      freeids <- setdiff(freeids, usedids)
+    }
+
+    results <- foreach(i = seq_along(alllambdas)) %dopar% {
+      set.seed(i + Sys.time())
+      fit <- MBASIC.MADBayes.internal(Y, Gamma, fac, lambdaw = lambdaw, lambda = alllambdas[i], maxitr = maxitr, S = S, tol = tol, verbose = FALSE, para = para, initialize = initialize, Theta.init = Theta, Mu.init = Mu, Sigma.init = Sigma, clusterLabels.init = initClusterLabels[[i]], scaleFactor = scaleFactor)
+      list(fit = fit, lambda = alllambdas[i])
+    }
   }
-  return(list(BestFit = bestFit,
-              Iter = allIter,
-              Loss = allLoss)
-       )
+  message("Finished individual models")
+  ## Within the same lambda, choose the model that minimizes the loss
+  bestLosses <- rep(Inf, length(lambdas))
+  bestFits <- list()
+  bestIters <- rep(0, length(lambdas))
+  for(i in seq_along(results)) {
+    lambdaid <- which(lambdas == alllambdas[i])
+    if(bestLosses[lambdaid] > tail(results[[i]]$fit@alllik, 1)) {
+      bestLosses[lambdaid] <- tail(results[[i]]$fit@alllik, 1)
+      bestFits[[lambdaid]] <- results[[i]]$fit
+      bestIters[lambdaid] <- results[[i]]$fit@Iter
+    }
+  }
+  ## Between different lambdas, choose the model with the largest Silhouette score
+  bestSil <- -Inf
+  bestFit <- NULL
+  for(fit in bestFits) {
+    if(fit@Loss$Silhouette > bestSil) {
+      bestFit <- fit
+      bestSil <- fit@Loss$Silhouette
+    }
+  }
+  return(list(allFits = bestFits,
+              BestFit = bestFit,
+              Iter = bestIters,
+              Loss = bestLosses,
+              lambda = lambdas,
+              Time = as.numeric(Sys.time() - t0, units = "secs"),
+              InitLoss = initLosses)
+         )
+}
+
+InitializeTheta.MADBayes <- function() {
+  Inherit(c("N", "S", "K", "I", "Y", "Gamma", "designMat", "D", "maxitr", "tol"))
+  Mu <- Sigma <- matrix(0, nrow = N, ncol = S)
+  Theta <- matrix(0, nrow = K, ncol = I)
+  storage.mode(Theta) <- "integer"
+  foldChange <- Y / Gamma[seq(N), ]
+  foldChange[Gamma[seq(N), ] == 0] <- 1
+  avgFoldChange <- crossprod(foldChange, designMat) / rep(apply(designMat, 2, sum), each = I)
+  for(k in seq(K)) {
+    for(s in seq(S, 1)) {
+      Theta[k, rank(avgFoldChange[, k]) <= s / S * I] <- s - 1
+    }
+  }
+  ## DTheta: N by I
+  DTheta <- designMat %*% Theta
+  for(n in seq(N)) {
+    for(s in seq(S)) {
+      Mu[n, s] <- mean(foldChange[n, DTheta[n, ] == s - 1])
+      Sigma[n, s] <- var(foldChange[n, DTheta[n, ] == s - 1])
+    }
+  }
+  Sigma[Sigma <= 0] <- min(Sigma[Sigma > 0])
+  
+  storage.mode(Theta) <- "integer"
+  
+  ## initialize Theta
+  
+  ret <- .Call("madbayes_theta", Theta, Mu, D, Gamma, Y, maxitr, tol, package = "MBASIC")
+
+  Theta <- ret$Theta
+  Mu <- ret$Mu
+  Sigma <- ret$Sigma
+
+  Return(c("Theta", "Mu", "Sigma"))
+
+}
+
+InitializeClusters.MADBayes <- function() {
+  Inherit(c("verbose", "I", "initialize", "K", "S", "Theta", "lambda", "lambdaw"))
+  if(verbose)
+    message("Initialize clusters...")
+  
+  ## Sample J from an exponential distribution with the median sqrt(I)/4
+  J <- sample(seq(I)[-1], 1, prob = exp(-seq(I)/sqrt(I)*4*log(2))[-1])
+  
+  if(initialize == "kmeans") {
+    ## use K-means to initialize clusters
+    Theta.aug <- matrix(0, nrow = K * S, ncol = I)
+    for(s in seq(S)) {
+      Theta.aug[seq(K) + (s - 1) * K, ] <- (Theta == s)
+    }
+    ##  clusterLabels <- sample(seq(J), I, replace = TRUE) - 1
+    clusterLabels <- kmeans(t(Theta.aug), centers = J)$cluster - 1
+  } else if(initialize == "kmeans++" ) {
+    ret <- .Call("madbayes_init_kmeanspp", Theta, as.integer(S - 1), J, I, package = "MBASIC")
+    clusterLabels <- ret$clusterLabels
+  } else if(initialize == "madbayes") {
+    ret <- .Call("madbayes_init", Theta, lambda / lambdaw, as.integer(S - 1), I, package = "MBASIC")
+    clusterLabels <- ret$clusterLabels
+  } else {
+    clusterLabels <- sample(seq(J), I, replace = TRUE)
+  }
+
+  Return("clusterLabels")
+}
+
+GetModelStructure <- function() {
+
+  Inherit(c("fac", "Y", "Gamma"))
+  ## prespecified
+  K <- length(unique(fac))
+  I <- ncol(Y)
+  N <- nrow(Y)
+  if(length(fac) != N)
+    stop("Error: total number of replicates do not match with the number of rows in Y")
+
+  ## design matrix is N by K
+  designMat <- matrix(0, ncol = K, nrow = N)
+  for(k in 1:K) {
+    designMat[fac == unique(fac)[k], k] <- 1
+  }
+  D <- apply(designMat, 1, function(x) which(x == 1)) - 1
+  storage.mode(D) <- "integer"
+
+  Return(c("K", "I", "N", "designMat", "D"))
+}
+
+NormalizeData <- function() {
+  Inherit(c("Y", "Gamma", "S"))
+  ## Scale the data from different replicates
+  scaleFactor <- apply(Y, 1, mean)
+  N <- length(scaleFactor)
+  I <- ncol(Y)
+  
+  if(is.null(Gamma)) {
+    Gamma <- matrix(1, nrow = nrow(Y), ncol = ncol(Y))
+  }
+  
+  if(prod(dim(Y) == dim(Gamma)) != 1) {
+    stop("Error: dimensions for Y and Gamma must be the same.")
+  }
+  
+  ## normalize the Gamma
+  Gamma <- Gamma / rep(apply(Gamma, 1, mean), ncol(Gamma))
+  Y <- Y / scaleFactor
+  Gamma <- rbind(Gamma, matrix(0, ncol = ncol(Gamma), nrow = nrow(Gamma) * (S - 1)))
+  for(s in seq(S)[-1]) {
+    Gamma[(s - 1) * N + seq(N), ] <- rep(apply(Gamma[seq(N), ], 1, mean), I)
+  }
+
+  Return(c("Y", "Gamma", "scaleFactor"))
+
 }

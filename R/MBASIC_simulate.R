@@ -205,13 +205,13 @@ MBASIC.sim.state <- function(I, K, J, S = 2, struct = NULL, delta = NULL, delta.
   if(is.null(delta))
     delta <- rep(0.1, length(statemap))
   else if(length(statemap) != length(delta)) {
-    stop("Error: the length of 'delta' must be the same as 'statemap'.")
+  stop("delta ", paste(delta, collapse = " ")," statemap ", paste(statemap, collapse = " "), " Error: length of 'delta' must be the same as 'statemap'.")
   }
 
   if(is.null(delta.non))
     delta.non <- rep(0.1, length(statemap))
   else if(length(statemap) != length(delta.non)) {
-    stop("Error: the of 'delta.non' must be the same as 'statemap'.")
+  stop("delta.non ", paste(delta.non, collapse = " ")," statemap ", paste(statemap, collapse = " "), " error: length of 'delta.non' must be the same as 'statemap'.")
   }
 
   if(!is.null(struct))
@@ -302,7 +302,7 @@ MBASIC.sim<- function(xi, family = "lognormal", struct = NULL, I, fac, J, S = 2,
   if(is.null(statemap)) {
     statemap <- seq(S)
   }
-
+ 
   if(prod(sort(unique(statemap)) == seq(S)) != 1) {
     stop("Error: statemap must be consisted of 1, 2, ... S.")
   }
@@ -310,10 +310,9 @@ MBASIC.sim<- function(xi, family = "lognormal", struct = NULL, I, fac, J, S = 2,
   M <- length(statemap)
   K <- length(unique(fac))
   N <- length(fac)
- 
-  para.theta <- MBASIC.sim.state(I=I, K=K, J=J, S=S, delta=delta, delta.non=delta.non, zeta=zeta, struct = struct, statemap = statemap)
 
-  V <- matrix(0, nrow = N, ncol = M)
+  para.theta <- MBASIC.sim.state(I=I, K=K, J=J, S=S, delta=delta, delta.non=delta.non, zeta=zeta, struct = struct, statemap = statemap)
+   V <- matrix(0, nrow = N, ncol = M)
   for(s in seq(S)) {
     ids <- which(statemap == s)
     if(length(ids) == 1)

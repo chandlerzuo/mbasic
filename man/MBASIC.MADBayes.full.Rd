@@ -4,18 +4,16 @@
 \alias{MBASIC.MADBayes.full}
 \title{MAD-Bayes method to fit the MBASIC model.}
 \usage{
-MBASIC.MADBayes.full(Y, Mu0, fac, lambdap = 15, lambdaw = 0.5,
-  lambda = 20, maxitr = 100, S = 2, tol = 0.01, zeta = 0.1,
-  ncore = 8, nfits = 1000, para = NULL)
+MBASIC.MADBayes.full(Y, Gamma = NULL, fac, lambdaw = NULL, lambda = NULL,
+  maxitr = 50, S = 2, tol = 1e-08, ncores = 15, nfits = 1,
+  para = NULL, initialize = "madbayes")
 }
 \arguments{
 \item{Y}{An N by I matrix containing the data from N experiments across I observation units (loci).}
 
-\item{Mu0}{An N by I matrix for the prior estimated mean for the background state, for N experiments across the I observation units (loci).}
+\item{Gamma}{An N by I matrix for the prior estimated mean for the background state, for N experiments across the I observation units (loci).}
 
 \item{fac}{A vector of length N denoting the experimental condition for each replicate.}
-
-\item{lambdap,lambdaw,lambda}{Tuning parameters.}
 
 \item{maxitr}{The maximum number of iterations in the E-M algorithm. Default: 100.}
 
@@ -23,16 +21,24 @@ MBASIC.MADBayes.full(Y, Mu0, fac, lambdap = 15, lambdaw = 0.5,
 
 \item{tol}{Tolerance for error in checking the E-M algorithm's convergence. Default: 1e-04.}
 
-\item{zeta}{The initial value of the proportion of unclustered units. Default: 0.2.}
-
-\item{ncore}{The number of CPUs to be used for parallelization.}
+\item{ncores}{The number of CPUs to be used for parallelization.}
 
 \item{nfits}{The number of random restarts of the model.}
+
+\item{lambdap,lambdaw,lambda}{Tuning parameters.}
 
 \item{family}{The distribution of family to be used. Either "lognormal" or "negbin". See details for more information.}
 }
 \value{
-A list object.
+A list object including the following fields:
+\tabular{ll}{
+allFits \tab A list of 'MBASICFit' objects for the best model fit with each lambda.\cr
+lambda \tab A vector of all lambdas corresponding to 'allFits'.\cr
+Loss \tab A vector for the loss corresponding to 'allFits'.\cr
+BestFit \tab The 'MBASICFit' object with largest Silhouette score.\cr
+Iter \tab Number of iterations for 'BestFit'.\cr
+Time \tab Time in seconds used to fit the model.\cr
+}
 }
 \description{
 MAD-Bayes method to fit the MBASIC model.

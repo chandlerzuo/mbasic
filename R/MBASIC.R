@@ -35,10 +35,10 @@
 #' ## Simulate a dataset
 #' dat.sim <- MBASIC.sim(xi = 2, family = "lognormal", I = 1000, fac = rep(1:10, each = 2), J = 3, S = 3, zeta = 0.1)
 #' ## Fit the model
-#' dat.sim.fit <- MBASIC(Y = dat.sim$Y, S = 3, fac = rep(1:10, each = 2), J = 3, maxitr = 3, para = NULL, family = "lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-04)
+#' dat.sim.fit <- MBASIC(Y = dat.sim$Y, S = 3, fac = rep(1:10, each = 2), J = 3, maxitr = 3, para = NULL, family = "lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-6)
 #' @useDynLib MBASIC
 #' @export
-MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL,  family="lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-4, out = NULL, X = NULL, verbose = FALSE, statemap = NULL, Mu.init = NULL, Sigma.init = NULL, V.init = NULL, ProbMat.init = NULL, W.init = NULL, Z.init = NULL, b.init = NULL, P.init = NULL) {
+MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL,  family="lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-10, tol.par = 0.001, out = NULL, X = NULL, verbose = FALSE, statemap = NULL, Mu.init = NULL, Sigma.init = NULL, V.init = NULL, ProbMat.init = NULL, W.init = NULL, Z.init = NULL, b.init = NULL, P.init = NULL) {
 
   write.out(out, "Started")
   if(! method %in% c("SE-HC", "SE-MC", "PE-MC", "MBASIC")) {
@@ -128,6 +128,9 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
   ## in constructing Z, cluster all locis
   ## This gives deterministic initialization
   ProbMat <- matrix(0, nrow = K * S, ncol = I)
+  if(M == S) {
+    V.init <- matrix(1, ncol = M, nrow = N)
+  }
   if(is.null(ProbMat.init) | is.null(V.init)) {
     InitStates()
   } else {
@@ -185,11 +188,11 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
       }
 
       ## check for convergence
-      if(max(abs(oldpar - allpar))< tol) {
+      if(max(na.omit(abs(oldpar / allpar - 1))) < tol.par) {
         conv <- TRUE
         break
       }
-      if(itr > 10 & oldlik < totallik & totallik - oldlik < tol) {
+      if(itr > 10 & oldlik < totallik & totallik - oldlik < tol * abs(oldlik)) {
         conv <- TRUE
         break
       }
@@ -210,7 +213,7 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
       allerr <- sqrt(sum((ProbMat - ProbMat.true) ^ 2) / I / K / S)
     
     if(method != "PE-MC") {
-      ret <- MBASIC.state(Theta, J=J, zeta = zeta, struct = struct, method = method, maxitr = maxitr, tol = tol, para = para, out = out, W.init = W.init, Z.init = Z.init, P.init = P.init, b.init = b.init)
+      ret <- MBASIC.state(Theta, J=J, zeta = zeta, struct = struct, method = method, maxitr = maxitr, tol = tol, tol.par = tol.par, para = para, out = out, W.init = W.init, Z.init = Z.init, P.init = P.init, b.init = b.init)
       
       conv <- (conv & ret@converged)
       
@@ -330,11 +333,11 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     P <- estep.result[["P"]]
     
     clustOrder <- .orderCluster(W, struct)
-    W <- W[, clustOrder]
+    W <- W[, clustOrder, drop = FALSE]
     W <- .structure(W, struct)
     probz <- probz[clustOrder]
-    Zcond <- Zcond[, clustOrder]
-    predZ <- predZ[, clustOrder]
+    Zcond <- Zcond[, clustOrder, drop = FALSE]
+    predZ <- predZ[, clustOrder, drop = FALSE]
     
     if(method != "PE-MC") {
         ## skip this step if the method is PE-MC
@@ -360,11 +363,11 @@ MBASIC <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, 
     }
     oldpar <- newpar
     newpar <- c(c(W), probz, zeta, c(P), c(V), c(Mu), c(Sigma))
-    if(max(abs(newpar - oldpar)) < tol) {
+    if(max(na.omit(abs(newpar / oldpar - 1))) < tol.par) {
       conv <- TRUE
       break
     }
-    if(outitr > 10 & oldlik < totallik & totallik - oldlik < tol) {
+    if(outitr > 10 & oldlik < totallik & totallik - oldlik < tol * abs(oldlik)) {
       conv <- TRUE
       break
     }
@@ -594,7 +597,7 @@ UpdateStates <- function() {
 }
 
 PrintUpdate <- function() {
-  Inherit(c("ProbMat", "ProbMat.true", "I", "K", "S", "J", "W", "W.true", "Z.true", "nonid.true", "b.prob", "Zcond", "allmisclass", "W.err", "allari", "Mu", "Mu.true", "totallik", "out"))
+  Inherit(c("ProbMat", "ProbMat.true", "I", "K", "S", "J", "W", "W.true", "Z.true", "nonid.true", "b.prob", "Zcond", "allmisclass", "W.err", "allari", "Mu", "Mu.true", "totallik", "out", "verbose"))
   allerr <- sqrt(sum((ProbMat - ProbMat.true) ^ 2) / I / K / S)
   ## compute misclassification rate
   W.f <- matrix(0, nrow = K * S, ncol = J)
@@ -603,8 +606,6 @@ PrintUpdate <- function() {
   
   mc <- matchCluster(W.f, W.true, Zcond, Z.true, b.prob, nonid.true)
   
-  write.out(out, paste("mis-class rate ", mc$mcr))
-  write.out(out, paste("Error for W ",  round(mc$W.err, 3)))
   allmisclass <- c(allmisclass, mc$mcr)
   W.err <- c(W.err, mc$W.err)
   allari <- c(allari, mc$ari)
@@ -612,9 +613,13 @@ PrintUpdate <- function() {
   if(prod(dim(Mu) == dim(Mu.true)) == 1) {
     Mu.err <- sqrt(mean((Mu - Mu.true) ^ 2))
   }
-  write.out(out, paste("ARI ", mc$ari))
-  write.out(out, paste("loglik", totallik, "err", round(allerr, 3)))
-  write.out(out, paste("Error for Mu", round(Mu.err, 3)))
+  if(verbose) {
+    write.out(out, paste("mis-class rate ", mc$mcr))
+    write.out(out, paste("Error for W ",  round(mc$W.err, 3)))
+    write.out(out, paste("ARI ", mc$ari))
+    write.out(out, paste("loglik", totallik, "err", round(allerr, 3)))
+    write.out(out, paste("Error for Mu", round(Mu.err, 3)))
+  }
   Return(c("allerr", "allari", "allmisclass", "W.err", "Mu.err"))
 }
 
@@ -760,11 +765,84 @@ InitWZb <- function() {
     }
   }
   clustOrder <- .orderCluster(W, struct)
-  W <- W[, clustOrder]
-  Z <- Z[, clustOrder]
+  W <- W[, clustOrder, drop = FALSE]
+  Z <- Z[, clustOrder, drop = FALSE]
   W <- .structure(W, struct)
   b.prob <- b
 
   Return(c("W", "Z", "b.prob"))
 
 }
+
+#' @name MBASIC.full
+#' @title Simultaneously fitting MBASIC model for different numbers of clusters.
+#' @description Simultaneously fitting MBASIC model for different numbers of clusters.
+#' @param Y An N by I matrix containing the data from N experiments across I observation units.
+#' @param S An integer for the number of states.
+#' @param fac A vector of levels repr1esenting the conditions of each replicate.
+#' @param struct A list of K by J matrix indicating the structures of each cluster. Default: NULL.
+#' @param J A vector of the numbers of clusters to be identified.
+#' @param family The distribution of family to be used. Either "lognormal", "negbin", "binom", "gamma-binom". See details for more information.
+#' @param method A string for the fitting method, 'MBASIC' (default), 'PE-MC', 'SE-HC',  or 'SE-MC'. See details for more information.
+#' @param para A list object that contains the true model parameters. Default: NULL. See details for more information.
+#' @param maxitr The maximum number of iterations in the E-M algorithm. Default: 100.
+#' @param tol Tolerance for error in checking the E-M algorithm's convergence. Default: 1e-04.
+#' @param zeta The initial value for the proportion of units that are not clustered. Default: 0.1. If 0, no singleton cluster is fitted.
+#' @param out The file directory for writing fitting information in each E-M iteration. Default: NULL (no information is outputted).
+#' @param verbose A boolean variable indicating whether intermediate model fitting metrics should be printed. Default: FALSE.
+#' @param statemap A vector the same length as the number of mixture components, and taking values from 1 to S representing the states of each component. Default: NULL.
+#' @param ncores The number of CPUs to be used in parallele. Default: 1.
+#' @details
+#' This function fits MBASIC models with different numbers of clusters and/or different structures in parallel.
+#' @return A list object including the following fields:
+#' \tabular{ll}{
+#' allFits \tab A list of 'MBASICFit' objects with different numbers of clusters and/or structures.\cr
+#' BestFit \tab The best model with minimum BIC.\cr
+#' Time \tab The time used for the model fitting.\cr}
+#' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
+#' @examples
+#' ## Simulate a dataset
+#' dat.sim <- MBASIC.sim(xi = 2, family = "lognormal", I = 1000, fac = rep(1:10, each = 2), J = 3, S = 3, zeta = 0.1)
+#' ## Fit the model
+#' dat.sim.fit <- MBASIC.full(Y = dat.sim$Y, S = 3, fac = rep(1:10, each = 2), J = 3:5, maxitr = 3, para = NULL, family = "lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-6, tol.par = 0.001)
+#' @useDynLib MBASIC
+#' @import doMC
+#' @export
+MBASIC.full <- function(Y, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL,  family="lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-10, tol.par = 0.001, out = NULL, X = NULL, verbose = FALSE, statemap = NULL, Mu.init = NULL, Sigma.init = NULL, V.init = NULL, ProbMat.init = NULL, W.init = NULL, Z.init = NULL, b.init = NULL, P.init = NULL, ncores = 1) {
+  t0 <- Sys.time()
+  allJs <- J
+  allstructs <- struct
+  if(is.null(allstructs)) {
+    nmodels <- length(allJs)
+  } else {
+    nmodels <- length(allstructs)
+  }
+  if(nmodels == 0) {
+    stop("Error: at least J or struct must be not NULL.")
+  }
+
+  registerDoMC(ncores)
+  allfits <- foreach(i = seq(nmodels)) %dopar% {
+    if(!is.null(allstructs)) {
+      struct <- allstructs[[i]]
+    }
+    if(!is.null(allJs)) {
+      J <- allJs[i]
+    }
+    if(!is.null(out)) {
+      out <- paste(out, "model", i, ".txt", sep = "")
+    }
+    MBASIC(Y = Y, S = S, fac = fac, J=J, maxitr = maxitr, struct = struct, para = para,  family = family, method = method, zeta = zeta, tol = tol, tol.par = tol.par, out = out, X = X, verbose = verbose, statemap = statemap, Mu.init = Mu.init, Sigma.init = Sigma.init, V.init = V.init, ProbMat.init = ProbMat.init, W.init = W.init, Z.init = Z.init, b.init = b.init, P.init = P.init)
+  }
+  bestBIC <- Inf
+  bestFit <- NULL
+  for(fit in allfits) {
+    if(fit@bic < bestBIC) {
+      bestBIC <- fit@bic
+      bestFit <- fit
+    }
+  }
+  return(list(allFits = allfits, BestFit = bestFit,
+              Time = as.numeric(Sys.time() - t0, units = "secs")))
+}
+
