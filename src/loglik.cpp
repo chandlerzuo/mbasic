@@ -1,18 +1,18 @@
 #include "loglik.h"
 
 SEXP loglik(SEXP _W, SEXP _P, SEXP _V, SEXP _zeta, SEXP _probz, SEXP _PDF, SEXP _factor, SEXP _statemap) {
-	NumericMatrix PDF(_PDF);
-        NumericMatrix W(_W);
-	NumericMatrix P(_P);
-	NumericMatrix V(_V);
-	NumericVector factor(_factor);
-	NumericVector statemap(_statemap);
+	NumericMatrix PDF(_PDF); // MN by I
+        NumericMatrix W(_W); // KS by J
+	NumericMatrix P(_P); // I by S
+	NumericMatrix V(_V); // N by M
+	NumericVector factor(_factor); //length N
+	NumericVector statemap(_statemap); // length M
 	double zeta = as<double>(_zeta);
-	NumericVector probz(_probz);
+	NumericVector probz(_probz);//length J
 
 	// extract the dimensions
 	int S = P.ncol();
-	int I = P.nrow();
+	int I = PDF.ncol();
 	int M = V.ncol();
 	int N = V.nrow();
 	int K = W.nrow() / S;

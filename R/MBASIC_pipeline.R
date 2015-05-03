@@ -13,15 +13,14 @@
 #' @param m.suffix A string for the suffix of the mappability files. See details for more information. Default: NULL.
 #' @param gc.prefix A string for the prefix of the GC files.
 #' @param gc.suffix A string for the suffix of the GC files. See details for more information. Default: NULL.
-#' @param fac A vector for the experimental conditions corresponding to the ChIP files.
-#' @param struct A matrix indicating the levels of the signal matrix.
-#' @param J The number of clusters to be identified.
-#' @param family The distribution of family to be used. Either "lognormal" or "negbin". See details for more information.
-#' @param burnin An integer value for the number of iterations in initialization. Default: 20.
-#' @param maxitr The maximum number of iterations in the E-M algorithm. Default: 100.
-#' @param tol Tolerance for error in checking the E-M algorithm's convergence. Default: 1e-04.
-#' @param nsig The number of mixture components for the distribution of the signal state.
-#' @param datafile The file location to save the data matrix.
+#' @param datafile The file location to save or load the data matrix. See details.
+#' @param ... Parameters for function MBASIC.
+#' @details
+#' This function executes three steps:\cr
+#' The first step uses the "generateReadMatrices" function to get the ChIP and Input counts for each locus.\cr
+#' The second step is to compute the covariate matrix. If any of 'm.prefix', 'm.suffix', 'gc.prefix', 'gc.suffix' is NULL, then the input count matrix is directly used as the covariate matrix for MBASIC. Alternatively, it will use the 'bkng_mean' to normalize the input count data according to the mappability and GC scores to produce the covariate matrix.\cr
+#' The final step is to call the MBASIC function for model fitting.\cr
+#' Because the first two steps are time consuming, we recommend in specifying a file location for 'datafile'. Then, when this function executes, it first checks whether 'datafile' exists. If it exists, it will be loaded and the function will jump to the final step. If it does not exist, after the function executes the first two steps, the ChIP data matrix and the covariate matrix will be saved to this file, so that when you rerun this function you do not need to repeat the first two steps.\cr
 #' @return A 'MBASICFit' class object.
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @examples
@@ -30,20 +29,29 @@
 #' target <- generateSyntheticData(dir = "syntheticData")
 #' tbl <- ChIPInputMatch(dir = paste("syntheticData/", c("chip", "input"), sep = ""),suffix = ".bed", depth = 5)
 #' conds <- paste(tbl$cell, tbl$factor, sep = ".")
-#' MBASIC.fit <- MBASIC.pipeline(chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, format = "BED", fragLen = 150, pairedEnd = FALSE, unique = TRUE, m.prefix = "syntheticData/mgc/", m.suffix = "_M.txt", gc.prefix = "syntheticData/mgc/", gc.suffix = "_GC.txt", fac = conds, struct = NULL, J = 3, family = "negbin", burnin = 20, maxitr = 100, tol = 1e-4, nsig = 2, datafile = NULL)
+#' MBASIC.fit <- MBASIC.pipeline(chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, format = "BED", fragLen = 150, pairedEnd = FALSE, unique = TRUE, fac = conds, struct = NULL, S = 2, J = 3, family = "lognormal", maxitr = 10, statemap = NULL)
 #'}
 #' @export
-MBASIC.pipeline <- function(chipfile, inputfile, input.suffix, target, chipformat, inputformat, fragLen, pairedEnd, unique, m.prefix, m.suffix, gc.prefix, gc.suffix, fac, struct, J, family, burnin = 20, maxitr = 100, tol = 1e-4, nsig = 2, datafile) {
+MBASIC.pipeline <- function(chipfile, inputfile, input.suffix, target, chipformat, inputformat, fragLen, pairedEnd, unique, m.prefix = NULL, m.suffix = NULL, gc.prefix = NULL, gc.suffix = NULL, datafile = NULL, ncores = 10, J, ...) {
 
-  target <- averageMGC(target = target, m.prefix = m.prefix, m.suffix = m.suffix, gc.prefix = gc.prefix, gc.suffix = gc.suffix)
+  if(is.null(datafile) | (!is.null(datafile) & !file.exists(datafile))) {
+    dat <- generateReadMatrices(chipfile = chipfile, inputfile = inputfile, input.suffix = input.suffix, target = target, chipformat = chipformat, inputformat = inputformat, fragLen = fragLen, pairedEnd = pairedEnd, unique = unique)
+    if(!is.null(m.prefix) & !is.null(m.suffix) & !is.null(gc.prefix) & !is.null(gc.suffix)) {
+      target <- averageMGC(target = target, m.prefix = m.prefix, m.suffix = m.suffix, gc.prefix = gc.prefix, gc.suffix = gc.suffix)
+      Gamma <- bkng_mean(inputdat = dat$input, target = target, family = family)
+    } else {
+      Gamma <- t(dat$input)
+    }
+    if(!is.null(datafile)) {
+      save(dat, Gamma, file = datafile)
+    }
+  } else {
+    load(datafile)
+  }
 
-  dat <- generateReadMatrices(chipfile = chipfile, inputfile = inputfile, input.suffix = input.suffix, target = target, chipformat = chipformat, inputformat = inputformat, fragLen = fragLen, pairedEnd = pairedEnd, unique = unique)
-  
-  Mu0 <- bkng_mean(inputdat = dat$input, target = target, family = family)
-
-  if(!is.null(datafile))
-    save(dat, Mu0, file = datafile)
-  
-  return(MBASIC.binary(t(dat$chip), t(Mu0), fac, J=J, zeta=0.2, maxitr = maxitr, burnin = burnin, outfile=NULL, out=NULL, init.mod = NULL, struct = struct, family=family, tol = tol, nsig = nsig))
-  
+  if(length(J) == 1) {
+    return(MBASIC(Y = t(dat$chip), Gamma = Gamma, J = J, ...))
+  } else {
+    return(MBASIC.full(Y = t(dat$chip), Gamma = Gamma, J = J, ...))
+  }
 }

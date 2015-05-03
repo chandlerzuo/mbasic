@@ -17,6 +17,9 @@ generateSyntheticData(dir, nchr = 5, K = 5, I = 100, J = 3)
 
 \item{J}{The number of clusters among the loci. Default: 3.}
 }
+\value{
+A RangedData object.
+}
 \description{
 This function generates three set of files. ChIP BED files are stored in 'chip/', input BED files are stored in 'input/', mappability and GC files are stored in 'mgc/'. All BED files follow the name convention for the ENCODE consortium.
 Each chromosome has a size of 10K, and each locus has 20 bp.

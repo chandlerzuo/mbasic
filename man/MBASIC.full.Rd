@@ -4,12 +4,12 @@
 \alias{MBASIC.full}
 \title{Simultaneously fitting MBASIC model for different numbers of clusters.}
 \usage{
-MBASIC.full(Y, S, fac, J = NULL, maxitr = 100, struct = NULL,
-  para = NULL, family = "lognormal", method = "MBASIC", zeta = 0.1,
-  tol = 1e-10, tol.par = 0.001, out = NULL, X = NULL, verbose = FALSE,
-  statemap = NULL, Mu.init = NULL, Sigma.init = NULL, V.init = NULL,
-  ProbMat.init = NULL, W.init = NULL, Z.init = NULL, b.init = NULL,
-  P.init = NULL, ncores = 1)
+MBASIC.full(Y, Gamma = NULL, S, fac, J = NULL, maxitr = 100,
+  struct = NULL, para = NULL, family = "lognormal", method = "MBASIC",
+  zeta = 0.1, tol = 1e-10, tol.par = 0.001, out = NULL, X = NULL,
+  verbose = FALSE, statemap = NULL, Mu.init = NULL, Sigma.init = NULL,
+  V.init = NULL, ProbMat.init = NULL, W.init = NULL, Z.init = NULL,
+  b.init = NULL, P.init = NULL, ncores = 1)
 }
 \arguments{
 \item{Y}{An N by I matrix containing the data from N experiments across I observation units.}

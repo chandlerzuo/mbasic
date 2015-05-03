@@ -21,7 +21,7 @@
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @import GenomicRanges
 #' @export
-ChIPInputMatch <- function(dir, suffices, depth = 5) {
+ChIPInputMatch <- function(dir, suffices, depth = 5, celltypes) {
   if(length(dir) != 2) {
     stop("Error: the length of dir must be 2.")
   }
@@ -34,27 +34,43 @@ ChIPInputMatch <- function(dir, suffices, depth = 5) {
   chiplab <- chipexp <- chipcell <- chipfac <- chipctrl <-
     inputlab <- inputexp <- inputcell <- inputfac <- inputctrl <- chiptype <- inputtype <-
       chiplist <- inputlist <- NULL
+
+  positionOfCelltype <- function(x) {
+    which(sapply(x,
+                 function(y)
+                 sum(sapply(celltypes,
+                            function(z)
+                            regexpr(z, y)) > 0)) > 0)
+  }
+
   for(suffix in suffices) {
     chipfilelist <- system(paste("find ", chipdir, " -maxdepth ", depth, " -name *", suffix, sep = ""), intern = TRUE)
     inputfilelist <- system(paste("find ", inputdir, " -maxdepth ", depth, " -name *", suffix, sep = ""), intern = TRUE)
+
+    chipfilelist <- chipfilelist[positionOfCelltype(chipfilelist)]
+    inputfilelist <- inputfilelist[positionOfCelltype(inputfilelist)]
     
     chippath <- extract(chipfilelist, "", "wgEncode*")
-    
     exp1 <- "[A-Z][a-z|0-9]*"
-    chiplab <- c(chiplab, extract(chipfilelist, "*wgEncode", exp1))
-    chipexp <- c(chipexp, extract(chipfilelist, paste("wgEncode", paste(rep(exp1, 1), collapse = ""), sep = ""), exp1))
-    chipcell <- c(chipcell, extract(chipfilelist, paste("wgEncode", paste(rep(exp1, 2), collapse = ""), sep = ""), exp1))
-    chipfac <- c(chipfac, extract(chipfilelist, paste("wgEncode", paste(rep(exp1, 3), collapse = ""), sep = ""), exp1))
-    chipctrl <- c(chipctrl, extract(chipfilelist, paste("wgEncode", paste(rep(exp1, 4), collapse = ""), sep = ""), exp1))
-    chiptype <- c(chiptype, rep(suffix, length(chipfilelist)))
-    
-    inputlab <- c(inputlab, extract(inputfilelist, "*wgEncode", exp1))
-    inputexp <- c(inputexp, extract(inputfilelist, paste("wgEncode", paste(rep(exp1, 1), collapse = ""), sep = ""), exp1))
-    inputcell <- c(inputcell, extract(inputfilelist, paste("wgEncode", paste(rep(exp1, 2), collapse = ""), sep = ""), exp1))
-    inputfac <- c(inputfac, extract(inputfilelist, paste("wgEncode", paste(rep(exp1, 3), collapse = ""), sep = ""), exp1))
-    inputctrl <- c(inputctrl, extract(inputfilelist, paste("wgEncode", paste(rep(exp1, 4), collapse = ""), sep = ""), exp1))
-    inputtype <- c(inputtype, rep(suffix, length(inputfilelist)))
 
+    for(pref in c("chip", "input")) {
+      filechars <- extract(get(paste(pref, "filelist", sep = "")), "*wgEncode", ".*")
+      filechars <- sapply(regmatches(filechars, gregexpr("[^\\.]+", filechars)), function(x) x[1])
+      filechars <- regmatches(filechars, gregexpr(exp1, filechars))
+      assign(paste(pref, "ctrl", sep = ""),
+             sapply(filechars, function(x) x[positionOfCelltype(x)[1] + 2]))
+      assign(paste(pref, "fac", sep = ""),
+             sapply(filechars, function(x) x[positionOfCelltype(x)[1] + 1]))
+      assign(paste(pref, "cell", sep = ""),
+             sapply(filechars, function(x) x[positionOfCelltype(x)[1]]))
+      assign(paste(pref, "exp", sep = ""),
+             sapply(filechars, function(x) x[positionOfCelltype(x)[1] - 1]))
+      assign(paste(pref, "lab", sep = ""),
+             sapply(filechars, function(x) paste(x[seq(positionOfCelltype(x)[1] - 2)], collapse = "")))
+      assign(paste(pref, "type", sep = ""),
+             rep(suffix, length(filechars)))
+    }
+           
     chiplist <- c(chiplist, chipfilelist)
     inputlist <- c(inputlist, inputfilelist)
   }
@@ -83,7 +99,7 @@ ChIPInputMatch <- function(dir, suffices, depth = 5) {
     if(length(id.chip) > 0) {
       for(i in id.chip) {
         if(length(inputfilehead) > 0) {
-          for(i.input in seq_along(id.input)) {
+          for(i.input in seq_along(inputfilehead)) {
             chipfile <- c(chipfile, chiplist[ i ])
             inputfile <- c(inputfile, inputfilehead[i.input])
             lab <- c(lab, chiplab[ i ])
@@ -130,7 +146,7 @@ ChIPInputMatch <- function(dir, suffices, depth = 5) {
 #' @param chipfile A string vector for the ChIP files.
 #' @param inputfile A string vector for the matching input files. The length must be the same as 'chipfile'.
 #' @param input.suffix A string for the suffix of input files.
-#' @param target A GenomicRanges object for the target intervals where the reads are mapped.
+#' @param target A RangedData object for the target intervals where the reads are mapped.
 #' @param chipformat A vector of strings specifying the type of the ChIP files. Can be a single value if all ChIP files have the same format. Currently two file types are allowed: "BAM" or "BED". Default: "BAM".
 #' @param inputformat A vector of strings specifying the type of the input file. Can be a single string if all input files have the same format. Currently two file types are allowed: "BAM" or "BED". Default: "BAM".
 #' @param fragLen Either a single value or a 2-column matrix of the fragment lengths for the chip and input files.  Default: 150.
@@ -147,10 +163,10 @@ ChIPInputMatch <- function(dir, suffices, depth = 5) {
 #' target \tab A GRanges object with sorted elements.\cr
 #'}
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
+#' @import doMC
 #' @export
 generateReadMatrices <- function(chipfile, inputfile, input.suffix, target, chipformat = "BAM", inputformat = "BAM", fragLen = 150, pairedEnd = FALSE, unique = TRUE, ncores = 1) {
   ## Check the arguments
-  require(doMC)
   nfiles <- length(chipfile)
   if(length(inputfile) != nfiles)
     stop("Error: number of matching input files must be the same as the number of ChIP files!")
@@ -194,8 +210,6 @@ generateReadMatrices <- function(chipfile, inputfile, input.suffix, target, chip
   if(sum(pairedEnd[,2] > 0 & inputformat != "BAM") > 0)
     stop("Error: for paired-end data only BAM format is allowed.")
   
-  target <- sort(target)
-
   inputfile <- as.character(inputfile)
   chipfile <- as.character(chipfile)
 
@@ -214,7 +228,16 @@ generateReadMatrices <- function(chipfile, inputfile, input.suffix, target, chip
           rds <- readReads(ifile, extended = TRUE, fragLen = fragLen[ which(inputfile == file)[1], 1 ], pairedEnd = pairedEnd[ which(inputfile == file)[1], 1 ], format = inputformat[which(inputfile == file)[1]])
           if(unique)
               rds <- unique(rds)
-          uniqueInputCount <- uniqueInputCount + countOverlaps(target, rds)
+          chrs <- unique(c(as.character(seqnames(rds)),
+                           as.character(target$chromosome)))
+          rds.fac <- factor(as.character(seqnames(rds)), label = chrs, level = chrs)
+          target.fac <- factor(as.character(target$chromosome), label = chrs, level = chrs)
+          rds <- RangedData(ranges(rds),
+                            chromosome = rds.fac)
+          target <- RangedData(target$ranges,
+                               chromosome = target.fac)
+          
+          uniqueInputCount <- uniqueInputCount + unlist(as.list(countOverlaps(target, rds)))
       }
       gc()
       uniqueInputCount
@@ -232,7 +255,15 @@ generateReadMatrices <- function(chipfile, inputfile, input.suffix, target, chip
       if(unique)
           rds <- unique(rds)
       gc()
-      countOverlaps(target, rds)
+      chrs <- unique(c(as.character(seqnames(rds)),
+                       as.character(target$chromosome)))
+      rds.fac <- factor(as.character(seqnames(rds)), label = chrs, level = chrs)
+      target.fac <- factor(as.character(target$chromosome), label = chrs, level = chrs)
+      rds <- RangedData(ranges(rds),
+                        chromosome = rds.fac)
+      target <- RangedData(target$ranges,
+                           chromosome = target.fac)
+      unlist(as.list(countOverlaps(target, rds)))
   }
 
   uniqueChIPCountsWithoutNA <- NULL
@@ -243,8 +274,8 @@ generateReadMatrices <- function(chipfile, inputfile, input.suffix, target, chip
   ##message(dim(uniqueChIPCountsWithoutNA))
   ##message(dim(uniqueInputCountsWithoutNA))
   
-  uniquechipcounts <- matrix(1, nrow = length(target), ncol = length(unique(chipfile)))
-  uniqueinputcounts <- matrix(1, nrow = length(target), ncol = length(unique(inputfile)))
+  uniquechipcounts <- matrix(1, nrow = length(target$ranges), ncol = length(unique(chipfile)))
+  uniqueinputcounts <- matrix(1, nrow = length(target$ranges), ncol = length(unique(inputfile)))
   inputfile[is.na(inputfile)] <- "NA"
   chipfile[is.na(chipfile)] <- "NA"
   colnames(uniqueinputcounts) <- unique(inputfile)
@@ -256,8 +287,8 @@ generateReadMatrices <- function(chipfile, inputfile, input.suffix, target, chip
       uniqueinputcounts[, colnames(uniqueinputcounts) != "NA"] <- uniqueInputCountsWithoutNA
   }
   
-  allchipcounts <- allinputcounts <- matrix(0, nrow = length(target), ncol = nfiles)
-
+  allchipcounts <- allinputcounts <- matrix(0, nrow = length(target$ranges), ncol = nfiles)
+  
   for(i in seq_len(nfiles)) {
     allchipcounts[ , i ] <- uniquechipcounts[ , chipfile[i] ]
     allinputcounts[ , i ] <- uniqueinputcounts[ , inputfile[i] ]
@@ -270,7 +301,7 @@ generateReadMatrices <- function(chipfile, inputfile, input.suffix, target, chip
 
 #' @name averageMGC
 #' @title Compute the average mappability and GC scores over a set of genomic intervals.
-#' @param target A \link{GRanges} object for the target intervals.
+#' @param target A \link{RangedData} object for the target intervals.
 #' @param m.prefix A string for the prefix of the mappability files.
 #' @param m.suffix A string for the suffix of the mappability files. See details for more information. Default: NULL.
 #' @param gc.prefix A string for the prefix of the GC files.
@@ -278,7 +309,7 @@ generateReadMatrices <- function(chipfile, inputfile, input.suffix, target, chip
 #' @details
 #' If 'm.suffix' is NULL, then a single file with name 'm.prefix' should include mappability scores of all chromosomes, and this file is read. Alternatively, all mappability files with 'm.prefix'<chrXX>'m.suffix' are read. The 'gc.suffix' argument has similar effects.\cr
 #' 'target' has to be a sorted GRanges object. If it is not sorted, then the elements are reordered. Users have to make sure that other data sources must follow the same ordering in the elements.
-#' @return A GRanges object with two extra fields from the input argument 'target':
+#' @return A \link{RangedData} object with two extra fields from the input argument 'target':
 #' \tabular{ll}{
 #' mappability \tab The average mappability scores for the sorted elements of 'target'.\cr
 #' GC \tab The average GC scores for the sorted elements of 'target'.\cr
@@ -288,8 +319,8 @@ generateReadMatrices <- function(chipfile, inputfile, input.suffix, target, chip
 #' @useDynLib MBASIC
 #' @export
 averageMGC <- function(target, m.prefix, m.suffix = NULL, gc.prefix, gc.suffix = NULL) {
-  if(class(target) != "GRanges")
-    stop("Error: target must be a GRanges object.")
+  if(class(target) != "RangedData")
+    stop("Error: target must be a RangedData object.")
   if(is.null(m.prefix) & is.null(m.suffix))
     stop("Error: either m.prefix or m.suffix must not be null.")
   if(is.null(gc.prefix) & is.null(gc.suffix))
@@ -300,11 +331,6 @@ averageMGC <- function(target, m.prefix, m.suffix = NULL, gc.prefix, gc.suffix =
   if(is.null(gc.suffix) & !file.exists(gc.prefix))
     stop(paste("Error: the file", gc.prefix, "does not exist."))
   
-  target.sorted <- sort(target)
-  if(prod(target == target.sorted) == 0)
-    message("Warning: target is not sorted. The elements of target will be reordered.")
-  target <- target.sorted
-
   allmap <- allgc <- NULL
   
   if(is.null(m.suffix)) {
@@ -319,7 +345,7 @@ averageMGC <- function(target, m.prefix, m.suffix = NULL, gc.prefix, gc.suffix =
   }
   
   allmgc <- NULL
-  for(chr in as.character(unique(seqnames(target)))) {
+  for(chr in as.character(unique(target$chromosome))) {
     message(paste("processing", chr))
     if(!is.null(m.suffix))
       map <- as.matrix(read.table(paste(m.prefix, chr, m.suffix, sep = "")))
@@ -333,14 +359,14 @@ averageMGC <- function(target, m.prefix, m.suffix = NULL, gc.prefix, gc.suffix =
       gc <- as.matrix(allgc[ allgc$chr == chr, -1 ])
     message("read gc file")
     
-    genecoord <- cbind(start(ranges(target[ seqnames(target) == chr ])),
-                   end(ranges(target[ seqnames(target) == chr ])))
-    avgmgc <- .Call("avg_score", genecoord, map[ , 2 ], gc[ , 2 ], diff(map[ 1:2, 1 ]), diff(gc[ 1:2, 1 ]), package = "MBASIC")
+    genecoord <- cbind(start(target$ranges[target$chromosome == chr]),
+                       end(target$ranges[target$chromosome == chr]))
+    avgmgc <- .Call("avg_score", genecoord, map[ , 2], gc[ , 2], diff(map[1:2, 1]), diff(gc[1:2, 1]), package = "MBASIC")
     allmgc <- rbind(allmgc, avgmgc)
   }
 
-  elementMetadata(target)[[ "mappability" ]] <- allmgc[ , 1 ]
-  elementMetadata(target)[[ "GC" ]] <- allmgc[ , 2 ]
+  target$mappability <- allmgc[, 1]
+  target$GC <- allmgc[, 2]
   return(target)
   
 }
@@ -348,7 +374,7 @@ averageMGC <- function(target, m.prefix, m.suffix = NULL, gc.prefix, gc.suffix =
 #' @name bkng_mean
 #' @title Compute the background means.
 #' @param inputdat A matrix for the input counts at each locus (column) for each experiment (row).
-#' @param target A \link{GRanges} object with two fiels named "mappability" and "GC".The length of target must be the same as the column of inputdat.
+#' @param target A \link{RangedData} object with two fiels named "mappability" and "GC".The length of target must be the same as the column of inputdat.
 #' @param nknots A integer for the number of knots for the spline function. Default: 2.
 #' @param family A string for the distributional family. Must be either "lognormal" (default) or "negbin".
 #' @return A numeric matrix for the background counts at each locus (column) for each experiment (row).
@@ -357,9 +383,9 @@ averageMGC <- function(target, m.prefix, m.suffix = NULL, gc.prefix, gc.suffix =
 #' @export
 bkng_mean <- function(inputdat, target, nknots = 2, family = "lognormal") {
   options(warn = -1)
-  if(class(target) != "GRanges")
-    stop("Error: target must be a GRanges object.")
-  if(length(target) != nrow(inputdat))
+  if(class(target) != "RangedData")
+    stop("Error: target must be a RangedData object.")
+  if(length(target$ranges) != nrow(inputdat))
     stop("Error: length of target must be the same as number of columns in inputdat.")
   if(! family %in% c("lognormal", "negbin"))
     stop("Error: family must be either lognormal or negbin.")

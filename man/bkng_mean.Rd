@@ -9,7 +9,7 @@ bkng_mean(inputdat, target, nknots = 2, family = "lognormal")
 \arguments{
 \item{inputdat}{A matrix for the input counts at each locus (column) for each experiment (row).}
 
-\item{target}{A \link{GRanges} object with two fiels named "mappability" and "GC".The length of target must be the same as the column of inputdat.}
+\item{target}{A \link{RangedData} object with two fiels named "mappability" and "GC".The length of target must be the same as the column of inputdat.}
 
 \item{nknots}{A integer for the number of knots for the spline function. Default: 2.}
 

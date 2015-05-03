@@ -11,9 +11,11 @@ MBASIC.MADBayes(Y, Gamma, fac, lambdaw = 0.2, lambda = 200, maxitr = 100,
 \arguments{
 \item{Y}{An N by I matrix containing the data from N experiments across I observation units (loci).}
 
-\item{Gamma}{An N by I matrix for the prior esti1mated mean for the background state, for N experiments across the I observation units (loci).}
+\item{Gamma}{An N by I matrix for the prior estimated mean for the background state, for N experiments across the I observation units (loci).}
 
 \item{fac}{A vector of length N denoting the experimental condition for each replicate.}
+
+\item{lambdaw,lambda}{Tuning parameters.}
 
 \item{maxitr}{The maximum number of iterations in the E-M algorithm. Default: 100.}
 
@@ -24,8 +26,6 @@ MBASIC.MADBayes(Y, Gamma, fac, lambdaw = 0.2, lambda = 200, maxitr = 100,
 \item{verbose}{Boolean variable for whether the model fitting messages are printed.}
 
 \item{para}{A list of true paramters.}
-
-\item{lambdap,lambdaw,lambda}{Tuning parameters.}
 
 \item{family}{The distribution of family to be used. Either "lognormal" or "negbin". See details for more information.}
 }

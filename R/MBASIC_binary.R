@@ -348,15 +348,15 @@ MBASIC.binary <- function(Y, Mu0, fac, J=NULL, zeta=0.2, maxitr = 100, burnin = 
       B <- matrix(rep(b, each = K), nrow = K)
 
       PDF <- matrix(0, nrow = N, ncol = I * (nsig + 1))
-      PDF[ , seq_len(I) ] <- logdensity(Y, Mu0 * E, Sigma0, family)
+      PDF[ , seq_len(I) ] <- logdensity(Y, Mu0 * E, Sigma0, family = family)
       for(s in seq_len(nsig)) {
         idx <- s * I + seq_len(I)
         Sigma1 <- matrix(rep(sigma1[ , s ], I), nrow = N)
         Mu1 <- matrix(rep(mu1[ , s ], I), nrow = N)
         if(family == "negbin") {
-          PDF[ , idx ] <- logdensity(Y - min.count , Mu1 - min.count , Sigma1, family)
+          PDF[ , idx ] <- logdensity(Y - min.count , Mu1 - min.count , Sigma1, family = family)
         } else {
-          PDF[ , idx ] <- logdensity(Y, Mu1, Sigma1, family)
+          PDF[ , idx ] <- logdensity(Y, Mu1, Sigma1, family = family)
         }
       }
       PDF <- trimLogValue(PDF)

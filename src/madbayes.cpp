@@ -2,25 +2,19 @@
 
 //this file is under testing
 
-SEXP madbayes(SEXP _b, SEXP _clusterLabels, SEXP _Theta, SEXP _Mu, SEXP _D,
-	      SEXP _Gamma, SEXP _Y, SEXP _scalar, SEXP _lambdaw, SEXP _lambda,
-	      SEXP _p, SEXP _q, SEXP _maxitr, SEXP _tol) {
+SEXP madbayes(SEXP _clusterLabels, SEXP _Theta, SEXP _Mu, SEXP _D,
+	      SEXP _Gamma, SEXP _Y, SEXP _lambdaw, SEXP _lambda,
+	      SEXP _maxitr, SEXP _tol) {
 	
 	// The following values are 1updated in MCMC iterations
-	IntegerVector b(_b); // length I
 	IntegerVector clusterLabels(_clusterLabels); // length I
 	IntegerMatrix Theta(_Theta); // K by I
-	//NumericMatrix W(_W); // KS by I + 1
-	//NumericMatrix P(_P); // I by S
 	NumericMatrix Mu(_Mu); // N by S
 	IntegerVector D(_D); // Length N, valued in {0, 1, ..., K-1}
 	double lambda = as<double>(_lambda);
 
 	// The following values are piror parameters and are fixed
-	double scalar = as<double>(_scalar);
 	double lambdaw = as<double>(_lambdaw);
-	double p = as<double>(_p);
-	double q = as<double>(_q);
 
 	double tol = as<double>(_tol);
 	int maxitr = as<int>(_maxitr);
@@ -30,7 +24,7 @@ SEXP madbayes(SEXP _b, SEXP _clusterLabels, SEXP _Theta, SEXP _Mu, SEXP _D,
 	NumericMatrix Y(_Y); // N by I
 
 	// extract the dimensions
-	int I = b.size();
+	int I = Theta.ncol();
 	int S = Mu.ncol();
 	int K = Theta.nrow();
 	int N = D.size();
@@ -65,31 +59,26 @@ SEXP madbayes(SEXP _b, SEXP _clusterLabels, SEXP _Theta, SEXP _Mu, SEXP _D,
 	for(itr = 0; itr < maxitr; itr ++) {
 		oldloss = loss;
 		// Update W
-		NumericVector counts(2 * S);
+		NumericVector counts(S);
 		NumericVector w_sol(S);
 		for(j = 0; j < J; j ++) {
 			for(k = 0; k < K; k ++) {
 				for(s = 0; s < S; s ++) {
 					counts[s] = 0;
-					counts[s + S] = 0;
 					w_sol[s] = 1 / (double) S;
 				}
 				for(i = 0; i < I; i ++) {
 					if(clusterLabels[i] == j) {
 						for(s = 0; s < S; s ++) {
 							if(Theta(k, i) == s) {
-								counts[s + b[i] * S] = counts[s + b[i] * S] + 1;
+								counts[s] ++;
 							}
 						}
 					}
 				}
 				// invoke the numerical optimization to solve for W(j, k)
-				if(p == 2 && (scalar == 0 || q == 2)) {
-					for(s = 0; s < S; s ++) {
-						w_sol[s] = (counts[s] + counts[s + S] + 1) / ((double) ClusterSize[j] + S);
-					}
-				} else {
-					w_sol = SolveW(counts, scalar, p, q);
+				for(s = 0; s < S; s ++) {
+					w_sol[s] = (counts[s] + 1) / ((double) ClusterSize[j] + S);
 				}
 
 				for(s = 0; s < S; s ++) {
@@ -98,7 +87,7 @@ SEXP madbayes(SEXP _b, SEXP _clusterLabels, SEXP _Theta, SEXP _Mu, SEXP _D,
 			}
 		}
 
-		//loss = ComputeLoss(D, Theta, Y, Mu, Gamma, W, clusterLabels, b, lambda, lambdaw, scalar, p, q);
+		//loss = ComputeLoss(D, Theta, Y, Mu, Gamma, W, clusterLabels, lambda, lambdaw);
 		//printf("update W, Loss function = %3.3f, number of clusters = %d\n", loss, J);
 
 		// update Theta
@@ -113,17 +102,7 @@ SEXP madbayes(SEXP _b, SEXP _clusterLabels, SEXP _Theta, SEXP _Mu, SEXP _D,
 							tmp[s] += (Y(n, i) - Mu(n, s) * Gamma(s * N + n, i)) * (Y(n, i) - Mu(n, s) * Gamma(s * N + n, i));
 						}
 					}
-					if(b[i] == 1) {
-						tmp[s] += scalar * lambdaw * (
-									      exp(q * log(1 - W(s * K + k, clusterLabels[i])))
-									      - exp(q * log(W(s * K + k, clusterLabels[i])))
-									      );
-					} else {
-						tmp[s] += lambdaw * (
-								     exp(p * log(1 - W(s * K + k, clusterLabels[i])))
-								     - exp(p* log(W(s * K + k, clusterLabels[i])))
-								     );
-					}
+					tmp[s] += lambdaw * ((1 - W(s * K + k, clusterLabels[i])) * (1 - W(s * K + k, clusterLabels[i])) - W(s * K + k, clusterLabels[i]) * W(s * K + k, clusterLabels[i]));
 				}
 				// Assign new values
 				Theta(k, i) = 0;
@@ -134,42 +113,33 @@ SEXP madbayes(SEXP _b, SEXP _clusterLabels, SEXP _Theta, SEXP _Mu, SEXP _D,
 			}
 		}
 
-		//loss = ComputeLoss(D, Theta, Y, Mu, Gamma, W, clusterLabels, b, lambda, lambdaw, scalar, p, q);
+		//loss = ComputeLoss(D, Theta, Y, Mu, Gamma, W, clusterLabels, lambda, lambdaw);
 		//printf("update states, Loss function = %3.3f, number of clusters = %d\n", loss, J);
 
 		//update clusters
 		for(i = 0; i < I; i ++) {
 			int oldState = clusterLabels[i];
 			ClusterSize[clusterLabels[i]] --;
-			double tmp_p[J], tmp_q[J];
+			double tmp_p[J];
 			double mintmp = lambda;// cost of starting a new cluster
 			int newState = J;
 			for(j = 0; j < J; j ++) {
 				tmp_p[j] = 0;
-				tmp_q[j] = 0;
 				for(k = 0; k < K; k ++) {
 					for(s = 0; s < S; s ++) {
 						if(Theta(k, i) == s) {
-							tmp_q[j] += exp(q * log(1 - W(s * K + k, j)));
-							tmp_p[j] += exp(p * log(1 - W(s * K + k, j)));
+							tmp_p[j] += (1 - W(s * K + k, j)) * (1 - W(s * K + k, j));
 						} else {
-							tmp_q[j] += exp(q * log(W(s * K + k, j)));
-							tmp_p[j] += exp(p * log(W(s * K + k, j)));
+							tmp_p[j] += W(s * K + k, j) * W(s * K + k, j);
 						}
 					}
 				}
-				tmp_q[j] *= scalar;
+				tmp_p[j] *= lambdaw;
 			
 				// assign the cluster label as well as the outlier label
 				if(tmp_p[j] < mintmp) {
 					mintmp = tmp_p[j];
 					newState = j;
-					b[i] = 0;
-				}
-				if(tmp_q[j] < mintmp) {
-					mintmp = tmp_q[j];
-					newState = j;
-					b[i] = 1;
 				}
 			}
 
@@ -210,7 +180,7 @@ SEXP madbayes(SEXP _b, SEXP _clusterLabels, SEXP _Theta, SEXP _Mu, SEXP _D,
 			if(J >= sqrt(I) * 3) break;
 		}
 
-		//loss = ComputeLoss(D, Theta, Y, Mu, Gamma, W, clusterLabels, b, lambda, lambdaw, scalar, p, q);
+		//loss = ComputeLoss(D, Theta, Y, Mu, Gamma, W, clusterLabels, lambda, lambdaw);
 		//printf("update cluster, Loss function = %3.3f, number of clusters = %d\n", loss, J);
 
 		// update mu
@@ -268,7 +238,7 @@ SEXP madbayes(SEXP _b, SEXP _clusterLabels, SEXP _Theta, SEXP _Mu, SEXP _D,
 
 		// calculate the loss function
 
-		loss = ComputeLoss(D, Theta, Y, Mu, Gamma, W, clusterLabels, b, lambda, lambdaw, scalar, p, q);
+		loss = ComputeLoss(D, Theta, Y, Mu, Gamma, W, clusterLabels, lambda, lambdaw);
 		//printf("update distribution, Loss function = %3.3f, number of clusters = %d\n", loss, J);
 
 		if(oldloss - loss < tol * oldloss && itr > 1) {
@@ -284,7 +254,6 @@ SEXP madbayes(SEXP _b, SEXP _clusterLabels, SEXP _Theta, SEXP _Mu, SEXP _D,
 	Rcpp::List ret = Rcpp::List::create(
 					    Rcpp::Named("Theta") = Theta,
 					    Rcpp::Named("clusterLabels") = clusterLabels,
-					    Rcpp::Named("b") = b,
 					    Rcpp::Named("W") = W,
 					    Rcpp::Named("Mu") = Mu,
 					    Rcpp::Named("Sigma") = Sigma,
@@ -295,7 +264,7 @@ SEXP madbayes(SEXP _b, SEXP _clusterLabels, SEXP _Theta, SEXP _Mu, SEXP _D,
 	
 }
 
-double ComputeLoss(IntegerVector D, IntegerMatrix Theta, NumericMatrix Y, NumericMatrix Mu, NumericMatrix Gamma, NumericMatrix W, IntegerVector clusterLabels, IntegerVector b, double lambda, double lambdaw, double scalar, double p, double q) {
+double ComputeLoss(IntegerVector D, IntegerMatrix Theta, NumericMatrix Y, NumericMatrix Mu, NumericMatrix Gamma, NumericMatrix W, IntegerVector clusterLabels, double lambda, double lambdaw) {
 	int I = Theta.ncol();
 	int K = Theta.nrow();
 	int N = D.size();
@@ -321,22 +290,11 @@ double ComputeLoss(IntegerVector D, IntegerMatrix Theta, NumericMatrix Y, Numeri
 		for(k = 0; k < K; k ++) {
 			for(s = 0; s < S; s ++) {
 				if(Theta(k, i) == s) {
-					if(b[i] == 1) {
-						tmp += exp(q * log(1 - W(s * K + k, clusterLabels[i])));
-					} else {
-						tmp += exp(p * log(1 - W(s * K + k, clusterLabels[i])));
-					}
+					tmp += (1 - W(s * K + k, clusterLabels[i])) * (1 - W(s * K + k, clusterLabels[i])); 
 				} else {
-					if(b[i] == 1) {
-						tmp += exp(q * log(W(s * K + k, clusterLabels[i])));
-					} else {
-						tmp += exp(p * log(W(s * K + k, clusterLabels[i])));
-					}
+					tmp += W(s * K + k, clusterLabels[i]) * W(s * K + k, clusterLabels[i]);
 				}
 			}
-		}
-		if(b[i] == 1) {
-			tmp *= scalar;
 		}
 		//		printf("i = %d, loss = %3.3f, b = %d\n", i, tmp, b[i]);
 		loss += lambdaw * tmp;
@@ -556,7 +514,7 @@ SEXP madbayes_theta(SEXP _Theta, SEXP _Mu, SEXP _D, SEXP _Gamma, SEXP _Y, SEXP _
 		
 		// calculate the loss function
 		
-		loss = ComputeLoss_theta(D, Theta, Y, Mu, Gamma);
+		//loss = ComputeLoss_theta(D, Theta, Y, Mu, Gamma);
 		//printf("initialize distribution, Loss function = %3.3f\n", loss);
 
 		if(itr > 1 && oldloss - loss < tol * oldloss) {
@@ -686,12 +644,6 @@ SEXP madbayes_init(SEXP _Theta, SEXP _lambda, SEXP _S, SEXP _maxJ) {
 			exit(1);
 		}
 		
-		//	printf("After cleaning, cluster sizes: ");
-		//	for(int j = 0; j < J + 2; j ++) {
-		//		printf("%d ", (int)(newClusterSizes[j]));
-		//	}
-		//	printf("\n");
-
 		// compute the new loss
 		newLoss = 0;
 		for(int i = 0; i < I; i ++) {
@@ -773,7 +725,7 @@ SEXP madbayes_init_kmeanspp(SEXP _Theta, SEXP _S, SEXP _J) {
 			if(i != centroids[j]) {
 				for(int k = 0; k < K; k ++) {
 					if(Theta(k, i) != Theta(k, centroids[j])) {
-						dist ++;
+						dist += 2;
 					}
 				}
 			}
@@ -793,7 +745,8 @@ SEXP madbayes_init_kmeanspp(SEXP _Theta, SEXP _S, SEXP _J) {
 	Rcpp::List ret = Rcpp::List::create(//Rcpp::Named("allClusterLabels") = allClusterLabels,
 					    //Rcpp::Named("allLosses") = allLosses,
 					    Rcpp::Named("loss") = loss,
-					    Rcpp::Named("clusterLabels") = clusterLabels);
+					    Rcpp::Named("clusterLabels") = clusterLabels,
+					    Rcpp::Named("centroids") = centroids);
 	return(ret);
 }
 

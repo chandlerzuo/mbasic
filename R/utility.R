@@ -87,7 +87,7 @@ orderCluster <- function(W, struct) {
     if(length(which.min(r2))==0)
       id <- workSet[1]
     else
-      id <- workSet[which.min(r2)]
+      id <- workSet[which.min(r2)[1]]
     ret <- c(ret, id)
     workSet <- setdiff(workSet, id)
   }

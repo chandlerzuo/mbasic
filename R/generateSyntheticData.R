@@ -9,6 +9,7 @@
 #' This function generates three set of files. ChIP BED files are stored in 'chip/', input BED files are stored in 'input/', mappability and GC files are stored in 'mgc/'. All BED files follow the name convention for the ENCODE consortium.
 #' Each chromosome has a size of 10K, and each locus has 20 bp.
 #' ChIP data for two celllines, each with K transcription factors, are generated. All ChIP experiments with the same celltype have the same matching input. Each ChIP experiment has randomly 1-3 replicates. Each input has 3 replicates.
+#' @return A RangedData object.
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @examples \dontrun{generateSyntheticData("tmpData/", nchr = 5, K = 5, I = 100, J = 3) }
 #' @export
@@ -35,9 +36,7 @@ generateSyntheticData <- function(dir, nchr = 5, K = 5, I = 100, J = 3) {
   ir.start[ ir.start < 30 ] <- 30
   ir.end <- ir.start + 20
     
-  target <- GRanges(seqnames = sample(paste("chr", seq_len(nchr), sep = ""), length(ir.start), replace = TRUE), IRanges(start = ir.start, end = ir.end))
-
-  target <- sort(target)
+  target <- RangedData(chromosome = sample(paste("chr", seq_len(nchr), sep = ""), length(ir.start), replace = TRUE), IRanges(start = ir.start, end = ir.end))
 
   Y <- dat.sim$Y
 
@@ -48,8 +47,8 @@ generateSyntheticData <- function(dir, nchr = 5, K = 5, I = 100, J = 3) {
       idfac <- idfac + 1
       for(idrep in seq_len(n[ idfac ])) {
         idrow <- idrow + 1
-        midpos <- rep(start(ranges(target)), Y[ idrow, ]) + sample(1:20, sum(Y[ idrow, ]), replace = TRUE)
-        chr <- rep(seqnames(target), Y[ idrow, ])
+        midpos <- rep(start(target), Y[ idrow, ]) + sample(1:20, sum(Y[ idrow, ]), replace = TRUE)
+        chr <- rep(target$chromosome, Y[ idrow, ])
         strand <- sample(c("+", "-"), sum(Y[ idrow, ]), replace = TRUE)
         dat <- data.frame(chr = chr, start = midpos - 10, end = midpos + 9, unknown = NA, unknown2 = NA, strand = strand)
         filename <- paste(chipdir, "wgEncodeLabExpCell", idcell, "Fac", idtf, "CtrlAlnRep", idrep, ".bed", sep = "")
@@ -61,8 +60,8 @@ generateSyntheticData <- function(dir, nchr = 5, K = 5, I = 100, J = 3) {
   for(idcell in unique(cellid)) {
     for(idrep in seq_len(3)) {
       inputcount <- sample(1:3, I, replace = TRUE)
-      midpos <- rep(start(ranges(target)), inputcount) + sample(1:20, sum(inputcount), replace = TRUE)
-      chr <- rep(seqnames(target), inputcount)
+      midpos <- rep(start(target), inputcount) + sample(1:20, sum(inputcount), replace = TRUE)
+      chr <- rep(target$chromosome, inputcount)
       strand <- sample(c("+", "-"), sum(inputcount), replace = TRUE)
       dat <- data.frame(chr = chr, start = midpos - 10, end = midpos + 9, unknown = NA, unknown2 = NA, strand = strand)
       filename <- paste(inputdir, "wgEncodeLabExpCell", idcell, "InputCtrlAlnRep", idrep, ".bed", sep = "")

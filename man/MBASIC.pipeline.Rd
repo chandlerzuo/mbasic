@@ -5,9 +5,9 @@
 \title{The pipeline for fitting a MBASIC model for sequencing data.}
 \usage{
 MBASIC.pipeline(chipfile, inputfile, input.suffix, target, chipformat,
-  inputformat, fragLen, pairedEnd, unique, m.prefix, m.suffix, gc.prefix,
-  gc.suffix, fac, struct, J, family, burnin = 20, maxitr = 100,
-  tol = 1e-04, nsig = 2, datafile)
+  inputformat, fragLen, pairedEnd, unique, m.prefix = NULL, m.suffix = NULL,
+  gc.prefix = NULL, gc.suffix = NULL, datafile = NULL, ncores = 10, J,
+  ...)
 }
 \arguments{
 \item{chipfile}{A string vector for the ChIP files.}
@@ -36,23 +36,9 @@ MBASIC.pipeline(chipfile, inputfile, input.suffix, target, chipformat,
 
 \item{gc.suffix}{A string for the suffix of the GC files. See details for more information. Default: NULL.}
 
-\item{fac}{A vector for the experimental conditions corresponding to the ChIP files.}
+\item{datafile}{The file location to save or load the data matrix. See details.}
 
-\item{struct}{A matrix indicating the levels of the signal matrix.}
-
-\item{J}{The number of clusters to be identified.}
-
-\item{family}{The distribution of family to be used. Either "lognormal" or "negbin". See details for more information.}
-
-\item{burnin}{An integer value for the number of iterations in initialization. Default: 20.}
-
-\item{maxitr}{The maximum number of iterations in the E-M algorithm. Default: 100.}
-
-\item{tol}{Tolerance for error in checking the E-M algorithm's convergence. Default: 1e-04.}
-
-\item{nsig}{The number of mixture components for the distribution of the signal state.}
-
-\item{datafile}{The file location to save the data matrix.}
+\item{...}{Parameters for function MBASIC.}
 }
 \value{
 A 'MBASICFit' class object.
@@ -60,13 +46,20 @@ A 'MBASICFit' class object.
 \description{
 The pipeline for fitting a MBASIC model for sequencing data.
 }
+\details{
+This function executes three steps:\cr
+The first step uses the "generateReadMatrices" function to get the ChIP and Input counts for each locus.\cr
+The second step is to compute the covariate matrix. If any of 'm.prefix', 'm.suffix', 'gc.prefix', 'gc.suffix' is NULL, then the input count matrix is directly used as the covariate matrix for MBASIC. Alternatively, it will use the 'bkng_mean' to normalize the input count data according to the mappability and GC scores to produce the covariate matrix.\cr
+The final step is to call the MBASIC function for model fitting.\cr
+Because the first two steps are time consuming, we recommend in specifying a file location for 'datafile'. Then, when this function executes, it first checks whether 'datafile' exists. If it exists, it will be loaded and the function will jump to the final step. If it does not exist, after the function executes the first two steps, the ChIP data matrix and the covariate matrix will be saved to this file, so that when you rerun this function you do not need to repeat the first two steps.\cr
+}
 \examples{
 \dontrun{
 ## This is the example in our vignette
 target <- generateSyntheticData(dir = "syntheticData")
 tbl <- ChIPInputMatch(dir = paste("syntheticData/", c("chip", "input"), sep = ""),suffix = ".bed", depth = 5)
 conds <- paste(tbl$cell, tbl$factor, sep = ".")
-MBASIC.fit <- MBASIC.pipeline(chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, format = "BED", fragLen = 150, pairedEnd = FALSE, unique = TRUE, m.prefix = "syntheticData/mgc/", m.suffix = "_M.txt", gc.prefix = "syntheticData/mgc/", gc.suffix = "_GC.txt", fac = conds, struct = NULL, J = 3, family = "negbin", burnin = 20, maxitr = 100, tol = 1e-4, nsig = 2, datafile = NULL)
+MBASIC.fit <- MBASIC.pipeline(chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, format = "BED", fragLen = 150, pairedEnd = FALSE, unique = TRUE, fac = conds, struct = NULL, S = 2, J = 3, family = "lognormal", maxitr = 10, statemap = NULL)
 }
 }
 \author{

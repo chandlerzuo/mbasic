@@ -5,8 +5,8 @@
 \title{MAD-Bayes method to fit the MBASIC model.}
 \usage{
 MBASIC.MADBayes.full(Y, Gamma = NULL, fac, lambdaw = NULL, lambda = NULL,
-  maxitr = 50, S = 2, tol = 1e-08, ncores = 15, nfits = 1,
-  para = NULL, initialize = "madbayes")
+  maxitr = 30, S = 2, tol = 1e-10, ncores = 15, nfits = 3,
+  nlambdas = 30, para = NULL, initialize = "madbayes")
 }
 \arguments{
 \item{Y}{An N by I matrix containing the data from N experiments across I observation units (loci).}

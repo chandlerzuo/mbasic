@@ -7,7 +7,7 @@
 averageMGC(target, m.prefix, m.suffix = NULL, gc.prefix, gc.suffix = NULL)
 }
 \arguments{
-\item{target}{A \link{GRanges} object for the target intervals.}
+\item{target}{A \link{RangedData} object for the target intervals.}
 
 \item{m.prefix}{A string for the prefix of the mappability files.}
 
@@ -18,7 +18,7 @@ averageMGC(target, m.prefix, m.suffix = NULL, gc.prefix, gc.suffix = NULL)
 \item{gc.suffix}{A string for the suffix of the GC files. See details for more information. Default: NULL.}
 }
 \value{
-A GRanges object with two extra fields from the input argument 'target':
+A \link{RangedData} object with two extra fields from the input argument 'target':
 \tabular{ll}{
 mappability \tab The average mappability scores for the sorted elements of 'target'.\cr
 GC \tab The average GC scores for the sorted elements of 'target'.\cr

@@ -1,19 +1,70 @@
 %% \VignetteIndexEntry{CSSP: ChIP-Seq Statistical Power}
-\documentclass[a4paper,10pt]{article}
+\documentclass[a4paper,10pt]{article}\usepackage[]{graphicx}\usepackage[]{color}
+%% maxwidth is the original width if it is less than linewidth
+%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
+\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
+\newcommand{\hlstr}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
+\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
+\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hlstd}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
+\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
+\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
+\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
+\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
+
+\usepackage{framed}
+\makeatletter
+\newenvironment{kframe}{%
+ \def\at@end@of@kframe{}%
+ \ifinner\ifhmode%
+  \def\at@end@of@kframe{\end{minipage}}%
+  \begin{minipage}{\columnwidth}%
+ \fi\fi%
+ \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
+ \colorbox{shadecolor}{##1}\hskip-\fboxsep
+     % There is no \\@totalrightmargin, so:
+     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
+ \MakeFramed {\advance\hsize-\width
+   \@totalleftmargin\z@ \linewidth\hsize
+   \@setminipage}}%
+ {\par\unskip\endMakeFramed%
+ \at@end@of@kframe}
+\makeatother
+
+\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
+
+\usepackage{alltt}
 \usepackage{amsmath,mathrsfs,graphicx}
-\usepackage[top=2cm,bottom=2cm,left=2cm,right=2cm]{geometry}
+%\usepackage[top=2cm,bottom=2cm,left=2cm,right=2cm]{geometry}
 \usepackage[utf8]{inputenc}
-\usepackage{hyperref}
 \usepackage{color}
 %\usepackage{natbib}
 
+%\usepackage{Sweave}
+\RequirePackage{/afs/cs.wisc.edu/u/z/u/zuo/R/x86_64-redhat-linux-gnu-library/3.0/BiocStyle/sty/Bioconductor}
+
+
 \title{MBASIC: Matrix Based Analysis for State-space Inference and Clustering}
 
-\author{Chandler Zuo\footnote{Department of Statistics, 1300 University Avenue, Madison, WI, 53706, USA.}  \\
-S\"und\"uz Kele\c{s}\footnote{Departments of Statistics and of  Biostatistics and Medical Informatics, 1300 University Avenue, Madison, WI, 53706, USA.}}
+\author{Chandler Zuo and S\"und\"uz Kele\c{s}\\
+  Departments of Statistics and of  Biostatistics and Medical Informatics, University of Wisconsin-Madison}
 \date{}
-
-\usepackage{Sweave}
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
 \begin{document}
 \maketitle
 
@@ -21,149 +72,186 @@ S\"und\"uz Kele\c{s}\footnote{Departments of Statistics and of  Biostatistics an
 
 \section{Introduction}
 
-This document provides an introduction to the power analysis of ChIP-seq data with
-the \texttt{MBASIC} package. This \texttt{R} package implements \textbf{MBASIC} which stands for \textbf{M}atrix \textbf{B}ased \textbf{A}nalysis for \textbf{S}tate-space \textbf{I}nference and \textbf{C}lustering in \cite{zuo14}. \textbf{MBASIC} provides a Bayesian framework for clustering units based on their infered states over a set of experimental conditions.
+This document provides an introduction to the power analysis of ChIP-seq data with the \software{MBASIC} package (\textbf{MBASIC} which stands for \textbf{M}atrix \textbf{B}ased \textbf{A}nalysis for \textbf{S}tate-space \textbf{I}nference and \textbf{C}lustering) \cite{zuo14}. \software{MBASIC} provides a Bayesian framework for clustering units based on their infered states over a set of experimental conditions.
 
-\texttt{MBASIC} is especially useful for integrative analysis for ChIP-seq experiments. In this case, a set of prespecified loci is clustered based on their activities over celltypes and transcription factors. We build a pipeline in the \texttt{MBASIC} package and will focus on this pipeline in this vignette. We will introduce the general functionalities for the \textbf{MBASIC} model at the end of the vignette.
+\software{MBASIC} is especially useful for integrative analysis for ChIP-seq experiments. In this case, a set of prespecified loci is clustered based on their activities over celltypes and transcription factors. We build a pipeline in the \software{MBASIC} package and will focus on this pipeline in this vignette. We will introduce the general functionalities for the \textbf{MBASIC} model at the end of the vignette.
 
 \section{MBASIC Pipeline for Sequencing Data}
 
-\subsection{Workflow}
+\subsection{Overview}
 
-The \texttt{MBASIC} framework consists of five major steps:
+Applying the \textbf{MBASIC} framework to analyzing ChIP-seq data sets includes three steps:
 
 \begin{enumerate}
-  \item \textit{Matching ChIP replicate files with their inputs:} This step matches ChIP replicate files with their matching input files;
-  \item \textit{Calculating mapped counts and genomic scores on the target loci:} This step calculates the mapped counts from each ChIP and input replicate files on each of the target locus;
-  \item \textit{Calculating the mappability and GC-content scores for the target loci:} This step computes the average mappability and GC scores for loci from external files;
-  \item \textit{Estimating the background means:} This step uses regression models for the input data and the M, GC scores to estimate the background means for the ChIP replicates;
-  \item \textit{Fitting MBASIC model:} This step fits the MBASIC model to identify the binding states for each locus and cluster the loci based on their binding states across different conditions.
+\item \textit{Matching each ChIP replicate data set with their input data set:} This step matches ChIP replicate files with their matching input files;
+\item \textit{Calculating mapped counts and the covariate on the target loci:} This step calculates the mapped counts from each ChIP and input replicate files on each of the target locus;
+\item \textit{Fitting MBASIC model:} This step fits the MBASIC model to identify the binding states for each locus and cluster the loci based on their binding states across different conditions.
 \end{enumerate}
 
-\texttt{MBASIC} integrates Step 2-5 in a single function called ``MBASIC.pipeline". For Step 1 \texttt{MBASIC} provides a function ``ChIPInputMatch'' that assists matching the ChIP files with input files based on the naming convention of the ENCODE datasets. We have found that in practice, more often than not, some violations to the ENCODE file name conventions always occur, and manual adjustments to the results of our automated matching are inevitable. Therefore, we do not integrate this function in ``MBASIC.pipeline".
+\software{MBASIC} integrates Step 2-3 in a single function \Rfunction{MBASIC.pipeline}. For Step 1 \software{MBASIC} provides a function \Rfunction{ChIPInputMatch} that assists matching the ChIP files with input files based on the naming convention of the ENCODE datasets. We have found that in practice, more often than not, some violations to the ENCODE file name conventions always occur, and manual adjustments to the results of our automated matching are inevitable. Therefore, we do not integrate this function in \Rfunction{MBASIC.pipeline}.
 
-\subsection{Match ChIP and Input Datasets}
+\subsection{Step 1: Match ChIP and Input Datasets}
 
 
-To illustrate Step 1 we first generate a set of synthetic data.
 
-\texttt{MBASIC} package provides a function ``generateSyntheticData'' to assist our demo. This function generates synthetic BED data for ChIP and input samples, as well as mappability and GC scores in a directory specified by the ``dir" argument. It also generates a target set of loci for our analysis. By default, the number of loci is 100, each with size 20 bp. All data are generated across 5 chromosomes, each with size 10K bp. ChIP data are from 2 celltypes, and for each celltype there are K=5 TFs. Under each condition randomly 1-3 replicates for the ChIP data are generated. All ChIP data from the same celltype are matched to the same set of 3 input replicates.
+To illustrate Step 1 we first generate a set of synthetic data. \software{MBASIC} package provides a function \Rfunction{generateSyntheticData} to assist our demo. This function generates synthetic BED data for ChIP and input samples, as well as mappability and GC scores in a directory specified by the 'dir' argument. It also generates a target set of loci for our analysis. By default, the number of loci is 100, each with size 20 bp. All data are generated across 5 chromosomes, each with size 10K bp. ChIP data are from 2 celltypes, and for each celltype there are K=5 TFs. Under each condition randomly 1-3 replicates for the ChIP data are generated. All ChIP data from the same celltype are matched to the same set of 3 input replicates.
 
-\begin{Schunk}
-\begin{Sinput}
-> library(MBASIC)
-> target <- generateSyntheticData(dir = "syntheticData")
-> target
-\end{Sinput}
-\begin{Soutput}
-GRanges with 100 ranges and 0 metadata columns:
-        seqnames       ranges strand
-           <Rle>    <IRanges>  <Rle>
-    [1]     chr1 [ 200,  220]      *
-    [2]     chr1 [1800, 1820]      *
-    [3]     chr1 [2440, 2460]      *
-    [4]     chr1 [2480, 2500]      *
-    [5]     chr1 [2960, 2980]      *
-    ...      ...          ...    ...
-   [96]     chr5 [7400, 7420]      *
-   [97]     chr5 [8720, 8740]      *
-   [98]     chr5 [8880, 8900]      *
-   [99]     chr5 [9560, 9580]      *
-  [100]     chr5 [9970, 9990]      *
-  ---
-  seqlengths:
-   chr1 chr2 chr3 chr4 chr5
-     NA   NA   NA   NA   NA
-\end{Soutput}
-\begin{Sinput}
-> system("ls syntheticData/*/*")
-\end{Sinput}
-\end{Schunk}
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{library}\hlstd{(MBASIC)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
 
-Function ``ChIPInputMatch'' assists Step 1. It reads all files with suffix ``.bed" in directories specified by the argument ``.dir", and matches the files assuming ENCODE naming convention. It looks up files up to the number of levels of subdirectories specified by ``depth". The output of this function contains multiple columns. The first column contains the file name for each ChIP replicate. The second column is the initial string for the matching input replicates, because for each ChIP replicate there are possibly multiple input replicates. The rest of the columns contains information for lab, experiment identifier, factor and control identifier. This information is parsed from the file names.
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 
-\begin{Schunk}
-\begin{Sinput}
-> tbl <- ChIPInputMatch(dir = paste("syntheticData/",
-+                         c("chip", "input"), sep = ""),
-+                       suffices = c(".bam", ".bed"), depth = 5)
-> head(tbl)
-\end{Sinput}
-\begin{Soutput}
-                                                   chipfile
-1 syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep1.bed
-2 syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep1.bed
-3 syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep1.bed
-4 syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep2.bed
-5 syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep2.bed
-6 syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep2.bed
-                                         inputfile
-1 syntheticData/input/wgEncodeLabExpCell1InputCtrl
-2                                             <NA>
-3                                             <NA>
-4 syntheticData/input/wgEncodeLabExpCell1InputCtrl
-5                                             <NA>
-6                                             <NA>
-  lab experiment  cell factor control chipformat
-1 Lab        Exp Cell1   Fac1    Ctrl        BED
-2 Lab        Exp Cell1   Fac1    Ctrl        BED
-3 Lab        Exp Cell1   Fac1    Ctrl        BED
-4 Lab        Exp Cell1   Fac1    Ctrl        BED
-5 Lab        Exp Cell1   Fac1    Ctrl        BED
-6 Lab        Exp Cell1   Fac1    Ctrl        BED
-  inputformat
-1         BED
-2         BED
-3         BED
-4         BED
-5         BED
-6         BED
-\end{Soutput}
-\end{Schunk}
 
-We also need to prepare the following meta data information. Below the vector ``n" specifies the number of replicates within the same experimental conditions.
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# Loading required package: cluster\\\#\# Loading required package: doMC\\\#\# Loading required package: foreach\\\#\# Loading required package: iterators\\\#\# Loading required package: parallel\\\#\# Loading required package: GenomicRanges\\\#\# Loading required package: BiocGenerics\\\#\# \\\#\# Attaching package: 'BiocGenerics'\\\#\# \\\#\# The following objects are masked from 'package:parallel':\\\#\# \\\#\#\ \ \ \  clusterApply, clusterApplyLB,\\\#\#\ \ \ \  clusterCall, clusterEvalQ,\\\#\#\ \ \ \  clusterExport, clusterMap, parApply,\\\#\#\ \ \ \  parCapply, parLapply, parLapplyLB,\\\#\#\ \ \ \  parRapply, parSapply, parSapplyLB\\\#\# \\\#\# The following object is masked from 'package:stats':\\\#\# \\\#\#\ \ \ \  xtabs\\\#\# \\\#\# The following objects are masked from 'package:base':\\\#\# \\\#\#\ \ \ \  anyDuplicated, append, as.data.frame,\\\#\#\ \ \ \  as.vector, cbind, colnames, duplicated,\\\#\#\ \ \ \  eval, evalq, Filter, Find, get,\\\#\#\ \ \ \  intersect, is.unsorted, lapply, Map,\\\#\#\ \ \ \  mapply, match, mget, order, paste, pmax,\\\#\#\ \ \ \  pmax.int, pmin, pmin.int, Position,\\\#\#\ \ \ \  rank, rbind, Reduce, rep.int, rownames,\\\#\#\ \ \ \  sapply, setdiff, sort, table, tapply,\\\#\#\ \ \ \  union, unique, unlist\\\#\# \\\#\# Loading required package: IRanges\\\#\# Loading required package: XVector\\\#\# Loading required package: gtools\\\#\# Loading required package: MASS\\\#\# Loading required package: mclust\\\#\# Package 'mclust' version 4.4\\\#\# Type 'citation("{}mclust"{})' for citing this R package in publications.\\\#\# \\\#\# Attaching package: 'mclust'\\\#\# \\\#\# The following object is masked from 'package:GenomicRanges':\\\#\# \\\#\#\ \ \ \  map\\\#\# \\\#\# The following object is masked from 'package:IRanges':\\\#\# \\\#\#\ \ \ \  map\\\#\# \\\#\# Loading required package: msm\\\#\# Loading required package: Rcpp}}
 
-\begin{Schunk}
-\begin{Sinput}
-> conds <- paste(tbl$cell, tbl$factor, sep = ".")
-\end{Sinput}
-\end{Schunk}
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning: replacing previous import by 'mclust::map' when loading 'MBASIC'}}\end{kframe}
+\end{knitrout}
 
-Now we are in a position to continue the next steps in the pipeline. There are two ways to execute these steps: (1) use function ``MBASIC.pipeline", which wraps up all the consecutive steps; or (2) execute each step separately.
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{target} \hlkwb{<-} \hlkwd{generateSyntheticData}\hlstd{(}\hlkwc{dir} \hlstd{=} \hlstr{"syntheticData"}\hlstd{)}
+\hlkwd{head}\hlstd{(target)}
+\end{alltt}
+\begin{verbatim}
+## RangedData with 6 rows and 1 value column across 1 space
+##      space       ranges |  chromosome
+##   <factor>    <IRanges> | <character>
+## 1        1 [6720, 6740] |        chr1
+## 2        1 [6360, 6380] |        chr5
+## 3        1 [3600, 3620] |        chr4
+## 4        1 [5480, 5500] |        chr2
+## 5        1 [8200, 8220] |        chr1
+## 6        1 [3120, 3140] |        chr1
+\end{verbatim}
+\begin{alltt}
+\hlkwd{system}\hlstd{(}\hlstr{"ls syntheticData/*/*"}\hlstd{,} \hlkwc{intern} \hlstd{=} \hlnum{TRUE}\hlstd{)[}\hlnum{1}\hlopt{:}\hlnum{5}\hlstd{]}
+\end{alltt}
+\begin{verbatim}
+## [1] "syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep1.bed"
+## [2] "syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep2.bed"
+## [3] "syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep3.bed"
+## [4] "syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep1.bed"
+## [5] "syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep2.bed"
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
 
-\subsection{Pipeline Execution}
+We have developed the \Rfunction{ChIPInputMatch} function to help match the ChIP and input data files. In the following example, we use this function to read all files with suffices ``.bed" and ``.bam'' in directories specified by the argument ``dir", and matches the files assuming ENCODE naming convention. It looks up files up to the number of levels of subdirectories specified by ``depth". The output of this function contains multiple columns. The first column contains the file name for each ChIP replicate. The second column is the initial string for the matching input replicates, because for each ChIP replicate there are possibly multiple input replicates. The rest of the columns contains information for lab, experiment identifier, factor and control identifier. This information is parsed from the file names.
 
-The following code calls the function ``MBASIC.pipeline":
+We acknowledge that the current function may not parse all data file names correctly. For practical data files, users are suggested to check its result, and manual corrections may be needed.
 
-\begin{Schunk}
-\begin{Sinput}
-> MBASIC.fit <- MBASIC.pipeline(chipfile = tbl$chipfile,
-+                               inputfile = tbl$inputfile,
-+                               input.suffix = ".bed",
-+                               target = target,
-+                               chipformat = tbl$chipformat,
-+                               inputformat = tbl$inputformat,
-+                               fragLen = 150,
-+                               pairedEnd = FALSE,
-+                               unique = TRUE,
-+                               m.prefix = "syntheticData/mgc/",
-+                               m.suffix = "_M.txt",
-+                               gc.prefix = "syntheticData/mgc/",
-+                               gc.suffix = "_GC.txt",
-+                               fac = conds,
-+                               struct = NULL, J = 3,
-+                               family = "negbin",
-+                               burnin = 20, maxitr = 100,
-+                               tol = 1e-4, nsig = 2,
-+                               datafile = NULL)
-\end{Sinput}
-\end{Schunk}
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{tbl} \hlkwb{<-} \hlkwd{ChIPInputMatch}\hlstd{(}\hlkwc{dir} \hlstd{=} \hlkwd{paste}\hlstd{(}\hlstr{"syntheticData/"}\hlstd{,}
+    \hlkwd{c}\hlstd{(}\hlstr{"chip"}\hlstd{,} \hlstr{"input"}\hlstd{),} \hlkwc{sep} \hlstd{=} \hlstr{""}\hlstd{),} \hlkwc{celltypes} \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{"Cell1"}\hlstd{,}
+    \hlstr{"Cell2"}\hlstd{),} \hlkwc{suffices} \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{".bam"}\hlstd{,} \hlstr{".bed"}\hlstd{),} \hlkwc{depth} \hlstd{=} \hlnum{5}\hlstd{)}
+\end{alltt}
 
-``MBASIC.pipeline'' requires a number of arguments. We list these arguments in Table \ref{tbl:arguments}. For details users are recommended to read our manual.
+
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# Warning:Lab.Exp.Cell1.Ctrlhas multiple matching input files\\\#\# Warning:Lab.Exp.Cell2.Ctrlhas multiple matching input files}}\begin{alltt}
+\hlkwd{head}\hlstd{(tbl)}
+\end{alltt}
+\begin{verbatim}
+##                                                    chipfile
+## 1 syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep1.bed
+## 2 syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep2.bed
+## 3 syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep3.bed
+## 4 syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep1.bed
+## 5 syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep2.bed
+## 6 syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep3.bed
+##                                          inputfile
+## 1 syntheticData/input/wgEncodeLabExpCell1InputCtrl
+## 2 syntheticData/input/wgEncodeLabExpCell1InputCtrl
+## 3 syntheticData/input/wgEncodeLabExpCell1InputCtrl
+## 4 syntheticData/input/wgEncodeLabExpCell1InputCtrl
+## 5 syntheticData/input/wgEncodeLabExpCell1InputCtrl
+## 6 syntheticData/input/wgEncodeLabExpCell1InputCtrl
+##   lab experiment  cell factor control chipformat
+## 1 Lab        Exp Cell1   Fac1    Ctrl        BED
+## 2 Lab        Exp Cell1   Fac1    Ctrl        BED
+## 3 Lab        Exp Cell1   Fac1    Ctrl        BED
+## 4 Lab        Exp Cell1   Fac2    Ctrl        BED
+## 5 Lab        Exp Cell1   Fac2    Ctrl        BED
+## 6 Lab        Exp Cell1   Fac2    Ctrl        BED
+##   inputformat
+## 1         BED
+## 2         BED
+## 3         BED
+## 4         BED
+## 5         BED
+## 6         BED
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+We also need to specify the experimental condition for each data set by a vector 'conds'.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{conds} \hlkwb{<-} \hlkwd{paste}\hlstd{(tbl}\hlopt{$}\hlstd{cell, tbl}\hlopt{$}\hlstd{factor,} \hlkwc{sep} \hlstd{=} \hlstr{"."}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\subsection{Executing Step 2 and 3 Altogether}
+
+Now we are in a position to continue the next steps in the pipeline. There are two ways to execute these steps: (1) use function \Rfunction{MBASIC.pipeline}, which wraps up all the consecutive steps; or (2) execute each step separately. The following code calls the function Rfunction{MBASIC.pipeline}:
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+
+
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# processing input file syntheticData/input/wgEncodeLabExpCell1InputCtrlAlnRep1.bed\\\#\# processing input file syntheticData/input/wgEncodeLabExpCell1InputCtrlAlnRep2.bed\\\#\# processing input file syntheticData/input/wgEncodeLabExpCell1InputCtrlAlnRep3.bed\\\#\# processing input file syntheticData/input/wgEncodeLabExpCell2InputCtrlAlnRep1.bed\\\#\# processing input file syntheticData/input/wgEncodeLabExpCell2InputCtrlAlnRep2.bed\\\#\# processing input file syntheticData/input/wgEncodeLabExpCell2InputCtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac3CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac3CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac3CtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac4CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac4CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac4CtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac5CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac5CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac5CtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac1CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac2CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac2CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac3CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac3CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac4CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac5CtrlAlnRep1.bed}}\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{## remove file 'data.Rda' since it will be generated}
+\hlcom{## try(file.remove('data.Rda'))}
+\hlstd{fit} \hlkwb{<-} \hlkwd{MBASIC.pipeline}\hlstd{(}\hlkwc{chipfile} \hlstd{= tbl}\hlopt{$}\hlstd{chipfile,} \hlkwc{inputfile} \hlstd{= tbl}\hlopt{$}\hlstd{inputfile,}
+    \hlkwc{input.suffix} \hlstd{=} \hlstr{".bed"}\hlstd{,} \hlkwc{target} \hlstd{= target,} \hlkwc{chipformat} \hlstd{= tbl}\hlopt{$}\hlstd{chipformat,}
+    \hlkwc{inputformat} \hlstd{= tbl}\hlopt{$}\hlstd{inputformat,} \hlkwc{fragLen} \hlstd{=} \hlnum{150}\hlstd{,} \hlkwc{pairedEnd} \hlstd{=} \hlnum{FALSE}\hlstd{,}
+    \hlkwc{unique} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{,}
+    \hlkwc{datafile} \hlstd{=} \hlstr{"data.Rda"}\hlstd{)}
+\hlkwd{class}\hlstd{(fit)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+We list the meanings of the arguments of \Rfunction{MBASIC.pipeline} in Table \ref{tbl:arguments}. The above example fits a clustering model with 3 clusters. It returns an object of class \Rclass{MBASICFit}. This class is described in more details in Section \ref{sec:mbasicfit}.
+
+Alternatively, we can fit models with varying numbers of clusters simultaneously, and pick the one with the minimum BIC value:
+
+
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{allfits} \hlkwb{<-} \hlkwd{MBASIC.pipeline}\hlstd{(}\hlkwc{chipfile} \hlstd{= tbl}\hlopt{$}\hlstd{chipfile,}
+    \hlkwc{inputfile} \hlstd{= tbl}\hlopt{$}\hlstd{inputfile,} \hlkwc{input.suffix} \hlstd{=} \hlstr{".bed"}\hlstd{,}
+    \hlkwc{target} \hlstd{= target,} \hlkwc{chipformat} \hlstd{= tbl}\hlopt{$}\hlstd{chipformat,} \hlkwc{inputformat} \hlstd{= tbl}\hlopt{$}\hlstd{inputformat,}
+    \hlkwc{fragLen} \hlstd{=} \hlnum{150}\hlstd{,} \hlkwc{pairedEnd} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{unique} \hlstd{=} \hlnum{TRUE}\hlstd{,}
+    \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlopt{:}\hlnum{10}\hlstd{,} \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{,}
+    \hlkwc{datafile} \hlstd{=} \hlstr{"data.Rda"}\hlstd{)}
+\hlkwd{names}\hlstd{(allfits)}
+\hlkwd{class}\hlstd{(allfits}\hlopt{$}\hlstd{BestFit)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
 
 \begin{table}
   \centering
-  \caption{Arguments for the ``MBASIC.pipeline'' function.}\label{tbl:arguments}
+  \caption{Arguments for the \Rfunction{MBASIC.pipeline} function. For a comprehensive list of arguments and their details, users are recommended to read our manual.}\label{tbl:arguments}
   \begin{tabular}{p{2cm}p{10cm}}
     \hline
     \multicolumn{2}{c}{Data Sources}\\
@@ -172,247 +260,457 @@ The following code calls the function ``MBASIC.pipeline":
     inputfile & A string vector for the matching input files. The length must be the same as ``chipfile".\\
     input.suffix & A string for the suffix of input files. If NULL, ``inputfile" will be treated as the full names of the input files. Otherwise, all inputfiles with the initial ``inputfile" and this suffix will be merged.\\
     chipformat (inputformat) & A string specifying the type of all ChIP (input) files, or a vector of string specifying the types of each ChIP (input) file.  Currently three file types are allowed: ``BAM", ``BED" or ``TAGALIGN'' (``TAGALIGN'' and ``BED'' files are treated as same).  Default: ``BAM".\\
-    m.prefix & A string for the prefix of the mappability files.\\
-    m.suffix & A string for the suffix of the mappability files. See our man files for more details.  Default: NULL.\\
-    gc.prefix & A string for the prefix of the GC files.\\
-    gc.suffix & A string for the suffix of the GC files.  See our man files for more details. Default: NULL.\\
+    m.prefix (optional) & A string for the prefix of the mappability files.\\
+    m.suffix (optional) & A string for the suffix of the mappability files. See our man files for more details.  Default: NULL.\\
+    gc.prefix (optional) & A string for the prefix of the GC files.\\
+    gc.suffix (optional) & A string for the suffix of the GC files.  See our man files for more details. Default: NULL.\\
     \hline
     \multicolumn{2}{c}{Genomic Information}\\
     \hline
-    target & A GenomicRanges object for the target intervals where the reads are mapped.\\
+    target & A RangedData object for the target intervals where the reads are mapped.\\
     fragLen & Either a single value or a 2-column matrix of the fragment lengths for the chip and input files.  Default: 150.\\
     pairedEnd & Either a boolean value or a 2-column boolean matrix for  whether each file is a paired-end data set. Currently this function only allows ``BAM" files for paired-end data. Default: FALSE.\\
     unique & A boolean value for whether only reads with distinct genomic coordinates or strands are mapped.  Default: TRUE.\\
     \hline
     \multicolumn{2}{c}{Model Parameters}\\
     \hline
+    S & The number of states.\\
     fac & A vector of length N for the experimental condition of each ChIP replicate.\\
     struct & A matrix indicating the levels of the signal matrix. \\
-    J & The number of clusters to be identified.\\
-    family & The distribution of family to be used.  Either ``lognormal" or ``negbin". See our man files for more information.\\
-    nsig & The number of mixture components for the distribution of the signal state. Default: 2.\\
+    J & A single number or a numeric vector of the numbers of clusters to be included in the model.\\
+    family & The distribution of family to be used.  \software{MBASIC} currently support five distribution types: 'lognormal', 'negbin', 'binom', 'scaled-t', 'gamma-binom'. See our man files for more information.\\
     \hline
     \multicolumn{2}{c}{Tuning Parameters}\\
     \hline
-    burnin & An integer value for the number of iterations in initialization. Default: 20.\\
     maxitr & The maximum number of iterations in the E-M algorithm. Default: 100.\\
-    tol & Tolerance for error in checking the E-M algorithm's convergence. Default: 1e-04.\\
-    datafile & The location to save the count matrices.\\
+    tol & Tolerance for the relative increment in the log-likelihood function to check the E-M algorithm's convergence. Default: 1e-10.\\
+    tol.par & Tolerance for the maximum relative change in parameters to check the algorithm's convergence. Default: 1e-5.\\
+    datafile & The location to save the count matrices, or load pre-computed count matrices.\\
     \hline
   \end{tabular}
 \end{table}
 
-\subsection{Stepwise Execution}
+Before we move on to describe the step-wise execution, we highlight the usage of argument 'datafile'. When we fit 'MBASIC.fit', we process ChIP and input data and save the processed data in 'datafile'. When we compute 'MBASIC.fit', since 'datafile' already exists on our disk, \Rfunction{MBASIC.allfit} automatically loads our processed data. This can save substantially amount of time if the size of our data is large.
 
-Alternatively, each step in the pipeline can be executed separately.
+\subsection{Step 2: Generate the Data Matrices}
 
-\begin{Schunk}
-\begin{Sinput}
-> ## Step 2: Generate mapped count matrices
-> dat <- generateReadMatrices(chipfile = tbl$chipfile,
-+                             inputfile = tbl$inputfile,
-+                             input.suffix = ".bed",
-+                             target = target,
-+                             chipformat = tbl$chipformat,
-+                             inputformat = tbl$inputformat,
-+                             fragLen = 150,
-+                             pairedEnd = FALSE,
-+                             unique = TRUE)
-> ## Step 3: Compute M and GC scores
-> target <- averageMGC(target = target,
-+                      m.prefix = "syntheticData/mgc/",
-+                      m.suffix = "_M.txt",
-+                      gc.prefix = "syntheticData/mgc/",
-+                      gc.suffix = "_GC.txt")
-> ## Step 4: Compute the background means
-> Mu0 <- bkng_mean(inputdat = dat$input,
-+                  target = target,
-+                  family = "negbin")
-\end{Sinput}
-\end{Schunk}
+We can execute Step 2 and 3 separately. In Step 2, we use the function \Rfunction{generateReadMatrices} to calculate the ChIP count at each locus for each ChIP replicate. We also calculate the count at each locus for each matching input.
 
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{## Step 2: Generate mapped count matrices}
+\hlstd{dat} \hlkwb{<-} \hlkwd{generateReadMatrices}\hlstd{(}\hlkwc{chipfile} \hlstd{= tbl}\hlopt{$}\hlstd{chipfile,}
+    \hlkwc{inputfile} \hlstd{= tbl}\hlopt{$}\hlstd{inputfile,} \hlkwc{input.suffix} \hlstd{=} \hlstr{".bed"}\hlstd{,}
+    \hlkwc{target} \hlstd{= target,} \hlkwc{chipformat} \hlstd{= tbl}\hlopt{$}\hlstd{chipformat,} \hlkwc{inputformat} \hlstd{= tbl}\hlopt{$}\hlstd{inputformat,}
+    \hlkwc{fragLen} \hlstd{=} \hlnum{150}\hlstd{,} \hlkwc{pairedEnd} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{unique} \hlstd{=} \hlnum{TRUE}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
 
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{conds} \hlkwb{<-} \hlkwd{paste}\hlstd{(tbl}\hlopt{$}\hlstd{cell, tbl}\hlopt{$}\hlstd{factor,} \hlkwc{sep} \hlstd{=} \hlstr{"."}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 
 
-\begin{Schunk}
-\begin{Sinput}
-> ## Step 5: Fit an MBASIC model
-> MBASIC.fit <- MBASIC.binary(Y = t(dat$chip),
-+                             Mu0 = t(Mu0),
-+                             fac = conds,
-+                             J=3,
-+                             zeta=0.2,
-+                             maxitr = 100,
-+                             burnin = 20,
-+                             outfile=NULL,
-+                             out=NULL,
-+                             init.mod = NULL,
-+                             struct = NULL,
-+                             family="negbin",
-+                             tol = 1e-4,
-+                             nsig = 2)
-\end{Sinput}
-\end{Schunk}
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# processing input file syntheticData/input/wgEncodeLabExpCell1InputCtrlAlnRep1.bed\\\#\# processing input file syntheticData/input/wgEncodeLabExpCell1InputCtrlAlnRep2.bed\\\#\# processing input file syntheticData/input/wgEncodeLabExpCell1InputCtrlAlnRep3.bed\\\#\# processing input file syntheticData/input/wgEncodeLabExpCell2InputCtrlAlnRep1.bed\\\#\# processing input file syntheticData/input/wgEncodeLabExpCell2InputCtrlAlnRep2.bed\\\#\# processing input file syntheticData/input/wgEncodeLabExpCell2InputCtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac3CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac3CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac3CtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac4CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac4CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac4CtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac5CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac5CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac5CtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac1CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac2CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac2CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac3CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac3CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac4CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac5CtrlAlnRep1.bed\\\#\# processing chr1\\\#\# read mappability file\\\#\# read gc file\\\#\# processing chr5\\\#\# read mappability file\\\#\# read gc file\\\#\# processing chr4\\\#\# read mappability file\\\#\# read gc file\\\#\# processing chr2\\\#\# read mappability file\\\#\# read gc file\\\#\# processing chr3\\\#\# read mappability file\\\#\# read gc file}}\end{kframe}
+\end{knitrout}
 
-\subsection{The ``MBASICFit" Class}
+We can directly use the matching input counts as the covariate data in our model. Advanced users of our package may want to normalize the input counts according to the mappability and GC scores and use the normalized counts as the covariate. In that case, we need call functions \Rfunction{averageMGC} and \Rfunction{bkng\_mean}.
 
-The outputs of both ``MBASIC.binary" and ``MBASIC.pipeline" functions are of S-4 class ``MBASICFit".
+Notice that such a normalization step is automatically executed if users specify the 'm.prefix', 'm.suffix', 'gc.prefix' and 'gc.suffix' arguments in \Rfunction{MASIC.pipeline}.
 
-\begin{Schunk}
-\begin{Sinput}
-> showClass("MBASICFit")
-\end{Sinput}
-\begin{Soutput}
-Class "MBASICFit" [package "MBASIC"]
 
-Slots:
-                                          
-Name:              Theta                 W
-Class:            matrix            matrix
-                                          
-Name:                  V                 Z
-Class:            matrix            matrix
-                                          
-Name:                  b               aic
-Class:           numeric           numeric
-                                          
-Name:                bic              aicc
-Class:           numeric           numeric
-                                          
-Name:                lik            alllik
-Class:           numeric           numeric
-                                          
-Name:               zeta                Mu
-Class:           numeric            matrix
-                                          
-Name:              Sigma            sigma0
-Class:            matrix           numeric
-                                          
-Name:                  e             probz
-Class:           numeric           numeric
-                                          
-Name:                  P         converged
-Class:            matrix           logical
-                                          
-Name:          Theta.err               ARI
-Class:           numeric           numeric
-                                          
-Name:              W.err      MisClassRate
-Class:           numeric           numeric
-                                          
-Name:               Iter AssociationMatrix
-Class:           numeric            matrix
-                                          
-Name:               Loss            Struct
-Class:              list            matrix
-\end{Soutput}
-\end{Schunk}
 
-Slot ``Theta" is a matrix for the estimated state, where each row corresponds to an experimental condition, and each column corresponds to a locus. Each entry is the probability for the locus to be un-binding at the corresponding state.
+\subsection{Step 3: Build the MBASIC Model}
 
-\begin{Schunk}
-\begin{Sinput}
-> dim(MBASIC.fit@Theta)
-\end{Sinput}
-\begin{Soutput}
-[1]  10 300
-\end{Soutput}
-\begin{Sinput}
-> rownames(MBASIC.fit@Theta)
-\end{Sinput}
-\begin{Soutput}
- [1] "Cell1.Fac1" "Cell1.Fac2" "Cell1.Fac3"
- [4] "Cell1.Fac4" "Cell1.Fac5" "Cell2.Fac1"
- [7] "Cell2.Fac2" "Cell2.Fac3" "Cell2.Fac4"
-[10] "Cell2.Fac5"
-\end{Soutput}
-\begin{Sinput}
-> head(MBASIC.fit@Theta[ 1, ])
-\end{Sinput}
-\begin{Soutput}
-[1] 1 1 1 1 1 1
-\end{Soutput}
-\end{Schunk}
 
-Slot ``Z" is a matrix for the posterior probablity of each locus to belong to each cluster. The rows correspond to the loci and the columns correspond to the clusters.
 
-\begin{Schunk}
-\begin{Sinput}
-> dim(MBASIC.fit@Z)
-\end{Sinput}
-\begin{Soutput}
-[1] 100   3
-\end{Soutput}
-\begin{Sinput}
-> head(MBASIC.fit@Z)
-\end{Sinput}
-\begin{Soutput}
-           [,1]       [,2]      [,3]
-[1,] 0.86539593 0.03110030 0.1035038
-[2,] 0.03705921 0.02719300 0.9357478
-[3,] 0.11325310 0.08310192 0.8036450
-[4,] 0.10692364 0.07845754 0.8146188
-[5,] 0.23947450 0.17571960 0.5848059
-[6,] 0.01864506 0.01368121 0.9676737
-\end{Soutput}
-\end{Schunk}
+We can build an MBASIC model using function \Rfunction{MBASIC}:
 
-Slot ``b" is a vector for the probability of each locus not to belong to any cluster.
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{## Step 3: Fit an MBASIC model}
+\hlstd{fit} \hlkwb{<-} \hlkwd{MBASIC}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),} \hlkwc{Gamma} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{input),}
+    \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{10}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
 
-\begin{Schunk}
-\begin{Sinput}
-> length(MBASIC.fit@b)
-\end{Sinput}
-\begin{Soutput}
-[1] 100
-\end{Soutput}
-\begin{Sinput}
-> head(MBASIC.fit@b)
-\end{Sinput}
-\begin{Soutput}
-[1] 0.17699181 0.15474780 0.47290380 0.44647337
-[5] 1.00000000 0.07785736
-\end{Soutput}
-\end{Schunk}
+We can also simultaneously fit models with different numbers of clusters:
 
-Slot ``W" is a matrix for the probability of loci in each group to be unenriched at each condition.
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{## Step 3: Fit an MBASIC model}
+\hlstd{allfits} \hlkwb{<-} \hlkwd{MBASIC.full}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),} \hlkwc{Gamma} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{input),}
+    \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlopt{:}\hlnum{10}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{10}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{,}
+    \hlkwc{ncores} \hlstd{=} \hlnum{10}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
 
-\begin{Schunk}
-\begin{Sinput}
-> rownames(MBASIC.fit@W)
-\end{Sinput}
-\begin{Soutput}
- [1] "Cell1.Fac1" "Cell1.Fac2" "Cell1.Fac3"
- [4] "Cell1.Fac4" "Cell1.Fac5" "Cell2.Fac1"
- [7] "Cell2.Fac2" "Cell2.Fac3" "Cell2.Fac4"
-[10] "Cell2.Fac5"
-\end{Soutput}
-\begin{Sinput}
-> dim(MBASIC.fit@W)
-\end{Sinput}
-\begin{Soutput}
-[1] 10  3
-\end{Soutput}
-\begin{Sinput}
-> head(MBASIC.fit@W)
-\end{Sinput}
-\begin{Soutput}
-                   [,1]         [,2]         [,3]
-Cell1.Fac1 1.000000e+00 0.9999999999 0.9999999999
-Cell1.Fac2 2.824951e-01 0.0012727096 0.9999999999
-Cell1.Fac3 5.997807e-01 0.0000000001 0.6887011720
-Cell1.Fac4 1.000000e+00 0.9999999999 0.0000000001
-Cell1.Fac5 9.267086e-05 0.5333470444 0.8000822904
-Cell2.Fac1 1.000000e+00 0.5345144593 0.9191454521
-\end{Soutput}
-\end{Schunk}
+\section{Interpreting the Results}\label{sec:mbasicfit}
 
-\subsection{Advanced Model Initialization}
+The outputs of both \Rfunction{MBASIC} and \Rfunction{MBASIC.pipeline} functions are of S-4 class \Rclass{MBASICFit}.
 
-An important argument that is accessible by the ``MBASIC.binary" function but not ``MBASIC.pipeline" is ``init.mod". This argument allows the user to pass a ``MBASICFit" object, whose values are used to initialize the parameters in this function. It can be useful in two conditions:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{showClass}\hlstd{(}\hlstr{"MBASICFit"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+Slot 'Theta' records the probabilities for each locus to have each state under each condition. For a model with K experiment conditions, S states and I units, slot 'Theta' is a matrix of dimension KS by I, and the (K(s-1)+k, i)-th entry is the probability for the i-th locus to have state s under condition k. 
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{dim}\hlstd{(fit}\hlopt{@}\hlkwc{Theta}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+## [1]  20 100
+\end{verbatim}
+\begin{alltt}
+\hlkwd{rownames}\hlstd{(fit}\hlopt{@}\hlkwc{Theta}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+##  [1] "Cell1.Fac1" "Cell1.Fac2" "Cell1.Fac3"
+##  [4] "Cell1.Fac4" "Cell1.Fac5" "Cell2.Fac1"
+##  [7] "Cell2.Fac2" "Cell2.Fac3" "Cell2.Fac4"
+## [10] "Cell2.Fac5" "Cell1.Fac1" "Cell1.Fac2"
+## [13] "Cell1.Fac3" "Cell1.Fac4" "Cell1.Fac5"
+## [16] "Cell2.Fac1" "Cell2.Fac2" "Cell2.Fac3"
+## [19] "Cell2.Fac4" "Cell2.Fac5"
+\end{verbatim}
+\begin{alltt}
+\hlkwd{head}\hlstd{(fit}\hlopt{@}\hlkwc{Theta}\hlstd{[}\hlnum{1}\hlstd{, ])}
+\end{alltt}
+\begin{verbatim}
+## [1] 0.809012298 0.004470991 0.991730554
+## [4] 0.999904604 0.930188530 0.999558999
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+In our example, suppose state 1 corresponds to the un-enriched state, and state 2 the enriched state. We can draw a heatmap to visualize the enrichment states across all data.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{library}\hlstd{(gplots)}
+\end{alltt}
+
+
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# KernSmooth 2.23 loaded\\\#\# Copyright M. P. Wand 1997-2009\\\#\# \\\#\# Attaching package: 'gplots'\\\#\# \\\#\# The following object is masked from 'package:IRanges':\\\#\# \\\#\#\ \ \ \  space\\\#\# \\\#\# The following object is masked from 'package:stats':\\\#\# \\\#\#\ \ \ \  lowess}}\begin{alltt}
+\hlkwd{heatmap.2}\hlstd{(fit}\hlopt{@}\hlkwc{Theta}\hlstd{[}\hlkwd{seq}\hlstd{(}\hlnum{10}\hlstd{)} \hlopt{+} \hlnum{10}\hlstd{, ],} \hlkwc{Rowv} \hlstd{=} \hlnum{FALSE}\hlstd{,}
+    \hlkwc{Colv} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{dendrogram} \hlstd{=} \hlstr{"none"}\hlstd{,} \hlkwc{trace} \hlstd{=} \hlstr{"none"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/unnamed-chunk-20-1} 
+
+}
+
+
+
+\end{knitrout}
+
+Slot 'clustProb' is a matrix for the posterior probablity of each locus to belong to each cluster. The first column contains the probability for each locus to be a singleton (i.e. not belong to any clusters). The (j+1)-th column contains the probabilities for each locus to be in cluster j.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{dim}\hlstd{(fit}\hlopt{@}\hlkwc{clustProb}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+## [1] 100   4
+\end{verbatim}
+\begin{alltt}
+\hlkwd{round}\hlstd{(}\hlkwd{head}\hlstd{(fit}\hlopt{@}\hlkwc{clustProb}\hlstd{),}\hlnum{3}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+##      b.prob                  
+## [1,]  0.721 0.000 0.000 0.279
+## [2,]  0.997 0.001 0.001 0.001
+## [3,]  0.873 0.000 0.000 0.127
+## [4,]  0.725 0.000 0.000 0.275
+## [5,]  0.547 0.000 0.453 0.000
+## [6,]  0.273 0.000 0.000 0.727
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+Slot 'W' is a matrix for the state-space profiles for all clusters. For a model with K conditions, S states and J clusters, this matrix has dimension KS by J, where the (k+K(s-1),j)-th entry contains the probability that a unit in cluster j has state s under condition k. For our example, the enriched probability for all clusters is in rows 11-20.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{rownames}\hlstd{(fit}\hlopt{@}\hlkwc{W}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+##  [1] "Cell1.Fac1" "Cell1.Fac2" "Cell1.Fac3"
+##  [4] "Cell1.Fac4" "Cell1.Fac5" "Cell2.Fac1"
+##  [7] "Cell2.Fac2" "Cell2.Fac3" "Cell2.Fac4"
+## [10] "Cell2.Fac5" "Cell1.Fac1" "Cell1.Fac2"
+## [13] "Cell1.Fac3" "Cell1.Fac4" "Cell1.Fac5"
+## [16] "Cell2.Fac1" "Cell2.Fac2" "Cell2.Fac3"
+## [19] "Cell2.Fac4" "Cell2.Fac5"
+\end{verbatim}
+\begin{alltt}
+\hlkwd{dim}\hlstd{(fit}\hlopt{@}\hlkwc{W}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+## [1] 20  3
+\end{verbatim}
+\begin{alltt}
+\hlkwd{round}\hlstd{(}\hlkwd{head}\hlstd{(fit}\hlopt{@}\hlkwc{W}\hlstd{[}\hlkwd{seq}\hlstd{(}\hlnum{10}\hlstd{)} \hlopt{+} \hlnum{10}\hlstd{, ]),}\hlnum{3}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+##             [,1]  [,2]  [,3]
+## Cell1.Fac1 0.999 0.604 0.092
+## Cell1.Fac2 0.002 1.000 0.364
+## Cell1.Fac3 1.000 1.000 0.004
+## Cell1.Fac4 0.989 1.000 0.424
+## Cell1.Fac5 0.484 0.015 0.051
+## Cell2.Fac1 0.002 0.274 1.000
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\section{Advanced Functions}
+
+\subsection{Model Initialization}
+
+Function \Rfunction{MBASIC} accepts initial values for a number of parameters. This is especially useful when an initial run of \Rfunction{MBASIC} reaches the maximum number of iterations, but the algorithm is not converged. In this case, we can rerun the \Rfunction{MBASIC} using the previously fitted model parameters to initialize the model.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{fit.update} \hlkwb{<-} \hlkwd{MBASIC}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),} \hlkwc{Gamma} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{input),}
+    \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{10}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{,}
+    \hlkwc{Mu.init} \hlstd{= fit}\hlopt{@}\hlkwc{Mu}\hlstd{,} \hlkwc{Sigma.init} \hlstd{= fit}\hlopt{@}\hlkwc{Sigma}\hlstd{,} \hlkwc{V.init} \hlstd{= fit}\hlopt{@}\hlkwc{V}\hlstd{,}
+    \hlkwc{ProbMat.init} \hlstd{= fit}\hlopt{@}\hlkwc{Theta}\hlstd{,} \hlkwc{W.init} \hlstd{= fit}\hlopt{@}\hlkwc{W}\hlstd{,} \hlkwc{Z.init} \hlstd{= fit}\hlopt{@}\hlkwc{Z}\hlstd{,}
+    \hlkwc{b.init} \hlstd{= fit}\hlopt{@}\hlkwc{b}\hlstd{,} \hlkwc{P.init} \hlstd{= fit}\hlopt{@}\hlkwc{P}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\subsection{Multiple Components in a State}
+
+MBASIC model assumes that the distribution of each data is a mixture of several components, and the components are mapped to different states. In the simpliest cases, each component corresponds to a distinct state. In some cases, we might want to include multiple components in one state. For example, for ChIP-seq data, we may want to include two components for the enriched state to capture both the weakly enriched and strongly enriched loci. This can be done by specifying the 'statemap' value. In the following example, we assume there are three components for data set, the first component corresponds to the un-enriched state, the second and the third components both belong to the enriched states.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{fit.mix} \hlkwb{<-} \hlkwd{MBASIC}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),} \hlkwc{Gamma} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{input),}
+    \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{10}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{,}
+    \hlkwc{statemap} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{2}\hlstd{,} \hlnum{2}\hlstd{))}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\subsection{Simulation}
+
+The \software{MBASIC} package also provides functions to simulate and fit general MBASIC models.
+
+Function \Rfunction{MBASIC.sim} simulates data with 'I' units and 'J' clusters. The 'S' argument specifies the number of different states, and 'zeta' is the proportion of singleton. 'fac' specifies the condition for each experiment. The 'xi' argument relates to the magnitude of the simulated data. For detailed description users are recommended to read our manual.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{## Simulate data across I=1000 units with J=3}
+\hlcom{## clusters There are S=3 states}
+\hlstd{dat.sim} \hlkwb{<-} \hlkwd{MBASIC.sim}\hlstd{(}\hlkwc{xi} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"lognormal"}\hlstd{,}
+    \hlkwc{I} \hlstd{=} \hlnum{1000}\hlstd{,} \hlkwc{fac} \hlstd{=} \hlkwd{rep}\hlstd{(}\hlnum{1}\hlopt{:}\hlnum{10}\hlstd{,} \hlkwc{each} \hlstd{=} \hlnum{2}\hlstd{),} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{S} \hlstd{=} \hlnum{3}\hlstd{,}
+    \hlkwc{zeta} \hlstd{=} \hlnum{0.1}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\Rfunction{MBASIC.sim} returns a list object. The 'Y' field contains the simulated data matrix at each unit (column) for each experiment (row). The 'Theta' field is the matrix for the states for each unit (column) and each experimental condition (column). The 'W' field is a matrix with dimensions KS $\times$ J, where the (S(k-1)+s,j)-th entry is the probability that units in the j-th cluster have state s under the k-th condition.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{names}\hlstd{(dat.sim)}
+\end{alltt}
+\begin{verbatim}
+##  [1] "Theta"      "Y"          "X"         
+##  [4] "fac"        "W"          "Z"         
+##  [7] "V"          "delta"      "zeta"      
+## [10] "prior.mean" "prior.sd"   "stdev"     
+## [13] "Mu"         "bkng"       "snr"       
+## [16] "non.id"
+\end{verbatim}
+\begin{alltt}
+\hlkwd{dim}\hlstd{(dat.sim}\hlopt{$}\hlstd{Y)}
+\end{alltt}
+\begin{verbatim}
+## [1]   20 1000
+\end{verbatim}
+\begin{alltt}
+\hlkwd{dim}\hlstd{(dat.sim}\hlopt{$}\hlstd{W)}
+\end{alltt}
+\begin{verbatim}
+## [1] 30  3
+\end{verbatim}
+\begin{alltt}
+\hlkwd{dim}\hlstd{(dat.sim}\hlopt{$}\hlstd{Theta)}
+\end{alltt}
+\begin{verbatim}
+## [1]   10 1000
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+We can apply \Rfunction{MBASIC} to this simulated data. If we pass the simulated data to the function through the 'para' argument, we can get the following slots on the estimation error:
+
+\begin{itemize}
+\item \textit{ARI}: Adjusted Rand Index;
+\item \textit{W.err}: The mean squared error in matrix W;
+\item \textit{Theta.err}: The mean squared error in state estimation;
+\item \textit{MisClassRate}: The mis-classification rate.
+\end{itemize}
+ 
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{dat.sim.fit} \hlkwb{<-} \hlkwd{MBASIC}\hlstd{(}\hlkwc{Y} \hlstd{= dat.sim}\hlopt{$}\hlstd{Y,} \hlkwc{S} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{fac} \hlstd{= dat.sim}\hlopt{$}\hlstd{fac,}
+    \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{para} \hlstd{= dat.sim,} \hlkwc{family} \hlstd{=} \hlstr{"lognormal"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{dat.sim.fit}\hlopt{@}\hlkwc{ARI}
+\end{alltt}
+\begin{verbatim}
+## [1] 0.9200292
+\end{verbatim}
+\begin{alltt}
+\hlstd{dat.sim.fit}\hlopt{@}\hlkwc{W.err}
+\end{alltt}
+\begin{verbatim}
+## [1] 0.0942875
+\end{verbatim}
+\begin{alltt}
+\hlstd{dat.sim.fit}\hlopt{@}\hlkwc{Theta.err}
+\end{alltt}
+\begin{verbatim}
+## [1] 0.2112985
+\end{verbatim}
+\begin{alltt}
+\hlstd{dat.sim.fit}\hlopt{@}\hlkwc{MisClassRate}
+\end{alltt}
+\begin{verbatim}
+## [1] 0.06318779
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\subsection{Degenerate MBASIC Models}
+
+In a degenerate MBASIC model, the states for each unit under each condition are directly observed. \Rfunction{MBASIC.sim.state} and \Rfunction{MBASIC.state} functions allows users to simulate and fit such models. The usage of these functions are similar to functions \Rfunction{MBASIC.sim} and \Rfunction{MBASIC}.
+
+\Rfunction{MBASIC.sim.state} simulates data from a degenerate MBASIC model. Different from \Rfunction{MBASIC.sim}, \Rfunction{MBASIC.sim.state} does not need arguments 'fac' and 'family', but it needs the 'K' argument, specifying the number of experimental conditions.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{state.sim} \hlkwb{<-} \hlkwd{MBASIC.sim.state}\hlstd{(}\hlkwc{I} \hlstd{=} \hlnum{1000}\hlstd{,} \hlkwc{K} \hlstd{=} \hlnum{10}\hlstd{,} \hlkwc{J} \hlstd{=} \hlnum{4}\hlstd{,}
+    \hlkwc{S} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{zeta} \hlstd{=} \hlnum{0.1}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\Rfunction{MBASIC.state} fits a degenerate MBASIC model. Different to function \Rfunction{MBASIC}, it does not need arguments 'Y' and 'family'. Instead, it needs the argument 'Theta' to pass the observed states.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{state.sim.fit} \hlkwb{<-} \hlkwd{MBASIC.state}\hlstd{(}\hlkwc{Theta} \hlstd{= state.sim}\hlopt{$}\hlstd{Theta,}
+    \hlkwc{J} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{zeta} \hlstd{=} \hlnum{0.1}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\section{Session Information}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{verbatim}
+## R version 3.1.1 (2014-07-10)
+## Platform: x86_64-redhat-linux-gnu (64-bit)
+## 
+## locale:
+##  [1] LC_CTYPE=zh_TW.UTF-8      
+##  [2] LC_NUMERIC=C              
+##  [3] LC_TIME=en_US.UTF-8       
+##  [4] LC_COLLATE=en_US.UTF-8    
+##  [5] LC_MONETARY=en_US.UTF-8   
+##  [6] LC_MESSAGES=en_US.UTF-8   
+##  [7] LC_PAPER=en_US.UTF-8      
+##  [8] LC_NAME=C                 
+##  [9] LC_ADDRESS=C              
+## [10] LC_TELEPHONE=C            
+## [11] LC_MEASUREMENT=en_US.UTF-8
+## [12] LC_IDENTIFICATION=C       
+## 
+## attached base packages:
+## [1] parallel  stats     graphics  grDevices
+## [5] utils     datasets  methods   base     
+## 
+## other attached packages:
+##  [1] gplots_2.16.0        MBASIC_0.99.0       
+##  [3] Rcpp_0.11.4          msm_1.5             
+##  [5] mclust_4.4           MASS_7.3-33         
+##  [7] gtools_3.4.1         GenomicRanges_1.14.4
+##  [9] XVector_0.2.0        IRanges_1.20.7      
+## [11] BiocGenerics_0.8.0   doMC_1.3.3          
+## [13] iterators_1.0.7      foreach_1.4.2       
+## [15] cluster_1.15.2      
+## 
+## loaded via a namespace (and not attached):
+##  [1] BiocStyle_1.0.0    bitops_1.0-6      
+##  [3] caTools_1.17.1     codetools_0.2-8   
+##  [5] compiler_3.1.1     evaluate_0.5.5    
+##  [7] expm_0.99-1.1      formatR_1.0       
+##  [9] gdata_2.13.3       grid_3.1.1        
+## [11] highr_0.4          KernSmooth_2.23-12
+## [13] knitr_1.9          lattice_0.20-29   
+## [15] Matrix_1.1-5       mvtnorm_1.0-2     
+## [17] splines_3.1.1      stats4_3.1.1      
+## [19] stringr_0.6.2      survival_2.37-7   
+## [21] tools_3.1.1
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+
+
+\bibliographystyle{plain}
+
+\bibliography{mbasic}
+
+\end{document}
+
+
+initial values for  that is accessible by the \Rfunction{MBASIC.binary} function but not \Rfunction{MBASIC.pipeline} is 'init.mod'. This argument allows the user to pass a ``MBASICFit" object, whose values are used to initialize the parameters in this function. It can be useful in two conditions:
 
 \begin{enumerate}
-\item The model fitted by a previous call of function ``MBASIC.binary" has not yet converged, and the user wishes to increase the number of iterations;
+\item The model fitted by a previous call of function ``MBASIC" has not yet converged, and the user wishes to increase the number of iterations;
 \item The user wants to fit a MBASIC model with a larger number of clusters (``J")  from a previously fitted model;
 \item The user wants to fit a MBASIC model with a different structural constraints (``struct") from a previously fitted model.
 \end{enumerate}
@@ -424,194 +722,24 @@ In both cases, ``MBASIC.binary" uses the results from ``init.mod" before startin
 \item ``J" for the ``MBASIC.binary" function must be larger than or equal to the value used in ``init.mod".
 \end{enumerate}
    
-\begin{Schunk}
-\begin{Sinput}
-> ## Fit a MBASIC model with 4 clusters
-> MBASIC.binary(Y = t(dat$chip),  Mu0 = t(Mu0),
-+               fac = conds,  J=4,  zeta=0.2,
-+               maxitr = 100, burnin = 20,
-+               init.mod = MBASIC.fit,
-+               struct = NULL, family="negbin",
-+               tol = 1e-4,  nsig = 2)
-> ## Fit a MBASIC model with more iterations
-> MBASIC.binary(Y = t(dat$chip),  Mu0 = t(Mu0),
-+               fac = conds,  J=3,  zeta=0.2,
-+               maxitr = 200, burnin = 20,
-+               init.mod = MBASIC.fit,
-+               struct = NULL, family="negbin",
-+               tol = 1e-4,  nsig = 2)
-\end{Sinput}
-\end{Schunk}
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{## Fit a MBASIC model with 4 clusters}
+\hlkwd{MBASIC.binary}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),}  \hlkwc{Mu0} \hlstd{=} \hlkwd{t}\hlstd{(Mu0),}
+              \hlkwc{fac} \hlstd{= conds,}  \hlkwc{J}\hlstd{=}\hlnum{4}\hlstd{,}  \hlkwc{zeta}\hlstd{=}\hlnum{0.2}\hlstd{,}
+              \hlkwc{maxitr} \hlstd{=} \hlnum{100}\hlstd{,} \hlkwc{burnin} \hlstd{=} \hlnum{20}\hlstd{,}
+              \hlkwc{init.mod} \hlstd{= fit,}
+              \hlkwc{struct} \hlstd{=} \hlkwa{NULL}\hlstd{,} \hlkwc{family}\hlstd{=}\hlstr{"negbin"}\hlstd{,}
+              \hlkwc{tol} \hlstd{=} \hlnum{1e-4}\hlstd{,}  \hlkwc{nsig} \hlstd{=} \hlnum{2}\hlstd{)}
 
-\section{General Functionalities}
-
-The \texttt{MBASIC} package also provides additional functions to simulate and fit general MBASIC models with $S\geq 2$ states.
-
-\subsection{Simulation for General MBASIC Models}
-
-Function ``MBASIC.sim" simulates data with ``I" units with ``J" clusters. The ``S" argument specifies the number of different states, and ``zeta" is the proportion of unclustered units. ``fac" specifies the condition for each experiment. The ``xi" argument relates to the magnitude of the simulated data. Its detailed description is included in our manual.
-
-\begin{Schunk}
-\begin{Sinput}
-> ## Simulate data across I=1000 units with J=3 clusters
-> ## There are S=3 states
-> dat.sim <- MBASIC.sim(xi = 2, family = "lognormal",
-+                       I = 1000, fac = rep(1:10, each = 2),
-+                       J = 3, S = 3, zeta = 0.1)
-\end{Sinput}
-\end{Schunk}
-
-The ``MBASIC.sim" function returns a list object. The ``Y" field contains the simulated data matrix at each unit (column) for each experiment (row). The ``Theta" field is the matrix for the states for each unit (column) and each experimental condition (column). The ``W" field is a matrix with dimensions KS $\times$ J, where the (S(k-1)+s,j)-th entry is the probability that units in the j-th cluster have state s under the k-th condition.
-
-\begin{Schunk}
-\begin{Sinput}
-> names(dat.sim)
-\end{Sinput}
-\begin{Soutput}
- [1] "Theta"      "Y"          "W"         
- [4] "Z"          "delta"      "zeta"      
- [7] "prior.mean" "prior.sd"   "stdev"     
-[10] "Mu"         "bkng"       "snr"       
-[13] "non.id"    
-\end{Soutput}
-\begin{Sinput}
-> dim(dat.sim$Y)
-\end{Sinput}
-\begin{Soutput}
-[1]   20 1000
-\end{Soutput}
-\begin{Sinput}
-> dim(dat.sim$W)
-\end{Sinput}
-\begin{Soutput}
-[1] 30  3
-\end{Soutput}
-\begin{Sinput}
-> dim(dat.sim$Theta)
-\end{Sinput}
-\begin{Soutput}
-[1]   10 1000
-\end{Soutput}
-\end{Schunk}
-
-\subsection{Fitting General MBASIC Models}
-
-The general MBASIC model is fitted by the function ``MBASIC". The arguments here are similar to the ``MBASIC.binary" function. The arguments that are not common to both functions are::
-
-\begin{center}
-\begin{tabular}{cccc}
-  \hline
-  Argument & Meaning & ``MBASIC.binary" & ``MBASIC" \\
-  \hline
-  ``nsig" & Number of signal components for the binding state. & Y & N \\
-  ``Mu0" & Background means. & Y & N \\
-  ``S" & Number of states. & N & Y \\
-  ``method" & Fitting method. & N & Y\\
-  ``para" & True parameters. & N & Y \\
-  \hline
-\end{tabular}
-\end{center}
- 
-The ``method" argument specifies the fitting algorithm to be used. Currently, thre algorithms are provided. ``em" is the nested E-M algorithm that is also used by ``MBASIC.binary"; ``2em" and ``naive" are benchmark methods. Both ``2em" and ``naive" fit the model in two phases. In Phase 1 they estimate the state space matrix, and in Phase 2 ``2em" uses a mixture model for clustering the units while ``naive" uses hierarchical clustering.
-
-The ``para" argument allows users to pass the true model parameters into the model. In the following codes we pass the simulated list object ``dat.sim". In that case, the output of the model contains a few slots that calculate the estimation error:
-
-\begin{itemize}
-\item \textit{ARI}: Adjusted Rand Index;
-\item \textit{W.err}: The mean squared error in matrix W;
-\item \textit{Theta.err}: The mean squared error in state estimation;
-\item \textit{MisClassRate}: The mis-classification rate.
-\end{itemize}
- 
-For more details of the algorithms, as well as these metrics to assess model fitting, users may refer to \cite{zuo14}.
-
-\begin{Schunk}
-\begin{Sinput}
-> dat.sim.fit <- MBASIC(Y = dat.sim$Y, S = 3,
-+                       fac = rep(1:10, each = 2),
-+                       J = 3, maxitr = 3,
-+                       para = dat.sim, family = "lognormal",
-+                       method = "em",
-+                       zeta = 0.1, tol = 1e-04)
-> dat.sim.fit@ARI
-> dat.sim.fit@W.err
-> dat.sim.fit@Theta.err
-> dat.sim.fit@MisClassRate
-\end{Sinput}
-\end{Schunk}
-
-\subsection{Degenerate MBASIC Models}
-
-In a degenerate MBASIC model, the states for each unit under each condition are directly observed. ``MBASIC.sim.state" and ``MBASIC.state" functions allows users to simulate and fit such models. The usage of these functions are similar to functions ``MBASIC.sim" and ``MBASIC".
-
-``MBASIC.sim.state" simulates data from a degenerate MBASIC model. Most arguments are similar to ``MBASIC.sim". ``MBASIC.sim.state" does not need arguments ``fac" and ``family", but it needs the ``K" argument, specifying the number of experimental conditions.
-
-\begin{Schunk}
-\begin{Sinput}
-> state.sim <- MBASIC.sim.state(I = 1000, K = 10,
-+                               J = 4, S = 3,
-+                               zeta = 0.1)
-\end{Sinput}
-\end{Schunk}
-
-``MBASIC.state" fits a degenerate MBASIC model. Compared to function ``MBASIC", it does not need arguments ``Y" and ``family". Instead, it needs the argument ``Theta" to pass the observed states.
-
-\begin{Schunk}
-\begin{Sinput}
-> state.sim.fit <- MBASIC.state(Theta = state.sim$Theta, J = 4,
-+                               method = "2em", zeta = 0.1,
-+                               maxitr = 100, tol = 1e-04)
-\end{Sinput}
-\end{Schunk}
-
-\section{Session Information}
-
-\begin{Schunk}
-\begin{Soutput}
-R version 3.1.1 (2014-07-10)
-Platform: x86_64-redhat-linux-gnu (64-bit)
-
-locale:
- [1] LC_CTYPE=zh_TW.UTF-8      
- [2] LC_NUMERIC=C              
- [3] LC_TIME=en_US.UTF-8       
- [4] LC_COLLATE=en_US.UTF-8    
- [5] LC_MONETARY=en_US.UTF-8   
- [6] LC_MESSAGES=en_US.UTF-8   
- [7] LC_PAPER=en_US.UTF-8      
- [8] LC_NAME=C                 
- [9] LC_ADDRESS=C              
-[10] LC_TELEPHONE=C            
-[11] LC_MEASUREMENT=en_US.UTF-8
-[12] LC_IDENTIFICATION=C       
-
-attached base packages:
-[1] parallel  stats     graphics  grDevices
-[5] utils     datasets  methods   base     
-
-other attached packages:
- [1] doMC_1.3.3           iterators_1.0.7     
- [3] foreach_1.4.2        MBASIC_0.99.0       
- [5] MASS_7.3-33          GenomicRanges_1.14.4
- [7] XVector_0.2.0        IRanges_1.20.7      
- [9] BiocGenerics_0.8.0   mclust_4.3          
-[11] Rcpp_0.11.2          msm_1.4             
-[13] gtools_3.4.1        
-
-loaded via a namespace (and not attached):
- [1] codetools_0.2-8 compiler_3.1.1 
- [3] expm_0.99-1.1   grid_3.1.1     
- [5] lattice_0.20-29 Matrix_1.1-4   
- [7] mvtnorm_1.0-0   splines_3.1.1  
- [9] stats4_3.1.1    survival_2.37-7
-[11] tools_3.1.1    
-\end{Soutput}
-\end{Schunk}
-
-
-\bibliographystyle{apalike}
-%\bibliographystyle{natbib}
-
-\bibliography{cssmRef}
-
-\end{document}
+\hlcom{## Fit a MBASIC model with more iterations}
+\hlkwd{MBASIC.binary}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),}  \hlkwc{Mu0} \hlstd{=} \hlkwd{t}\hlstd{(Mu0),}
+              \hlkwc{fac} \hlstd{= conds,}  \hlkwc{J}\hlstd{=}\hlnum{3}\hlstd{,}  \hlkwc{zeta}\hlstd{=}\hlnum{0.2}\hlstd{,}
+              \hlkwc{maxitr} \hlstd{=} \hlnum{200}\hlstd{,} \hlkwc{burnin} \hlstd{=} \hlnum{20}\hlstd{,}
+              \hlkwc{init.mod} \hlstd{= fit,}
+              \hlkwc{struct} \hlstd{=} \hlkwa{NULL}\hlstd{,} \hlkwc{family}\hlstd{=}\hlstr{"negbin"}\hlstd{,}
+              \hlkwc{tol} \hlstd{=} \hlnum{1e-4}\hlstd{,}  \hlkwc{nsig} \hlstd{=} \hlnum{2}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}

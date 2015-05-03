@@ -19,10 +19,10 @@
 using namespace Rcpp;
 RcppExport SEXP mcmc(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP) ;
 
-RcppExport SEXP madbayes(SEXP, SEXP,SEXP,SEXP,SEXP,SEXP,SEXP,SEXP,SEXP,SEXP,SEXP, SEXP, SEXP, SEXP);
+RcppExport SEXP madbayes(SEXP,SEXP,SEXP,SEXP,SEXP,SEXP,SEXP, SEXP, SEXP, SEXP);
 RcppExport SEXP madbayes_theta(SEXP, SEXP,SEXP,SEXP,SEXP, SEXP, SEXP);
 
-double ComputeLoss(IntegerVector, IntegerMatrix, NumericMatrix, NumericMatrix, NumericMatrix, NumericMatrix, IntegerVector, IntegerVector, double, double, double, double, double);
+double ComputeLoss(IntegerVector, IntegerMatrix, NumericMatrix, NumericMatrix, NumericMatrix, NumericMatrix, IntegerVector, double, double);
 double ComputeLoss_theta(IntegerVector, IntegerMatrix, NumericMatrix, NumericMatrix, NumericMatrix);
 
 RcppExport SEXP RSolveW(SEXP, SEXP, SEXP, SEXP);

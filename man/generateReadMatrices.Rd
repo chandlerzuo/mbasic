@@ -15,7 +15,7 @@ generateReadMatrices(chipfile, inputfile, input.suffix, target,
 
 \item{input.suffix}{A string for the suffix of input files.}
 
-\item{target}{A GenomicRanges object for the target intervals where the reads are mapped.}
+\item{target}{A RangedData object for the target intervals where the reads are mapped.}
 
 \item{chipformat}{A vector of strings specifying the type of the ChIP files. Can be a single value if all ChIP files have the same format. Currently two file types are allowed: "BAM" or "BED". Default: "BAM".}
 

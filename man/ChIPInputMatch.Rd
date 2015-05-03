@@ -4,7 +4,7 @@
 \alias{ChIPInputMatch}
 \title{Match the ChIP files with input files.}
 \usage{
-ChIPInputMatch(dir, suffices, depth = 5)
+ChIPInputMatch(dir, suffices, depth = 5, celltypes)
 }
 \arguments{
 \item{dir}{A string vector of length 2. The first entry is the ChIP file directory and the second is the input file directory. It is required that ChIP and input files must be in two different directories.}

@@ -4,15 +4,17 @@
 \alias{MBASIC}
 \title{Bayesian clustering model for a state-space matrix.}
 \usage{
-MBASIC(Y, S, fac, J = NULL, maxitr = 100, struct = NULL, para = NULL,
-  family = "lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-10,
-  tol.par = 0.001, out = NULL, X = NULL, verbose = FALSE,
+MBASIC(Y, Gamma = NULL, S, fac, J = NULL, maxitr = 100, struct = NULL,
+  para = NULL, family = "lognormal", method = "MBASIC", zeta = 0.1,
+  tol = 1e-10, tol.par = 0.001, out = NULL, X = NULL, verbose = FALSE,
   statemap = NULL, Mu.init = NULL, Sigma.init = NULL, V.init = NULL,
   ProbMat.init = NULL, W.init = NULL, Z.init = NULL, b.init = NULL,
   P.init = NULL)
 }
 \arguments{
 \item{Y}{An N by I matrix containing the data from N experiments across I observation units.}
+
+\item{Gamma}{The data for background information. Default: NULL. See details for more information.}
 
 \item{S}{An integer for the number of states.}
 
@@ -26,13 +28,15 @@ MBASIC(Y, S, fac, J = NULL, maxitr = 100, struct = NULL, para = NULL,
 
 \item{para}{A list object that contains the true model parameters. Default: NULL. See details for more information.}
 
-\item{family}{The distribution of family to be used. Either "lognormal", "negbin", "binom", "gamma-binom". See details for more information.}
+\item{family}{The distribution of family to be used. Either "lognormal", "negbin", "binom", "gamma-binom" or "scaled-t". See details for more information.}
 
 \item{method}{A string for the fitting method, 'MBASIC' (default), 'PE-MC', 'SE-HC',  or 'SE-MC'. See details for more information.}
 
 \item{zeta}{The initial value for the proportion of units that are not clustered. Default: 0.1. If 0, no singleton cluster is fitted.}
 
-\item{tol}{Tolerance for error in checking the E-M algorithm's convergence. Default: 1e-04.}
+\item{tol}{Tolerance for the relative increment in log-likelihood value in checking the algorithm convergence. Default: 1e-10.}
+
+\item{tol.par}{Tolerance for the relative error in parameter updates in checking the algorithm convergence. Default: 1e-5.}
 
 \item{out}{The file directory for writing fitting information in each E-M iteration. Default: NULL (no information is outputted).}
 
@@ -47,9 +51,14 @@ An object of class 'MBASICFit'.
 This function is designed to analyze general state-space models. The data consists of observations over I units under N experiments with K different conditions. There are S states for each experiment and unit.
 }
 \details{
-Function MBASIC currently supports two different distributional families: log-normal and negative binomial. This should be specified by the 'family' argument.\cr
-For the log-normal distributions, log(Y+1) is modeled as normal distributions. For experiment n, if locus i has state s, distribution for log(Y[n,i]+1) is N(Mu[n,s], Sigma[n,s]).\cr
-For the negative binomial distributions, the meanings of Mu and Sigma are different. For experiment n, if locus i has state s, distribution of Y[n,i] is NB(Mu[n,s], Sigma[n,s]). In this package, NB(mu, a) denotes the negative-binomial distribution with mean mu and size a (i.e. the variance is mu*(1+mu/a)).\cr
+MBASIC assumes that there are S underlying states for each expeirment and each loci. A single state may also include multiple mixture components, indexed by m. In total, we can have M mixture components. The mapping from mixture components to the states are provided by 'statemap'. By default, 'statemap=NULL', in which case each state has only one component, and M=S.\cr
+Function MBASIC currently supports five different distributional families: log-normal, negative binomial, binomial, gamma-binomial and scaled-t distributions. This should be specified by the 'family' argument.\cr
+For the log-normal distributions, log(Y+1) is modeled as normal distributions. For experiment n, if locus i has component m, distribution for log(Y[n,i]+1) is N(Mu[n,m]*Gamma[n,i+I(m-1)], Sigma[n,m]).\cr
+For the negative binomial distributions, the meanings of Mu and Sigma are different. For experiment n, if locus i has component m, distribution of Y[n,i] is NB(Mu[n,m]*Gamma[n,i+I(m-1)], Sigma[n,m]). In this package, NB(mu, a) denotes the negative-binomial distribution with mean mu and size a (i.e. the variance is mu*(1+mu/a)).\cr
+For the binomial distribution, for experiment n, if locus i has component m, distribution for Y[n,i] is Binom(X[n,i], Mu[n,m]).\cr
+For the gamma-binomial distribution, for experiment n, if locus i has component m, distribution for Y[n,i] is Binom(X[n,i], p) where p follows a gamma prior of gamma(Mu[n,m], Sigma[n,m]).\cr
+For the scaled-t distribution, for experiment n, if locus i has component m, distribution for Y[n,i]/Gamma[n,i+I(m-1)]/Mu[n,m] is t distribution with Sigma[n,m] degrees of freedom.\cr
+The 'Gamma' parameter encodes the background information for all N experiments, I units and M components. It can be a matrix with dimension K by I * M, where the background datum for experiment n, unit i and component m is Gamma[n,i+I*(m-1)]. If in the input 'Gamma=NULL', then it is regenerated as a matrix of entries 1 with dimension N x IM. If in the input 'Gamma' is a N x I matrix, then this function adds I(M-1) columns of all 1s to this matrix.\cr
  The 'method' argument determines what fitting method will be used. The default is 'MBASIC', where the states and the clustering are simultaneously estimated. 'SE-HC' and 'SE-MC' methods use 2-step algorithms. In the first step, both estimate the states for each unit by an E-M algorithm for each experiment. In the second step, 'SE-HC' uses hierarchical clustering to cluster the units, while 'SE-MC' uses function 'MBASIC.state' to identify clusters.\cr
 The 'para' argument takes a list object that is supposed to include the following fields:
 \tabular{ll}{

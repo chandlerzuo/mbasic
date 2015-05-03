@@ -3,7 +3,7 @@
 #' @param Y An N by I matrix containing the data from N experiments across I observation units (loci).
 #' @param Gamma An N by I matrix for the prior estimated mean for the background state, for N experiments across the I observation units (loci).
 #' @param fac A vector of length N denoting the experimental condition for each replicate.
-#' @param lambdap,lambdaw,lambda Tuning parameters.
+#' @param lambdaw,lambda Tuning parameters.
 #' @param family The distribution of family to be used. Either "lognormal" or "negbin". See details for more information.
 #' @param maxitr The maximum number of iterations in the E-M algorithm. Default: 100.
 #' @param tol Tolerance for error in checking the E-M algorithm's convergence. Default: 1e-04.
@@ -25,7 +25,7 @@ MBASIC.MADBayes <- function(Y, Gamma, fac, lambdaw = 0.2, lambda = 200, maxitr =
 }
 
 #' @import cluster
-MBASIC.MADBayes.internal <- function(Y, Gamma, fac, lambdaw = NULL, lambda = NULL, maxitr = 20, S, tol = 1e-8, verbose = TRUE, para = NULL, initialize = "kmeans", Theta.init = NULL, Mu.init = NULL, Sigma.init = NULL, clusterLabels.init = NULL, scaleFactor) {
+MBASIC.MADBayes.internal <- function(Y, Gamma, fac, lambdaw = NULL, lambda, maxitr = 20, S, tol = 1e-8, verbose = TRUE, para = NULL, initialize = "kmeans", Theta.init = NULL, Mu.init = NULL, Sigma.init = NULL, clusterLabels.init = NULL, scaleFactor, J = NULL) {
 
   GetModelStructure()
 
@@ -55,34 +55,11 @@ MBASIC.MADBayes.internal <- function(Y, Gamma, fac, lambdaw = NULL, lambda = NUL
   
   ##  zeta <- mean(b)
 
-  ret <- .Call("madbayes", b, clusterLabels, Theta, Mu, D, Gamma, Y, 10, lambdaw, lambda, 2, 2, maxitr, tol, package = "MBASIC")
+  ret <- .Call("madbayes", clusterLabels, Theta, Mu, D, Gamma, Y, lambdaw, lambda, maxitr, tol, package = "MBASIC")
 
   t0 <- Sys.time()
   if(verbose)
-    message("start iteration...")
-
-  if(FALSE) {
-    allloss <- NULL
-    allnclusters <- NULL
-    for(itr in seq(maxitr)) {
-      ret <- .Call("madbayes", ret$b, ret$clusterLabels, ret$Theta, ret$Mu, D, Gamma, Y, 10, lambdaw, lambda, 2, 2, package = "MBASIC")
-      allloss <- c(allloss, ret$loss)
-      allnclusters <- c(allnclusters, max(ret$clusterLabels) + 1)
-      if(verbose & itr %% 10 == 0) {
-        message(Sys.time() - t0, " have passed, number of iterations = ", itr)
-      }
-      if(length(unique(ret$clusterLabels)) != max(ret$clusterLabels) + 1)
-        stop("Number of states is not equivalent to the maximum state index.")
-      if(length(allloss) > 2)
-        if(abs(diff(tail(allloss, 2))) < tol)
-          break
-      if(max(ret$clusterLabels) >= I / 4) {
-        warning("Too many clusters identified. Consider increasing the lambda value.")
-        itr <- maxitr
-        break
-      }
-    }
-  }
+    message("Finished iterations.")
 
   if(maxitr <= ret$Iter) {
     warning("MADBAYES procedure not converged.")
@@ -94,7 +71,7 @@ MBASIC.MADBayes.internal <- function(Y, Gamma, fac, lambdaw = NULL, lambda = NUL
 
   W <- ret$W[, seq(max(ret$clusterLabels) + 1)]
   
-  Theta.err <- W.err <- ari <- mcr <- NULL
+  Theta.err <- W.err <- ari <- mcr <- numeric(0)
   if(!is.null(para)) {
     Theta.err <- sqrt(2 * sum(para$Theta != (ret$Theta + 1)) / I / K / S)
     W.f <- matrix(0, nrow = K * S, ncol = J)
@@ -130,8 +107,10 @@ MBASIC.MADBayes.internal <- function(Y, Gamma, fac, lambdaw = NULL, lambda = NUL
   ## Add normalized data
   ## Y: I * N, each column has mean 1
   Theta.norm <- matrix(0, ncol = I, nrow = K * S)
+  PDF <- matrix(0, ncol = I, nrow = N * S)
   for(s in seq(S)) {
     denY <- dnorm(Y, mean = rep(Mu[, s], I), sd = rep(sqrt(Sigma[, s]), I), log = TRUE)
+    PDF[seq(N) + N * (s - 1), ] <- denY
     Theta.norm[seq(K) + K * (s - 1), ] <- crossprod(designMat, denY)
   }
   ## for any i k, max_s Theta.norm[i, k, s] = 0
@@ -151,12 +130,16 @@ MBASIC.MADBayes.internal <- function(Y, Gamma, fac, lambdaw = NULL, lambda = NUL
     sil.norm <- mean(cluster::silhouette(ret$clusterLabels, dist.norm)[, 3])
   }
 
-  clustProb <- cbind(b, Z * (1 - b))
+  P <- matrix(1 / S, ncol = S, nrow = I)
+  V <- matrix(1, nrow = N, ncol = S)
+  probz <- apply(Z, 2, mean)
+  loglik <- .Call("loglik", W, P, V, 1e-10, probz, PDF, fac, seq(S) - 1, package = "MBASIC")
+  npars <- ncol(Z) - 1 + prod(dim(W)) * (S - 1) / S + N * S * 2
   
   new("MBASICFit",
       Theta = t(ret$Theta) + 1,
       W = W,
-      clustProb = clustProb,
+      clustProb = cbind(0, Z),
       ##      P = ret$P,
       alllik = ret$loss,
       Mu = ret$Mu * scaleFactor,
@@ -173,7 +156,9 @@ MBASIC.MADBayes.internal <- function(Y, Gamma, fac, lambdaw = NULL, lambda = NUL
         lambda = lambda,
         Y = loss.y,
         W = loss.w,
-        Silhouette = sil.norm)
+        Silhouette = sil.norm,
+        loglik = loglik,
+        bic = -2 * loglik + log(N * I) * npars)
     )
 }
 
@@ -244,7 +229,7 @@ MBASIC.MADBayes.full <- function(Y, Gamma = NULL, fac, lambdaw = NULL, lambda = 
       }
       ret <- foreach(i = seq(as.integer(sqrt(I)) + 1)) %dopar% {
         fit.kmeans <- kmeans(t(Theta.aug), i)
-        return(list(loss = fit.kmeans$tot.withinss, clusterLabels = fit.kmeans$cluster - 1))
+        return(list(loss = fit.kmeans$tot.withinss * 2, clusterLabels = fit.kmeans$cluster - 1))
       }
     } else {
       stop("Error: a vector for 'lambda' values must be provided.")
@@ -260,27 +245,35 @@ MBASIC.MADBayes.full <- function(Y, Gamma = NULL, fac, lambdaw = NULL, lambda = 
     }
 
     slopes <- abs(diff(sort(initLosses, decreasing = TRUE)))
+    slopes <- slopes[-1]
     allLambdas <- (slopes[-1] + slopes[-length(slopes)]) / 2
     allLambdas <- sort(allLambdas, decreasing = TRUE)
     minLambda <- min(allLambdas)
     maxLambda <- max(allLambdas)
-    lambdas <- seq(minLambda, maxLambda, length = nlambdas + 2)
+    ## lambdas <- seq(minLambda, maxLambda, length = nlambdas)
+    lambdas <- unique(quantile(allLambdas, seq(nlambdas) / (nlambdas + 2)))
     lambdas <- lambdas[-c(1, length(lambdas))]
     alllambdas <- rep(lambdas, each = nfits)
 
     initClusterLabels <- list()
     usedids <- numeric(0)
     freeids <- seq_along(allLambdas)
+    allJs <- seq_along(alllambdas)
     for(i in seq_along(alllambdas)) {
       j <- freeids[which.min(abs(allLambdas[freeids] - alllambdas[i]))[1]]
-      initClusterLabels[[i]] <- allClusterLabels[[j + 1]]
+      initClusterLabels[[i]] <- allClusterLabels[[j + 2]]
       usedids <- c(usedids, j)
       freeids <- setdiff(freeids, usedids)
+      j <- which.min(abs(allLambdas - alllambdas[i]))[1]
+      allJs[i] <- max(allClusterLabels[[j + 2]]) + 1
     }
 
+    message("Selected lambda values: ", paste(allLambdas, collapse = ", "))
+    
     results <- foreach(i = seq_along(alllambdas)) %dopar% {
       set.seed(i + Sys.time())
-      fit <- MBASIC.MADBayes.internal(Y, Gamma, fac, lambdaw = lambdaw, lambda = alllambdas[i], maxitr = maxitr, S = S, tol = tol, verbose = FALSE, para = para, initialize = initialize, Theta.init = Theta, Mu.init = Mu, Sigma.init = Sigma, clusterLabels.init = initClusterLabels[[i]], scaleFactor = scaleFactor)
+      ##      fit <- MBASIC.MADBayes.internal(Y, Gamma, fac, lambdaw = lambdaw, lambda = alllambdas[i], maxitr = maxitr, S = S, tol = tol, verbose = FALSE, para = para, initialize = initialize, Theta.init = Theta, Mu.init = Mu, Sigma.init = Sigma, clusterLabels.init = initClusterLabels[[i]], scaleFactor = scaleFactor)
+      fit <- MBASIC.MADBayes.internal(Y, Gamma, fac, lambdaw = lambdaw, lambda = alllambdas[i], maxitr = maxitr, S = S, tol = tol, verbose = FALSE, para = para, initialize = initialize, Theta.init = Theta, Mu.init = Mu, Sigma.init = Sigma, scaleFactor = scaleFactor, J = allJs[i])
       list(fit = fit, lambda = alllambdas[i])
     }
   }
@@ -290,13 +283,14 @@ MBASIC.MADBayes.full <- function(Y, Gamma = NULL, fac, lambdaw = NULL, lambda = 
   bestFits <- list()
   bestIters <- rep(0, length(lambdas))
   for(i in seq_along(results)) {
-    lambdaid <- which(lambdas == alllambdas[i])
+    lambdaid <- which(lambdas == alllambdas[i])[1]
     if(bestLosses[lambdaid] > tail(results[[i]]$fit@alllik, 1)) {
       bestLosses[lambdaid] <- tail(results[[i]]$fit@alllik, 1)
       bestFits[[lambdaid]] <- results[[i]]$fit
       bestIters[lambdaid] <- results[[i]]$fit@Iter
     }
   }
+  
   ## Between different lambdas, choose the model with the largest Silhouette score
   bestSil <- -Inf
   bestFit <- NULL
@@ -306,8 +300,18 @@ MBASIC.MADBayes.full <- function(Y, Gamma = NULL, fac, lambdaw = NULL, lambda = 
       bestSil <- fit@Loss$Silhouette
     }
   }
+  bestbic <- Inf
+  bestFit.bic <- NULL
+  for(fit in bestFits) {
+    if(fit@Loss$bic < bestbic) {
+      bestFit.bic <- fit
+      bestbic <- fit@Loss$bic
+    }
+  }
+  
   return(list(allFits = bestFits,
               BestFit = bestFit,
+              BestFit.bic = bestFit.bic,
               Iter = bestIters,
               Loss = bestLosses,
               lambda = lambdas,
@@ -354,13 +358,17 @@ InitializeTheta.MADBayes <- function() {
 }
 
 InitializeClusters.MADBayes <- function() {
-  Inherit(c("verbose", "I", "initialize", "K", "S", "Theta", "lambda", "lambdaw"))
+  Inherit(c("verbose", "I", "initialize", "K", "S", "Theta", "lambda", "lambdaw", "J"))
   if(verbose)
     message("Initialize clusters...")
   
   ## Sample J from an exponential distribution with the median sqrt(I)/4
-  J <- sample(seq(I)[-1], 1, prob = exp(-seq(I)/sqrt(I)*4*log(2))[-1])
-  
+  if(is.null(J)) {
+    J <- sample(seq(I)[-1], 1, prob = exp(-seq(I)/sqrt(I)*4*log(2))[-1])
+  } else  {
+    J <- as.integer(J)
+  }
+
   if(initialize == "kmeans") {
     ## use K-means to initialize clusters
     Theta.aug <- matrix(0, nrow = K * S, ncol = I)
@@ -378,7 +386,6 @@ InitializeClusters.MADBayes <- function() {
   } else {
     clusterLabels <- sample(seq(J), I, replace = TRUE)
   }
-
   Return("clusterLabels")
 }
 

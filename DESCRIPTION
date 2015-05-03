@@ -1,21 +1,21 @@
 Package: MBASIC
 Type: Package
-Title: Clustering for State Space Matrices.
+Title: Matrix Based Analysis for State-space Inference and Clustering.
 Version: 0.99.0
-Date: 2014-04-14
+Date: 2014-05-02
 Author: Chandler Zuo, Sunduz Keles
 Maintainer: Chandler Zuo<zuo@stat.wisc.edu>
-Description: Bayesian clustering model for state-space matrices.
+Description: A hierarchial model for state-space inference and clustering.
 License: GPL-2
 LinkingTo: Rcpp
-Suggests: testthat
+Suggests: testthat, BiocStyle
 Depends:
-    gtools,
-    msm,
-    Rcpp,
-    mclust,
-    GenomicRanges,
-    MASS,
-    methods,
     cluster,
-    doMC
+    doMC,
+    GenomicRanges,
+    gtools,
+    MASS,
+    mclust,
+    methods,
+    msm,
+    Rcpp
