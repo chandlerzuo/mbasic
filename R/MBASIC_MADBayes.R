@@ -4,7 +4,7 @@
 #' @param Gamma An N by I matrix for the prior estimated mean for the background state, for N experiments across the I observation units (loci).
 #' @param fac A vector of length N denoting the experimental condition for each replicate.
 #' @param lambdaw,lambda Tuning parameters.
-#' @param family The distribution of family to be used. Either "lognormal" or "negbin". See details for more information.
+#' @param family The distribution of family to be used. Either 'lognormal' or 'negbin'. See details for more information.
 #' @param maxitr The maximum number of iterations in the E-M algorithm. Default: 100.
 #' @param tol Tolerance for error in checking the E-M algorithm's convergence. Default: 1e-04.
 #' @param S The number of different states.
@@ -24,7 +24,7 @@ MBASIC.MADBayes <- function(Y, Gamma, fac, lambdaw = 0.2, lambda = 200, maxitr =
   return(fit)
 }
 
-#' @import cluster
+#' @importFrom cluster silhouette
 MBASIC.MADBayes.internal <- function(Y, Gamma, fac, lambdaw = NULL, lambda, maxitr = 20, S, tol = 1e-8, verbose = TRUE, para = NULL, initialize = "kmeans", Theta.init = NULL, Mu.init = NULL, Sigma.init = NULL, clusterLabels.init = NULL, scaleFactor, J = NULL) {
 
   GetModelStructure()
@@ -180,11 +180,11 @@ MBASIC.MADBayes.internal <- function(Y, Gamma, fac, lambdaw = NULL, lambda, maxi
 #' @useDynLib MBASIC
 #' @return A list object including the following fields:
 #' \tabular{ll}{
-#' allFits \tab A list of 'MBASICFit' objects for the best model fit with each lambda.\cr
-#' lambda \tab A vector of all lambdas corresponding to 'allFits'.\cr
-#' Loss \tab A vector for the loss corresponding to 'allFits'.\cr
-#' BestFit \tab The 'MBASICFit' object with largest Silhouette score.\cr
-#' Iter \tab Number of iterations for 'BestFit'.\cr
+#' allFits \tab A list of \linkS4class{MBASICFit} objects for the best model fit with each lambda.\cr
+#' lambda \tab A vector of all lambdas corresponding to \code{allFits}.\cr
+#' Loss \tab A vector for the loss corresponding to \code{allFits}.\cr
+#' BestFit \tab The \linkS4class{MBASICFit} object with largest Silhouette score.\cr
+#' Iter \tab Number of iterations for \code{BestFit}.\cr
 #' Time \tab Time in seconds used to fit the model.\cr
 #' }
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}

@@ -27,7 +27,7 @@ MBASIC.MADBayes(Y, Gamma, fac, lambdaw = 0.2, lambda = 200, maxitr = 100,
 
 \item{para}{A list of true paramters.}
 
-\item{family}{The distribution of family to be used. Either "lognormal" or "negbin". See details for more information.}
+\item{family}{The distribution of family to be used. Either 'lognormal' or 'negbin'. See details for more information.}
 }
 \value{
 A list object.

@@ -94,7 +94,7 @@ ChIPInputMatch <- function(dir, suffices, depth = 5, celltypes) {
     id.chip <- which(chipconds == cond)
     id.input <- which(inputconds == cond)
     if(length(id.input) > 1)
-      message("Warning:", cond, "has multiple matching input files")
+      message("Multiple matching input files with ", cond, " will be merged.")
     inputfilehead <- unique(paste(inputprefix, "wgEncode", inputlab, inputexp, inputcell, inputfac, inputctrl, sep = "")[ id.input])
     if(length(id.chip) > 0) {
       for(i in id.chip) {
@@ -224,15 +224,15 @@ generateReadMatrices <- function(chipfile, inputfile, input.suffix, target, chip
           listinputstr <- paste("ls ", file, sep = "")
       uniqueInputCount <- 0
       for(ifile in system(listinputstr, intern = TRUE)) {
-          message(paste("processing input file", ifile))
+          message("processing input file ", ifile)
           rds <- readReads(ifile, extended = TRUE, fragLen = fragLen[ which(inputfile == file)[1], 1 ], pairedEnd = pairedEnd[ which(inputfile == file)[1], 1 ], format = inputformat[which(inputfile == file)[1]])
           if(unique)
               rds <- unique(rds)
-          chrs <- unique(c(as.character(seqnames(rds)),
+          chrs <- unique(c(as.character(rds$chromosome),
                            as.character(target$chromosome)))
-          rds.fac <- factor(as.character(seqnames(rds)), label = chrs, level = chrs)
+          rds.fac <- factor(as.character(rds$chromosome), label = chrs, level = chrs)
           target.fac <- factor(as.character(target$chromosome), label = chrs, level = chrs)
-          rds <- RangedData(ranges(rds),
+          rds <- RangedData(rds$ranges,
                             chromosome = rds.fac)
           target <- RangedData(target$ranges,
                                chromosome = target.fac)
@@ -250,16 +250,16 @@ generateReadMatrices <- function(chipfile, inputfile, input.suffix, target, chip
 
   ## process all chip files
   uniqueChIPCounts <- foreach(file = na.omit(unique(chipfile))) %dopar% {
-      message(paste("processing chip file", file))
+      message("processing chip file ", file)
       rds <- readReads(file, extended = TRUE, fragLen = fragLen[ which(chipfile == file)[1], 1 ], pairedEnd = pairedEnd[ which(chipfile == file)[1], 1 ], format = chipformat[which(chipfile == file)[1]])
       if(unique)
           rds <- unique(rds)
       gc()
-      chrs <- unique(c(as.character(seqnames(rds)),
+      chrs <- unique(c(as.character(rds$chromosome),
                        as.character(target$chromosome)))
-      rds.fac <- factor(as.character(seqnames(rds)), label = chrs, level = chrs)
+      rds.fac <- factor(as.character(rds$chromosome), label = chrs, level = chrs)
       target.fac <- factor(as.character(target$chromosome), label = chrs, level = chrs)
-      rds <- RangedData(ranges(rds),
+      rds <- RangedData(rds$ranges,
                         chromosome = rds.fac)
       target <- RangedData(target$ranges,
                            chromosome = target.fac)
@@ -271,9 +271,6 @@ generateReadMatrices <- function(chipfile, inputfile, input.suffix, target, chip
       uniqueChIPCountsWithoutNA <- matrix(unlist(uniqueChIPCounts), ncol = length(uniqueChIPCounts))
   }
 
-  ##message(dim(uniqueChIPCountsWithoutNA))
-  ##message(dim(uniqueInputCountsWithoutNA))
-  
   uniquechipcounts <- matrix(1, nrow = length(target$ranges), ncol = length(unique(chipfile)))
   uniqueinputcounts <- matrix(1, nrow = length(target$ranges), ncol = length(unique(inputfile)))
   inputfile[is.na(inputfile)] <- "NA"
@@ -303,16 +300,16 @@ generateReadMatrices <- function(chipfile, inputfile, input.suffix, target, chip
 #' @title Compute the average mappability and GC scores over a set of genomic intervals.
 #' @param target A \link{RangedData} object for the target intervals.
 #' @param m.prefix A string for the prefix of the mappability files.
-#' @param m.suffix A string for the suffix of the mappability files. See details for more information. Default: NULL.
+#' @param m.suffix A string for the suffix of the mappability files. See details for more information. Default: \code{NULL}.
 #' @param gc.prefix A string for the prefix of the GC files.
-#' @param gc.suffix A string for the suffix of the GC files. See details for more information. Default: NULL.
+#' @param gc.suffix A string for the suffix of the GC files. See details for more information. Default: \code{NULL}.
 #' @details
-#' If 'm.suffix' is NULL, then a single file with name 'm.prefix' should include mappability scores of all chromosomes, and this file is read. Alternatively, all mappability files with 'm.prefix'<chrXX>'m.suffix' are read. The 'gc.suffix' argument has similar effects.\cr
-#' 'target' has to be a sorted GRanges object. If it is not sorted, then the elements are reordered. Users have to make sure that other data sources must follow the same ordering in the elements.
-#' @return A \link{RangedData} object with two extra fields from the input argument 'target':
+#' If \code{m.suffix} is \code{NULL}, then a single file with name \code{m.prefix} should include mappability scores of all chromosomes, and this file is read. Alternatively, all mappability files with \code{m.prefix}<chrXX>\code{m.suffix} are read. The \code{gc.suffix} argument has similar effects.\cr
+#' \code{target} has to be a \linkS4class{RangedData} object. If it is not sorted, then the elements are reordered. Users have to make sure that other data sources must follow the same ordering in the elements.
+#' @return A \link{RangedData} object with two extra fields from the input argument \code{target}:
 #' \tabular{ll}{
-#' mappability \tab The average mappability scores for the sorted elements of 'target'.\cr
-#' GC \tab The average GC scores for the sorted elements of 'target'.\cr
+#' mappability \tab The average mappability scores for the sorted elements of \code{target}.\cr
+#' GC \tab The average GC scores for the sorted elements of \code{target}.\cr
 #' }
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @import GenomicRanges
@@ -346,7 +343,7 @@ averageMGC <- function(target, m.prefix, m.suffix = NULL, gc.prefix, gc.suffix =
   
   allmgc <- NULL
   for(chr in as.character(unique(target$chromosome))) {
-    message(paste("processing", chr))
+    message("processing ", chr)
     if(!is.null(m.suffix))
       map <- as.matrix(read.table(paste(m.prefix, chr, m.suffix, sep = "")))
     else
@@ -380,6 +377,7 @@ averageMGC <- function(target, m.prefix, m.suffix = NULL, gc.prefix, gc.suffix =
 #' @return A numeric matrix for the background counts at each locus (column) for each experiment (row).
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @import GenomicRanges
+#' @importFrom splines bs
 #' @export
 bkng_mean <- function(inputdat, target, nknots = 2, family = "lognormal") {
   options(warn = -1)
@@ -390,8 +388,8 @@ bkng_mean <- function(inputdat, target, nknots = 2, family = "lognormal") {
   if(! family %in% c("lognormal", "negbin"))
     stop("Error: family must be either lognormal or negbin.")
 
-  gc_bs <- splines::bs(target$GC, knots = quantile(target$GC, prob = seq(0, 1, length = nknots + 2)[ 2 : (nknots + 1) ]))
-  map_bs <- splines::bs(target$mappability, knots = quantile(target$mappability, prob = seq(0, 1, length = nknots + 2)[ 2 : (nknots + 1) ]), degree = 1)
+  gc_bs <- bs(target$GC, knots = quantile(target$GC, prob = seq(0, 1, length = nknots + 2)[ 2 : (nknots + 1) ]))
+  map_bs <- bs(target$mappability, knots = quantile(target$mappability, prob = seq(0, 1, length = nknots + 2)[ 2 : (nknots + 1) ]), degree = 1)
 
   Mu0 <- inputdat
   for(i in seq_len(ncol(inputdat))) {
@@ -419,8 +417,8 @@ bkng_mean <- function(inputdat, target, nknots = 2, family = "lognormal") {
 #' @param fragLen A numeric value for the fragment length.
 #' @param pairedEnd A boolean value for whether the sequencing file is paired end.
 #' @param use.names A boolean value to be passed to \link{GenomicRanges} functions.
-#' @param format A string of file format. Must be either "BAM" or "BED".
-#' @return A \link{GRanges} object.
+#' @param format A string of file format. Must be either 'BAM' or 'BED'.
+#' @return A \linkS4class{RangedData} object.
 #' @import GenomicRanges
 #' @author Samuel Younkin \email{syounkin@@stat.wisc.edu}
 #' @export
@@ -458,6 +456,6 @@ readReads <- function(reads, extended, fragLen = 200, pairedEnd = FALSE, use.nam
       reads.gr <- c(reads.forward.extended, reads.reverse.extended)
       names(reads.gr) <- names(c(reads.forward,reads.reverse))
     }
-    return(reads.gr)
+    return(RangedData(chromosome = seqnames(reads.gr), ranges = ranges(reads.gr)))
   }
 }

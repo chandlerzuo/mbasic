@@ -20,8 +20,8 @@
 \item{zeta}{The hyper probability for each unit (locus) to belong to some cluster.}
 \item{Mu}{This is an N by M matrix, where the (n,m)-th entry is the mean parameter for the m-th component for the n-th replicate.}
 \item{Sigma}{An N by M matrix, where the (n,m)-th entry is the dispersion parameter for the m-th component for the n-th replicate.}
-\item{sigma0}{(This slot will be retired.) NULL except if this object is fitted by the 'MBASIC.binary' function. In that case, this is a vector of length N. The n-th entry is the dispersion parameter for the unenrichment component of the n-th experiment.}
-\item{e}{(This slot will be retired) NULL except if this object is fitted by the 'MBASIC.binary' function. In that case, this is a vector of length N. The n-th entry is the normalization value for the background of the n-th experiment.}
+\item{sigma0}{(This slot is deprecated.) \code{NULL} except if this object is fitted by the \code{\link{MBASIC.binary}} function. In that case, this is a vector of length N. The n-th entry is the dispersion parameter for the unenrichment component of the n-th experiment.}
+\item{e}{(This slot is deprecated) \code{NULL} except if this object is fitted by the \code{\link{MBASIC.binary}} function. In that case, this is a vector of length N. The n-th entry is the normalization value for the background of the n-th experiment.}
 \item{probz}{A vector of length J. The j-th entry is the hyper probability of any locus to belong to the j-th cluster.}
 \item{P}{A matrix of length I by S. The (i,s)-th entry is the probability for the i-th locus to have state s, conditional on that this locus does not belong to any cluster.}
 \item{converged}{Whether the final model is converged.}

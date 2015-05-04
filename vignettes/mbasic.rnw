@@ -7,8 +7,9 @@
 %\usepackage{natbib}
 
 %\usepackage{Sweave}
-<<style-knitr, eval=TRUE, echo=FALSE, results="asis">>=
-  BiocStyle::latex()
+<<eval=TRUE, echo=FALSE,results="asis">>=
+BiocStyle::latex()
+knitr::opts_chunk$set(eval = TRUE, message = FALSE, cache = TRUE, echo = TRUE, results = "markup", tidy = TRUE, warning = FALSE)
 @
 
 \title{MBASIC: Matrix Based Analysis for State-space Inference and Clustering}
@@ -44,7 +45,7 @@ Applying the \textbf{MBASIC} framework to analyzing ChIP-seq data sets includes 
 
 \subsection{Step 1: Match ChIP and Input Datasets}
 
-<<eval=TRUE, echo=FALSE, results="hide">>=
+<<echo=FALSE,results="hide">>=
 rm(list = ls())
 mydir <- getwd()
 options(width = 50)
@@ -53,15 +54,11 @@ setwd("~/mbasic_git/test/")
 
 To illustrate Step 1 we first generate a set of synthetic data. \software{MBASIC} package provides a function \Rfunction{generateSyntheticData} to assist our demo. This function generates synthetic BED data for ChIP and input samples, as well as mappability and GC scores in a directory specified by the 'dir' argument. It also generates a target set of loci for our analysis. By default, the number of loci is 100, each with size 20 bp. All data are generated across 5 chromosomes, each with size 10K bp. ChIP data are from 2 celltypes, and for each celltype there are K=5 TFs. Under each condition randomly 1-3 replicates for the ChIP data are generated. All ChIP data from the same celltype are matched to the same set of 3 input replicates.
 
-<<include=TRUE,eval=FALSE,echo=TRUE,results="markup">>=
+<<cache=FALSE>>=
 library(MBASIC)
 @ 
 
-<<eval=TRUE,echo=FALSE,results="hide">>=
-library(MBASIC)
-@ 
-
-<<eval=TRUE,echo=TRUE,results="markup">>=
+<<>>=
 target <- generateSyntheticData(dir = "syntheticData")
 head(target)
 system("ls syntheticData/*/*", intern = TRUE)[1:5]
@@ -71,14 +68,14 @@ We have developed the \Rfunction{ChIPInputMatch} function to help match the ChIP
 
 We acknowledge that the current function may not parse all data file names correctly. For practical data files, users are suggested to check its result, and manual corrections may be needed.
 
-<<eval=TRUE,echo=TRUE,results="markup",tidy=TRUE>>=
+<<>>=
 tbl <- ChIPInputMatch(dir = paste("syntheticData/", c("chip", "input"), sep = ""), celltypes = c("Cell1", "Cell2"), suffices = c(".bam", ".bed"), depth = 5)
 head(tbl)
 @
 
 We also need to specify the experimental condition for each data set by a vector 'conds'.
 
-<<eval=TRUE,echo=TRUE,results="markup",cache=FALSE>>=
+<<>>=
 conds <- paste(tbl$cell, tbl$factor, sep = ".")
 @
 
@@ -86,14 +83,7 @@ conds <- paste(tbl$cell, tbl$factor, sep = ".")
 
 Now we are in a position to continue the next steps in the pipeline. There are two ways to execute these steps: (1) use function \Rfunction{MBASIC.pipeline}, which wraps up all the consecutive steps; or (2) execute each step separately. The following code calls the function Rfunction{MBASIC.pipeline}:
 
-<<eval=TRUE,echo=FALSE,results="hide",tidy=TRUE>>=
-## remove file 'data.Rda' since it will be generated
-## try(file.remove("data.Rda"))
-fit <- MBASIC.pipeline(chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, chipformat = tbl$chipformat, inputformat = tbl$inputformat, fragLen = 150, pairedEnd = FALSE, unique = TRUE, fac = conds, J = 3, S = 2, family = "negbin", datafile = "data.Rda")
-class(fit)
-@
-
-<<eval=FALSE,echo=TRUE,results="hide",tidy=TRUE>>=
+<<results="hide">>=
 ## remove file 'data.Rda' since it will be generated
 ## try(file.remove("data.Rda"))
 fit <- MBASIC.pipeline(chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, chipformat = tbl$chipformat, inputformat = tbl$inputformat, fragLen = 150, pairedEnd = FALSE, unique = TRUE, fac = conds, J = 3, S = 2, family = "negbin", datafile = "data.Rda")
@@ -104,13 +94,7 @@ We list the meanings of the arguments of \Rfunction{MBASIC.pipeline} in Table \r
 
 Alternatively, we can fit models with varying numbers of clusters simultaneously, and pick the one with the minimum BIC value:
 
-<<eval=TRUE,echo=FALSE,results="hide",tidy=TRUE>>=
-allfits <- MBASIC.pipeline(chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, chipformat = tbl$chipformat, inputformat = tbl$inputformat, fragLen = 150, pairedEnd = FALSE, unique = TRUE, fac = conds, J = 3:10, S = 2, family = "negbin", datafile = "data.Rda")
-names(allfits)
-class(allfits$BestFit)
-@ 
-
-<<eval=FALSE,echo=TRUE,results="hide",tidy=TRUE>>=
+<<>>=
 allfits <- MBASIC.pipeline(chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, chipformat = tbl$chipformat, inputformat = tbl$inputformat, fragLen = 150, pairedEnd = FALSE, unique = TRUE, fac = conds, J = 3:10, S = 2, family = "negbin", datafile = "data.Rda")
 names(allfits)
 class(allfits$BestFit)
@@ -163,34 +147,33 @@ Before we move on to describe the step-wise execution, we highlight the usage of
 
 We can execute Step 2 and 3 separately. In Step 2, we use the function \Rfunction{generateReadMatrices} to calculate the ChIP count at each locus for each ChIP replicate. We also calculate the count at each locus for each matching input.
 
-<<eval=FALSE, echo=TRUE, results="hide",tidy=TRUE>>=
+<<results="hide">>=
 ## Step 2: Generate mapped count matrices
 dat <- generateReadMatrices(chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, chipformat = tbl$chipformat, inputformat = tbl$inputformat, fragLen = 150, pairedEnd = FALSE, unique = TRUE)
 @
 
-<<eval=FALSE, echo=TRUE, results="hide">>=
+<<results="hide">>=
 conds <- paste(tbl$cell, tbl$factor, sep = ".")
-@
-
-<<eval=TRUE, echo=FALSE, results="hide">>=
-## Step 2: Generate mapped count matrices
-dat <- generateReadMatrices(chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, chipformat = tbl$chipformat, inputformat = tbl$inputformat, fragLen = 150, pairedEnd = FALSE, unique = TRUE)
-conds <- paste(tbl$cell, tbl$factor, sep = ".")
-target <- averageMGC(target = target, m.prefix = "syntheticData/mgc/", m.suffix = "_M.txt", gc.prefix = "syntheticData/mgc/", gc.suffix = "_GC.txt")
-dat$input1 <- bkng_mean(inputdat = dat$input, target = target, family = "negbin")
 @
 
 We can directly use the matching input counts as the covariate data in our model. Advanced users of our package may want to normalize the input counts according to the mappability and GC scores and use the normalized counts as the covariate. In that case, we need call functions \Rfunction{averageMGC} and \Rfunction{bkng\_mean}.
 
+<<results="hide">>=
+## Step 2': calculate the mappability and GC-content scores for each locus
+target <- averageMGC(target = target, m.prefix = "syntheticData/mgc/", m.suffix = "_M.txt", gc.prefix = "syntheticData/mgc/", gc.suffix = "_GC.txt")
+## Step 2": compute the normalized input counts
+dat$input1 <- bkng_mean(inputdat = dat$input, target = target, family = "negbin")
+@
+
 Notice that such a normalization step is automatically executed if users specify the 'm.prefix', 'm.suffix', 'gc.prefix' and 'gc.suffix' arguments in \Rfunction{MASIC.pipeline}.
 
-<<eval=FALSE,echo=FALSE>>=
+<<eval=FALSE,echo=FALSE,cache=FALSE>>=
 save(dat, conds, file = "dat.Rda")
 @
 
 \subsection{Step 3: Build the MBASIC Model}
 
-<<eval=FALSE,echo=FALSE>>=
+<<eval=FALSE,echo=FALSE,cache=FALSE>>=
 setwd("~/mbasic_git/test/")
 library(MBASIC)
 load("dat.Rda")
@@ -198,14 +181,14 @@ load("dat.Rda")
 
 We can build an MBASIC model using function \Rfunction{MBASIC}:
 
-<<eval=TRUE, echo=TRUE, results="hide", tidy=TRUE>>=
+<<results="hide">>=
 ## Step 3: Fit an MBASIC model
 fit <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J=3, maxitr = 10, family="negbin")
 @
 
 We can also simultaneously fit models with different numbers of clusters:
 
-<<eval=TRUE, echo=TRUE, results="hide", tidy=TRUE>>=
+<<results="hide">>=
 ## Step 3: Fit an MBASIC model
 allfits <- MBASIC.full(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J=3:10, maxitr = 10, family="negbin", ncores = 10)
 @
@@ -214,38 +197,58 @@ allfits <- MBASIC.full(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds
 
 The outputs of both \Rfunction{MBASIC} and \Rfunction{MBASIC.pipeline} functions are of S-4 class \Rclass{MBASICFit}.
 
-<<eval=FALSE,echo=TRUE,results="markup">>=
+<<eval=FALSE>>=
 showClass("MBASICFit")
 @
 
 Slot 'Theta' records the probabilities for each locus to have each state under each condition. For a model with K experiment conditions, S states and I units, slot 'Theta' is a matrix of dimension KS by I, and the (K(s-1)+k, i)-th entry is the probability for the i-th locus to have state s under condition k. 
 
-<<eval=TRUE,echo=TRUE,results="markup">>=
+<<>>=
 dim(fit@Theta)
 rownames(fit@Theta)
 head(fit@Theta[1, ])
 @
 
-In our example, suppose state 1 corresponds to the un-enriched state, and state 2 the enriched state. We can draw a heatmap to visualize the enrichment states across all data.
+In our example, suppose state 1 corresponds to the un-enriched state, and state 2 the enriched state. We can use the function \Rfunction{plot} to draw a heatmap to visualize the enrichment states across all data.
 
-<<include=TRUE,eval=TRUE,echo=TRUE,fig.align="center",dpi=600,fig.width=6,fig.height=6,tidy=TRUE>>=
-library(gplots)
-heatmap.2(fit@Theta[seq(10) + 10, ], Rowv = FALSE, Colv= FALSE, dendrogram = "none", trace = "none")
+<<fig.align="center",dpi=600,fig.width=6,fig.height=6,cache=FALSE>>=
+plot(fit, slot = "Theta", xlab = "Locus", state = 2, cexRow = 0.6, cexCol = 0.4)
 @ 
 
 Slot 'clustProb' is a matrix for the posterior probablity of each locus to belong to each cluster. The first column contains the probability for each locus to be a singleton (i.e. not belong to any clusters). The (j+1)-th column contains the probabilities for each locus to be in cluster j.
 
-<<eval=TRUE, echo=TRUE, results="markup">>=
+<<>>=
 dim(fit@clustProb)
 round(head(fit@clustProb),3)
+clusterLabels <- apply(fit@clustProb, 1, which.max) - 1
+table(clusterLabels)
 @
 
 Slot 'W' is a matrix for the state-space profiles for all clusters. For a model with K conditions, S states and J clusters, this matrix has dimension KS by J, where the (k+K(s-1),j)-th entry contains the probability that a unit in cluster j has state s under condition k. For our example, the enriched probability for all clusters is in rows 11-20.
 
-<<eval=TRUE, echo=TRUE, results="markup">>=
+<<>>=
 rownames(fit@W)
 dim(fit@W)
 round(head(fit@W[seq(10) + 10, ]),3)
+@
+
+We can also use the \Rfunction{plot} function to visualize the probability for each cluster to have a particular state under all conditions.
+
+<<fig.align="center",dpi=600,fig.width=6,fig.height=6,cache=FALSE>>=
+plot(fit, slot = "W", state = 2, cexRow = 0.6, cexCol = 1, srtCol = 0, adjCol = c(0.5, 1))
+@ 
+
+Slot 'Mu' and 'Sigma' are matrices for the distribution parameters for each replicate and each component (usually, one component is one state, see Section \ref{sec:component}).
+
+<<>>=
+dim(fit@Mu)
+dim(fit@Sigma)
+@ 
+
+Function \Rfunction{plot} enables visualizing the range of the fitted parameter values across different replicates for the same condition. Notice that for these slots the function is implemented using \Rpackage{ggplot2}, so additional arguments can be passed by '+':
+
+<<fig.align="center",dpi=600,fig.width=6,fig.height=6,cache=FALSE>>=
+plot(fit, slot = "Mu", state = 2) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 @
 
 \section{Advanced Functions}
@@ -254,15 +257,18 @@ round(head(fit@W[seq(10) + 10, ]),3)
 
 Function \Rfunction{MBASIC} accepts initial values for a number of parameters. This is especially useful when an initial run of \Rfunction{MBASIC} reaches the maximum number of iterations, but the algorithm is not converged. In this case, we can rerun the \Rfunction{MBASIC} using the previously fitted model parameters to initialize the model.
 
-<<eval=TRUE, echo=TRUE, results="hide", tidy=TRUE>>=
-fit.update <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3, maxitr = 10, family="negbin", Mu.init = fit@Mu, Sigma.init = fit@Sigma, V.init = fit@V, ProbMat.init = fit@Theta, W.init = fit@W, Z.init = fit@Z, b.init = fit@b, P.init = fit@P)
+<<results="hide">>=
+fit.update <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3,
+                     maxitr = 10, family="negbin", Mu.init = fit@Mu, Sigma.init = fit@Sigma,
+                     V.init = fit@V, ProbMat.init = fit@Theta, W.init = fit@W,
+                     Z.init = fit@Z, b.init = fit@b, P.init = fit@P)
 @
 
-\subsection{Multiple Components in a State}
+\subsection{Multiple Components in a State}\label{sec:component}
 
 MBASIC model assumes that the distribution of each data is a mixture of several components, and the components are mapped to different states. In the simpliest cases, each component corresponds to a distinct state. In some cases, we might want to include multiple components in one state. For example, for ChIP-seq data, we may want to include two components for the enriched state to capture both the weakly enriched and strongly enriched loci. This can be done by specifying the 'statemap' value. In the following example, we assume there are three components for data set, the first component corresponds to the un-enriched state, the second and the third components both belong to the enriched states.
 
-<<eval=TRUE, echo=TRUE, results="hide", tidy=TRUE>>=
+<<results="hide">>=
 fit.mix <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3, maxitr = 10, family = "negbin", statemap = c(1, 2, 2))
 @ 
 
@@ -272,7 +278,7 @@ The \software{MBASIC} package also provides functions to simulate and fit genera
 
 Function \Rfunction{MBASIC.sim} simulates data with 'I' units and 'J' clusters. The 'S' argument specifies the number of different states, and 'zeta' is the proportion of singleton. 'fac' specifies the condition for each experiment. The 'xi' argument relates to the magnitude of the simulated data. For detailed description users are recommended to read our manual.
 
-<<eval=TRUE, echo=TRUE, results="markup", tidy=TRUE>>=
+<<>>=
 ## Simulate data across I=1000 units with J=3 clusters
 ## There are S=3 states
 dat.sim <- MBASIC.sim(xi = 2, family = "lognormal", I = 1000, fac = rep(1:10, each = 2), J = 3, S = 3, zeta = 0.1)
@@ -280,7 +286,7 @@ dat.sim <- MBASIC.sim(xi = 2, family = "lognormal", I = 1000, fac = rep(1:10, ea
 
 \Rfunction{MBASIC.sim} returns a list object. The 'Y' field contains the simulated data matrix at each unit (column) for each experiment (row). The 'Theta' field is the matrix for the states for each unit (column) and each experimental condition (column). The 'W' field is a matrix with dimensions KS $\times$ J, where the (S(k-1)+s,j)-th entry is the probability that units in the j-th cluster have state s under the k-th condition.
 
-<<eval=TRUE, echo=TRUE, results="markup">>=
+<<>>=
 names(dat.sim)
 dim(dat.sim$Y)
 dim(dat.sim$W)
@@ -296,11 +302,11 @@ We can apply \Rfunction{MBASIC} to this simulated data. If we pass the simulated
 \item \textit{MisClassRate}: The mis-classification rate.
 \end{itemize}
  
-<<eval=TRUE, echo=TRUE, results="hide", tidy=TRUE>>=
+<<results="hide">>=
 dat.sim.fit <- MBASIC(Y = dat.sim$Y, S = 3, fac = dat.sim$fac, J = 3, maxitr = 3, para = dat.sim, family = "lognormal")
 @ 
 
-<<eval=TRUE,echo=TRUE,results="markup">>=
+<<>>=
 dat.sim.fit@ARI
 dat.sim.fit@W.err
 dat.sim.fit@Theta.err
@@ -313,23 +319,23 @@ In a degenerate MBASIC model, the states for each unit under each condition are 
 
 \Rfunction{MBASIC.sim.state} simulates data from a degenerate MBASIC model. Different from \Rfunction{MBASIC.sim}, \Rfunction{MBASIC.sim.state} does not need arguments 'fac' and 'family', but it needs the 'K' argument, specifying the number of experimental conditions.
 
-<<eval=FALSE,echo=TRUE,results="hide",tidy=TRUE>>=
+<<results="hide">>=
 state.sim <- MBASIC.sim.state(I = 1000, K = 10, J = 4, S = 3, zeta = 0.1)
 @
 
 \Rfunction{MBASIC.state} fits a degenerate MBASIC model. Different to function \Rfunction{MBASIC}, it does not need arguments 'Y' and 'family'. Instead, it needs the argument 'Theta' to pass the observed states.
 
-<<eval=FALSE,echo=TRUE,results="hide",tidy=TRUE>>=
+<<results="hide">>=
 state.sim.fit <- MBASIC.state(Theta = state.sim$Theta, J = 4, zeta = 0.1)
 @
 
 \section{Session Information}
 
-<<12,eval=TRUE,echo=FALSE,results="markup",cache=FALSE>>=
+<<echo=FALSE>>=
 print(sessionInfo())
 @
 
-<<final,eval=TRUE,echo=FALSE,results="hide">>=
+<<echo=FALSE,results="hide">>=
 file.remove("data.Rda")
 file.remove("syntheticData")
 setwd(mydir)

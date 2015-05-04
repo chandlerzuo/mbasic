@@ -45,7 +45,7 @@ MBASIC.full(Y, Gamma = NULL, S, fac, J = NULL, maxitr = 100,
 \value{
 A list object including the following fields:
 \tabular{ll}{
-allFits \tab A list of 'MBASICFit' objects with different numbers of clusters and/or structures.\cr
+allFits \tab A list of \linkS4class{MBASICFit} objects with different numbers of clusters and/or structures.\cr
 BestFit \tab The best model with minimum BIC.\cr
 Time \tab The time used for the model fitting.\cr}
 }

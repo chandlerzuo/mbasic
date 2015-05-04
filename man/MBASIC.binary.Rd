@@ -2,7 +2,7 @@
 % Please edit documentation in R/MBASIC_binary.R
 \name{MBASIC.binary}
 \alias{MBASIC.binary}
-\title{Bayesian clustering model for binary state matrix with prior estimated background means.}
+\title{Bayesian clustering model for binary state matrix with prior estimated background means. This function is deprecated.}
 \usage{
 MBASIC.binary(Y, Mu0, fac, J = NULL, zeta = 0.2, maxitr = 100,
   burnin = 20, outfile = NULL, out = NULL, init.mod = NULL,
@@ -42,7 +42,7 @@ MBASIC.binary(Y, Mu0, fac, J = NULL, zeta = 0.2, maxitr = 100,
 A 'MBASICFit' class object.
 }
 \description{
-Bayesian clustering model for binary state matrix with prior estimated background means.
+Bayesian clustering model for binary state matrix with prior estimated background means. This function is deprecated.
 }
 \details{
 Function MBASIC.binary currently supports two different distributional families: log-normal and negative binomial. This should be specified by the 'family' argument.\cr

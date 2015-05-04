@@ -106,15 +106,6 @@ To illustrate Step 1 we first generate a set of synthetic data. \software{MBASIC
 
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
-
-
-{\ttfamily\noindent\itshape\color{messagecolor}{\#\# Loading required package: cluster\\\#\# Loading required package: doMC\\\#\# Loading required package: foreach\\\#\# Loading required package: iterators\\\#\# Loading required package: parallel\\\#\# Loading required package: GenomicRanges\\\#\# Loading required package: BiocGenerics\\\#\# \\\#\# Attaching package: 'BiocGenerics'\\\#\# \\\#\# The following objects are masked from 'package:parallel':\\\#\# \\\#\#\ \ \ \  clusterApply, clusterApplyLB,\\\#\#\ \ \ \  clusterCall, clusterEvalQ,\\\#\#\ \ \ \  clusterExport, clusterMap, parApply,\\\#\#\ \ \ \  parCapply, parLapply, parLapplyLB,\\\#\#\ \ \ \  parRapply, parSapply, parSapplyLB\\\#\# \\\#\# The following object is masked from 'package:stats':\\\#\# \\\#\#\ \ \ \  xtabs\\\#\# \\\#\# The following objects are masked from 'package:base':\\\#\# \\\#\#\ \ \ \  anyDuplicated, append, as.data.frame,\\\#\#\ \ \ \  as.vector, cbind, colnames, duplicated,\\\#\#\ \ \ \  eval, evalq, Filter, Find, get,\\\#\#\ \ \ \  intersect, is.unsorted, lapply, Map,\\\#\#\ \ \ \  mapply, match, mget, order, paste, pmax,\\\#\#\ \ \ \  pmax.int, pmin, pmin.int, Position,\\\#\#\ \ \ \  rank, rbind, Reduce, rep.int, rownames,\\\#\#\ \ \ \  sapply, setdiff, sort, table, tapply,\\\#\#\ \ \ \  union, unique, unlist\\\#\# \\\#\# Loading required package: IRanges\\\#\# Loading required package: XVector\\\#\# Loading required package: gtools\\\#\# Loading required package: MASS\\\#\# Loading required package: mclust\\\#\# Package 'mclust' version 4.4\\\#\# Type 'citation("{}mclust"{})' for citing this R package in publications.\\\#\# \\\#\# Attaching package: 'mclust'\\\#\# \\\#\# The following object is masked from 'package:GenomicRanges':\\\#\# \\\#\#\ \ \ \  map\\\#\# \\\#\# The following object is masked from 'package:IRanges':\\\#\# \\\#\#\ \ \ \  map\\\#\# \\\#\# Loading required package: msm\\\#\# Loading required package: Rcpp}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning: replacing previous import by 'mclust::map' when loading 'MBASIC'}}\end{kframe}
-\end{knitrout}
-
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
 \hlstd{target} \hlkwb{<-} \hlkwd{generateSyntheticData}\hlstd{(}\hlkwc{dir} \hlstd{=} \hlstr{"syntheticData"}\hlstd{)}
 \hlkwd{head}\hlstd{(target)}
@@ -123,22 +114,22 @@ To illustrate Step 1 we first generate a set of synthetic data. \software{MBASIC
 ## RangedData with 6 rows and 1 value column across 1 space
 ##      space       ranges |  chromosome
 ##   <factor>    <IRanges> | <character>
-## 1        1 [6720, 6740] |        chr1
-## 2        1 [6360, 6380] |        chr5
-## 3        1 [3600, 3620] |        chr4
-## 4        1 [5480, 5500] |        chr2
-## 5        1 [8200, 8220] |        chr1
-## 6        1 [3120, 3140] |        chr1
+## 1        1 [4920, 4940] |        chr4
+## 2        1 [3960, 3980] |        chr5
+## 3        1 [4000, 4020] |        chr2
+## 4        1 [8360, 8380] |        chr5
+## 5        1 [6680, 6700] |        chr5
+## 6        1 [5400, 5420] |        chr2
 \end{verbatim}
 \begin{alltt}
 \hlkwd{system}\hlstd{(}\hlstr{"ls syntheticData/*/*"}\hlstd{,} \hlkwc{intern} \hlstd{=} \hlnum{TRUE}\hlstd{)[}\hlnum{1}\hlopt{:}\hlnum{5}\hlstd{]}
 \end{alltt}
 \begin{verbatim}
 ## [1] "syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep1.bed"
-## [2] "syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep2.bed"
-## [3] "syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep3.bed"
-## [4] "syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep1.bed"
-## [5] "syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep2.bed"
+## [2] "syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep1.bed"
+## [3] "syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep2.bed"
+## [4] "syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep3.bed"
+## [5] "syntheticData/chip/wgEncodeLabExpCell1Fac3CtrlAlnRep1.bed"
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -150,44 +141,32 @@ We acknowledge that the current function may not parse all data file names corre
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{tbl} \hlkwb{<-} \hlkwd{ChIPInputMatch}\hlstd{(}\hlkwc{dir} \hlstd{=} \hlkwd{paste}\hlstd{(}\hlstr{"syntheticData/"}\hlstd{,}
-    \hlkwd{c}\hlstd{(}\hlstr{"chip"}\hlstd{,} \hlstr{"input"}\hlstd{),} \hlkwc{sep} \hlstd{=} \hlstr{""}\hlstd{),} \hlkwc{celltypes} \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{"Cell1"}\hlstd{,}
+\hlstd{tbl} \hlkwb{<-} \hlkwd{ChIPInputMatch}\hlstd{(}\hlkwc{dir} \hlstd{=} \hlkwd{paste}\hlstd{(}\hlstr{"syntheticData/"}\hlstd{,} \hlkwd{c}\hlstd{(}\hlstr{"chip"}\hlstd{,} \hlstr{"input"}\hlstd{),} \hlkwc{sep} \hlstd{=} \hlstr{""}\hlstd{),} \hlkwc{celltypes} \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{"Cell1"}\hlstd{,}
     \hlstr{"Cell2"}\hlstd{),} \hlkwc{suffices} \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{".bam"}\hlstd{,} \hlstr{".bed"}\hlstd{),} \hlkwc{depth} \hlstd{=} \hlnum{5}\hlstd{)}
-\end{alltt}
-
-
-{\ttfamily\noindent\itshape\color{messagecolor}{\#\# Warning:Lab.Exp.Cell1.Ctrlhas multiple matching input files\\\#\# Warning:Lab.Exp.Cell2.Ctrlhas multiple matching input files}}\begin{alltt}
 \hlkwd{head}\hlstd{(tbl)}
 \end{alltt}
 \begin{verbatim}
 ##                                                    chipfile
 ## 1 syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep1.bed
-## 2 syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep2.bed
-## 3 syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep3.bed
-## 4 syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep1.bed
-## 5 syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep2.bed
-## 6 syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep3.bed
-##                                          inputfile
-## 1 syntheticData/input/wgEncodeLabExpCell1InputCtrl
-## 2 syntheticData/input/wgEncodeLabExpCell1InputCtrl
-## 3 syntheticData/input/wgEncodeLabExpCell1InputCtrl
-## 4 syntheticData/input/wgEncodeLabExpCell1InputCtrl
-## 5 syntheticData/input/wgEncodeLabExpCell1InputCtrl
-## 6 syntheticData/input/wgEncodeLabExpCell1InputCtrl
-##   lab experiment  cell factor control chipformat
-## 1 Lab        Exp Cell1   Fac1    Ctrl        BED
-## 2 Lab        Exp Cell1   Fac1    Ctrl        BED
-## 3 Lab        Exp Cell1   Fac1    Ctrl        BED
-## 4 Lab        Exp Cell1   Fac2    Ctrl        BED
-## 5 Lab        Exp Cell1   Fac2    Ctrl        BED
-## 6 Lab        Exp Cell1   Fac2    Ctrl        BED
-##   inputformat
-## 1         BED
-## 2         BED
-## 3         BED
-## 4         BED
-## 5         BED
-## 6         BED
+## 2 syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep1.bed
+## 3 syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep2.bed
+## 4 syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep3.bed
+## 5 syntheticData/chip/wgEncodeLabExpCell1Fac3CtrlAlnRep1.bed
+## 6 syntheticData/chip/wgEncodeLabExpCell1Fac3CtrlAlnRep2.bed
+##                                          inputfile lab experiment  cell factor control
+## 1 syntheticData/input/wgEncodeLabExpCell1InputCtrl Lab        Exp Cell1   Fac1    Ctrl
+## 2 syntheticData/input/wgEncodeLabExpCell1InputCtrl Lab        Exp Cell1   Fac2    Ctrl
+## 3 syntheticData/input/wgEncodeLabExpCell1InputCtrl Lab        Exp Cell1   Fac2    Ctrl
+## 4 syntheticData/input/wgEncodeLabExpCell1InputCtrl Lab        Exp Cell1   Fac2    Ctrl
+## 5 syntheticData/input/wgEncodeLabExpCell1InputCtrl Lab        Exp Cell1   Fac3    Ctrl
+## 6 syntheticData/input/wgEncodeLabExpCell1InputCtrl Lab        Exp Cell1   Fac3    Ctrl
+##   chipformat inputformat
+## 1        BED         BED
+## 2        BED         BED
+## 3        BED         BED
+## 4        BED         BED
+## 5        BED         BED
+## 6        BED         BED
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -208,21 +187,11 @@ Now we are in a position to continue the next steps in the pipeline. There are t
 
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
-
-
-{\ttfamily\noindent\itshape\color{messagecolor}{\#\# processing input file syntheticData/input/wgEncodeLabExpCell1InputCtrlAlnRep1.bed\\\#\# processing input file syntheticData/input/wgEncodeLabExpCell1InputCtrlAlnRep2.bed\\\#\# processing input file syntheticData/input/wgEncodeLabExpCell1InputCtrlAlnRep3.bed\\\#\# processing input file syntheticData/input/wgEncodeLabExpCell2InputCtrlAlnRep1.bed\\\#\# processing input file syntheticData/input/wgEncodeLabExpCell2InputCtrlAlnRep2.bed\\\#\# processing input file syntheticData/input/wgEncodeLabExpCell2InputCtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac3CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac3CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac3CtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac4CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac4CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac4CtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac5CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac5CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac5CtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac1CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac2CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac2CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac3CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac3CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac4CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac5CtrlAlnRep1.bed}}\end{kframe}
-\end{knitrout}
-
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlcom{## remove file 'data.Rda' since it will be generated}
-\hlcom{## try(file.remove('data.Rda'))}
-\hlstd{fit} \hlkwb{<-} \hlkwd{MBASIC.pipeline}\hlstd{(}\hlkwc{chipfile} \hlstd{= tbl}\hlopt{$}\hlstd{chipfile,} \hlkwc{inputfile} \hlstd{= tbl}\hlopt{$}\hlstd{inputfile,}
-    \hlkwc{input.suffix} \hlstd{=} \hlstr{".bed"}\hlstd{,} \hlkwc{target} \hlstd{= target,} \hlkwc{chipformat} \hlstd{= tbl}\hlopt{$}\hlstd{chipformat,}
-    \hlkwc{inputformat} \hlstd{= tbl}\hlopt{$}\hlstd{inputformat,} \hlkwc{fragLen} \hlstd{=} \hlnum{150}\hlstd{,} \hlkwc{pairedEnd} \hlstd{=} \hlnum{FALSE}\hlstd{,}
-    \hlkwc{unique} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{,}
-    \hlkwc{datafile} \hlstd{=} \hlstr{"data.Rda"}\hlstd{)}
+\hlcom{## remove file 'data.Rda' since it will be generated try(file.remove('data.Rda'))}
+\hlstd{fit} \hlkwb{<-} \hlkwd{MBASIC.pipeline}\hlstd{(}\hlkwc{chipfile} \hlstd{= tbl}\hlopt{$}\hlstd{chipfile,} \hlkwc{inputfile} \hlstd{= tbl}\hlopt{$}\hlstd{inputfile,} \hlkwc{input.suffix} \hlstd{=} \hlstr{".bed"}\hlstd{,}
+    \hlkwc{target} \hlstd{= target,} \hlkwc{chipformat} \hlstd{= tbl}\hlopt{$}\hlstd{chipformat,} \hlkwc{inputformat} \hlstd{= tbl}\hlopt{$}\hlstd{inputformat,} \hlkwc{fragLen} \hlstd{=} \hlnum{150}\hlstd{,}
+    \hlkwc{pairedEnd} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{unique} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{,} \hlkwc{datafile} \hlstd{=} \hlstr{"data.Rda"}\hlstd{)}
 \hlkwd{class}\hlstd{(fit)}
 \end{alltt}
 \end{kframe}
@@ -232,20 +201,25 @@ We list the meanings of the arguments of \Rfunction{MBASIC.pipeline} in Table \r
 
 Alternatively, we can fit models with varying numbers of clusters simultaneously, and pick the one with the minimum BIC value:
 
-
-
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{allfits} \hlkwb{<-} \hlkwd{MBASIC.pipeline}\hlstd{(}\hlkwc{chipfile} \hlstd{= tbl}\hlopt{$}\hlstd{chipfile,}
-    \hlkwc{inputfile} \hlstd{= tbl}\hlopt{$}\hlstd{inputfile,} \hlkwc{input.suffix} \hlstd{=} \hlstr{".bed"}\hlstd{,}
-    \hlkwc{target} \hlstd{= target,} \hlkwc{chipformat} \hlstd{= tbl}\hlopt{$}\hlstd{chipformat,} \hlkwc{inputformat} \hlstd{= tbl}\hlopt{$}\hlstd{inputformat,}
-    \hlkwc{fragLen} \hlstd{=} \hlnum{150}\hlstd{,} \hlkwc{pairedEnd} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{unique} \hlstd{=} \hlnum{TRUE}\hlstd{,}
-    \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlopt{:}\hlnum{10}\hlstd{,} \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{,}
-    \hlkwc{datafile} \hlstd{=} \hlstr{"data.Rda"}\hlstd{)}
+\hlstd{allfits} \hlkwb{<-} \hlkwd{MBASIC.pipeline}\hlstd{(}\hlkwc{chipfile} \hlstd{= tbl}\hlopt{$}\hlstd{chipfile,} \hlkwc{inputfile} \hlstd{= tbl}\hlopt{$}\hlstd{inputfile,} \hlkwc{input.suffix} \hlstd{=} \hlstr{".bed"}\hlstd{,}
+    \hlkwc{target} \hlstd{= target,} \hlkwc{chipformat} \hlstd{= tbl}\hlopt{$}\hlstd{chipformat,} \hlkwc{inputformat} \hlstd{= tbl}\hlopt{$}\hlstd{inputformat,} \hlkwc{fragLen} \hlstd{=} \hlnum{150}\hlstd{,}
+    \hlkwc{pairedEnd} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{unique} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlopt{:}\hlnum{10}\hlstd{,} \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{,} \hlkwc{datafile} \hlstd{=} \hlstr{"data.Rda"}\hlstd{)}
 \hlkwd{names}\hlstd{(allfits)}
+\end{alltt}
+\begin{verbatim}
+## [1] "allFits" "BestFit" "Time"
+\end{verbatim}
+\begin{alltt}
 \hlkwd{class}\hlstd{(allfits}\hlopt{$}\hlstd{BestFit)}
 \end{alltt}
+\begin{verbatim}
+## [1] "MBASICFit"
+## attr(,"package")
+## [1] "MBASIC"
+\end{verbatim}
 \end{kframe}
 \end{knitrout}
 
@@ -300,10 +274,9 @@ We can execute Step 2 and 3 separately. In Step 2, we use the function \Rfunctio
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
 \hlcom{## Step 2: Generate mapped count matrices}
-\hlstd{dat} \hlkwb{<-} \hlkwd{generateReadMatrices}\hlstd{(}\hlkwc{chipfile} \hlstd{= tbl}\hlopt{$}\hlstd{chipfile,}
-    \hlkwc{inputfile} \hlstd{= tbl}\hlopt{$}\hlstd{inputfile,} \hlkwc{input.suffix} \hlstd{=} \hlstr{".bed"}\hlstd{,}
-    \hlkwc{target} \hlstd{= target,} \hlkwc{chipformat} \hlstd{= tbl}\hlopt{$}\hlstd{chipformat,} \hlkwc{inputformat} \hlstd{= tbl}\hlopt{$}\hlstd{inputformat,}
-    \hlkwc{fragLen} \hlstd{=} \hlnum{150}\hlstd{,} \hlkwc{pairedEnd} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{unique} \hlstd{=} \hlnum{TRUE}\hlstd{)}
+\hlstd{dat} \hlkwb{<-} \hlkwd{generateReadMatrices}\hlstd{(}\hlkwc{chipfile} \hlstd{= tbl}\hlopt{$}\hlstd{chipfile,} \hlkwc{inputfile} \hlstd{= tbl}\hlopt{$}\hlstd{inputfile,} \hlkwc{input.suffix} \hlstd{=} \hlstr{".bed"}\hlstd{,}
+    \hlkwc{target} \hlstd{= target,} \hlkwc{chipformat} \hlstd{= tbl}\hlopt{$}\hlstd{chipformat,} \hlkwc{inputformat} \hlstd{= tbl}\hlopt{$}\hlstd{inputformat,} \hlkwc{fragLen} \hlstd{=} \hlnum{150}\hlstd{,}
+    \hlkwc{pairedEnd} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{unique} \hlstd{=} \hlnum{TRUE}\hlstd{)}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
@@ -316,14 +289,19 @@ We can execute Step 2 and 3 separately. In Step 2, we use the function \Rfunctio
 \end{kframe}
 \end{knitrout}
 
+We can directly use the matching input counts as the covariate data in our model. Advanced users of our package may want to normalize the input counts according to the mappability and GC scores and use the normalized counts as the covariate. In that case, we need call functions \Rfunction{averageMGC} and \Rfunction{bkng\_mean}.
+
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
-
-
-{\ttfamily\noindent\itshape\color{messagecolor}{\#\# processing input file syntheticData/input/wgEncodeLabExpCell1InputCtrlAlnRep1.bed\\\#\# processing input file syntheticData/input/wgEncodeLabExpCell1InputCtrlAlnRep2.bed\\\#\# processing input file syntheticData/input/wgEncodeLabExpCell1InputCtrlAlnRep3.bed\\\#\# processing input file syntheticData/input/wgEncodeLabExpCell2InputCtrlAlnRep1.bed\\\#\# processing input file syntheticData/input/wgEncodeLabExpCell2InputCtrlAlnRep2.bed\\\#\# processing input file syntheticData/input/wgEncodeLabExpCell2InputCtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac3CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac3CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac3CtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac4CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac4CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac4CtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac5CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac5CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell1Fac5CtrlAlnRep3.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac1CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac2CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac2CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac3CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac3CtrlAlnRep2.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac4CtrlAlnRep1.bed\\\#\# processing chip file syntheticData/chip/wgEncodeLabExpCell2Fac5CtrlAlnRep1.bed\\\#\# processing chr1\\\#\# read mappability file\\\#\# read gc file\\\#\# processing chr5\\\#\# read mappability file\\\#\# read gc file\\\#\# processing chr4\\\#\# read mappability file\\\#\# read gc file\\\#\# processing chr2\\\#\# read mappability file\\\#\# read gc file\\\#\# processing chr3\\\#\# read mappability file\\\#\# read gc file}}\end{kframe}
+\begin{alltt}
+\hlcom{## Step 2': calculate the mappability and GC-content scores for each locus}
+\hlstd{target} \hlkwb{<-} \hlkwd{averageMGC}\hlstd{(}\hlkwc{target} \hlstd{= target,} \hlkwc{m.prefix} \hlstd{=} \hlstr{"syntheticData/mgc/"}\hlstd{,} \hlkwc{m.suffix} \hlstd{=} \hlstr{"_M.txt"}\hlstd{,}
+    \hlkwc{gc.prefix} \hlstd{=} \hlstr{"syntheticData/mgc/"}\hlstd{,} \hlkwc{gc.suffix} \hlstd{=} \hlstr{"_GC.txt"}\hlstd{)}
+\hlcom{## Step 2': compute the normalized input counts}
+\hlstd{dat}\hlopt{$}\hlstd{input1} \hlkwb{<-} \hlkwd{bkng_mean}\hlstd{(}\hlkwc{inputdat} \hlstd{= dat}\hlopt{$}\hlstd{input,} \hlkwc{target} \hlstd{= target,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{)}
+\end{alltt}
+\end{kframe}
 \end{knitrout}
-
-We can directly use the matching input counts as the covariate data in our model. Advanced users of our package may want to normalize the input counts according to the mappability and GC scores and use the normalized counts as the covariate. In that case, we need call functions \Rfunction{averageMGC} and \Rfunction{bkng\_mean}.
 
 Notice that such a normalization step is automatically executed if users specify the 'm.prefix', 'm.suffix', 'gc.prefix' and 'gc.suffix' arguments in \Rfunction{MASIC.pipeline}.
 
@@ -339,8 +317,8 @@ We can build an MBASIC model using function \Rfunction{MBASIC}:
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
 \hlcom{## Step 3: Fit an MBASIC model}
-\hlstd{fit} \hlkwb{<-} \hlkwd{MBASIC}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),} \hlkwc{Gamma} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{input),}
-    \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{10}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{)}
+\hlstd{fit} \hlkwb{<-} \hlkwd{MBASIC}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),} \hlkwc{Gamma} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{input),} \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{10}\hlstd{,}
+    \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{)}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
@@ -351,9 +329,8 @@ We can also simultaneously fit models with different numbers of clusters:
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
 \hlcom{## Step 3: Fit an MBASIC model}
-\hlstd{allfits} \hlkwb{<-} \hlkwd{MBASIC.full}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),} \hlkwc{Gamma} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{input),}
-    \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlopt{:}\hlnum{10}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{10}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{,}
-    \hlkwc{ncores} \hlstd{=} \hlnum{10}\hlstd{)}
+\hlstd{allfits} \hlkwb{<-} \hlkwd{MBASIC.full}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),} \hlkwc{Gamma} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{input),} \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlopt{:}\hlnum{10}\hlstd{,}
+    \hlkwc{maxitr} \hlstd{=} \hlnum{10}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{,} \hlkwc{ncores} \hlstd{=} \hlnum{10}\hlstd{)}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
@@ -384,40 +361,30 @@ Slot 'Theta' records the probabilities for each locus to have each state under e
 \hlkwd{rownames}\hlstd{(fit}\hlopt{@}\hlkwc{Theta}\hlstd{)}
 \end{alltt}
 \begin{verbatim}
-##  [1] "Cell1.Fac1" "Cell1.Fac2" "Cell1.Fac3"
-##  [4] "Cell1.Fac4" "Cell1.Fac5" "Cell2.Fac1"
-##  [7] "Cell2.Fac2" "Cell2.Fac3" "Cell2.Fac4"
-## [10] "Cell2.Fac5" "Cell1.Fac1" "Cell1.Fac2"
-## [13] "Cell1.Fac3" "Cell1.Fac4" "Cell1.Fac5"
-## [16] "Cell2.Fac1" "Cell2.Fac2" "Cell2.Fac3"
+##  [1] "Cell1.Fac1" "Cell1.Fac2" "Cell1.Fac3" "Cell1.Fac4" "Cell1.Fac5" "Cell2.Fac1"
+##  [7] "Cell2.Fac2" "Cell2.Fac3" "Cell2.Fac4" "Cell2.Fac5" "Cell1.Fac1" "Cell1.Fac2"
+## [13] "Cell1.Fac3" "Cell1.Fac4" "Cell1.Fac5" "Cell2.Fac1" "Cell2.Fac2" "Cell2.Fac3"
 ## [19] "Cell2.Fac4" "Cell2.Fac5"
 \end{verbatim}
 \begin{alltt}
 \hlkwd{head}\hlstd{(fit}\hlopt{@}\hlkwc{Theta}\hlstd{[}\hlnum{1}\hlstd{, ])}
 \end{alltt}
 \begin{verbatim}
-## [1] 0.809012298 0.004470991 0.991730554
-## [4] 0.999904604 0.930188530 0.999558999
+## [1] 0.985857771 0.006634503 0.188286952 0.212285459 0.742954763 0.674824843
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
 
-In our example, suppose state 1 corresponds to the un-enriched state, and state 2 the enriched state. We can draw a heatmap to visualize the enrichment states across all data.
+In our example, suppose state 1 corresponds to the un-enriched state, and state 2 the enriched state. We can use the function \Rfunction{plot} to draw a heatmap to visualize the enrichment states across all data.
 
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlkwd{library}\hlstd{(gplots)}
-\end{alltt}
-
-
-{\ttfamily\noindent\itshape\color{messagecolor}{\#\# KernSmooth 2.23 loaded\\\#\# Copyright M. P. Wand 1997-2009\\\#\# \\\#\# Attaching package: 'gplots'\\\#\# \\\#\# The following object is masked from 'package:IRanges':\\\#\# \\\#\#\ \ \ \  space\\\#\# \\\#\# The following object is masked from 'package:stats':\\\#\# \\\#\#\ \ \ \  lowess}}\begin{alltt}
-\hlkwd{heatmap.2}\hlstd{(fit}\hlopt{@}\hlkwc{Theta}\hlstd{[}\hlkwd{seq}\hlstd{(}\hlnum{10}\hlstd{)} \hlopt{+} \hlnum{10}\hlstd{, ],} \hlkwc{Rowv} \hlstd{=} \hlnum{FALSE}\hlstd{,}
-    \hlkwc{Colv} \hlstd{=} \hlnum{FALSE}\hlstd{,} \hlkwc{dendrogram} \hlstd{=} \hlstr{"none"}\hlstd{,} \hlkwc{trace} \hlstd{=} \hlstr{"none"}\hlstd{)}
+\hlkwd{plot}\hlstd{(fit,} \hlkwc{slot} \hlstd{=} \hlstr{"Theta"}\hlstd{,} \hlkwc{xlab} \hlstd{=} \hlstr{"Locus"}\hlstd{,} \hlkwc{state} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{cexRow} \hlstd{=} \hlnum{0.6}\hlstd{,} \hlkwc{cexCol} \hlstd{=} \hlnum{0.4}\hlstd{)}
 \end{alltt}
 \end{kframe}
 
-{\centering \includegraphics[width=\maxwidth]{figure/unnamed-chunk-20-1} 
+{\centering \includegraphics[width=\maxwidth]{figure/unnamed-chunk-18-1} 
 
 }
 
@@ -436,16 +403,25 @@ Slot 'clustProb' is a matrix for the posterior probablity of each locus to belon
 ## [1] 100   4
 \end{verbatim}
 \begin{alltt}
-\hlkwd{round}\hlstd{(}\hlkwd{head}\hlstd{(fit}\hlopt{@}\hlkwc{clustProb}\hlstd{),}\hlnum{3}\hlstd{)}
+\hlkwd{round}\hlstd{(}\hlkwd{head}\hlstd{(fit}\hlopt{@}\hlkwc{clustProb}\hlstd{),} \hlnum{3}\hlstd{)}
 \end{alltt}
 \begin{verbatim}
 ##      b.prob                  
-## [1,]  0.721 0.000 0.000 0.279
-## [2,]  0.997 0.001 0.001 0.001
-## [3,]  0.873 0.000 0.000 0.127
-## [4,]  0.725 0.000 0.000 0.275
-## [5,]  0.547 0.000 0.453 0.000
-## [6,]  0.273 0.000 0.000 0.727
+## [1,]  0.878 0.000 0.122 0.000
+## [2,]  0.995 0.000 0.005 0.000
+## [3,]  0.971 0.002 0.017 0.010
+## [4,]  0.335 0.014 0.002 0.649
+## [5,]  0.286 0.004 0.710 0.000
+## [6,]  0.046 0.952 0.002 0.000
+\end{verbatim}
+\begin{alltt}
+\hlstd{clusterLabels} \hlkwb{<-} \hlkwd{apply}\hlstd{(fit}\hlopt{@}\hlkwc{clustProb}\hlstd{,} \hlnum{1}\hlstd{, which.max)} \hlopt{-} \hlnum{1}
+\hlkwd{table}\hlstd{(clusterLabels)}
+\end{alltt}
+\begin{verbatim}
+## clusterLabels
+##  0  1  2  3 
+## 52 13 20 15
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -458,12 +434,9 @@ Slot 'W' is a matrix for the state-space profiles for all clusters. For a model 
 \hlkwd{rownames}\hlstd{(fit}\hlopt{@}\hlkwc{W}\hlstd{)}
 \end{alltt}
 \begin{verbatim}
-##  [1] "Cell1.Fac1" "Cell1.Fac2" "Cell1.Fac3"
-##  [4] "Cell1.Fac4" "Cell1.Fac5" "Cell2.Fac1"
-##  [7] "Cell2.Fac2" "Cell2.Fac3" "Cell2.Fac4"
-## [10] "Cell2.Fac5" "Cell1.Fac1" "Cell1.Fac2"
-## [13] "Cell1.Fac3" "Cell1.Fac4" "Cell1.Fac5"
-## [16] "Cell2.Fac1" "Cell2.Fac2" "Cell2.Fac3"
+##  [1] "Cell1.Fac1" "Cell1.Fac2" "Cell1.Fac3" "Cell1.Fac4" "Cell1.Fac5" "Cell2.Fac1"
+##  [7] "Cell2.Fac2" "Cell2.Fac3" "Cell2.Fac4" "Cell2.Fac5" "Cell1.Fac1" "Cell1.Fac2"
+## [13] "Cell1.Fac3" "Cell1.Fac4" "Cell1.Fac5" "Cell2.Fac1" "Cell2.Fac2" "Cell2.Fac3"
 ## [19] "Cell2.Fac4" "Cell2.Fac5"
 \end{verbatim}
 \begin{alltt}
@@ -473,18 +446,71 @@ Slot 'W' is a matrix for the state-space profiles for all clusters. For a model 
 ## [1] 20  3
 \end{verbatim}
 \begin{alltt}
-\hlkwd{round}\hlstd{(}\hlkwd{head}\hlstd{(fit}\hlopt{@}\hlkwc{W}\hlstd{[}\hlkwd{seq}\hlstd{(}\hlnum{10}\hlstd{)} \hlopt{+} \hlnum{10}\hlstd{, ]),}\hlnum{3}\hlstd{)}
+\hlkwd{round}\hlstd{(}\hlkwd{head}\hlstd{(fit}\hlopt{@}\hlkwc{W}\hlstd{[}\hlkwd{seq}\hlstd{(}\hlnum{10}\hlstd{)} \hlopt{+} \hlnum{10}\hlstd{, ]),} \hlnum{3}\hlstd{)}
 \end{alltt}
 \begin{verbatim}
 ##             [,1]  [,2]  [,3]
-## Cell1.Fac1 0.999 0.604 0.092
-## Cell1.Fac2 0.002 1.000 0.364
-## Cell1.Fac3 1.000 1.000 0.004
-## Cell1.Fac4 0.989 1.000 0.424
-## Cell1.Fac5 0.484 0.015 0.051
-## Cell2.Fac1 0.002 0.274 1.000
+## Cell1.Fac1 0.389 0.004 0.999
+## Cell1.Fac2 0.905 0.433 0.787
+## Cell1.Fac3 0.005 0.996 0.000
+## Cell1.Fac4 1.000 1.000 0.001
+## Cell1.Fac5 0.531 0.949 0.032
+## Cell2.Fac1 0.033 0.073 0.000
 \end{verbatim}
 \end{kframe}
+\end{knitrout}
+
+We can also use the \Rfunction{plot} function to visualize the probability for each cluster to have a particular state under all conditions.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{plot}\hlstd{(fit,} \hlkwc{slot} \hlstd{=} \hlstr{"W"}\hlstd{,} \hlkwc{state} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{cexRow} \hlstd{=} \hlnum{0.6}\hlstd{,} \hlkwc{cexCol} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{srtCol} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{adjCol} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0.5}\hlstd{,} \hlnum{1}\hlstd{))}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/unnamed-chunk-21-1} 
+
+}
+
+
+
+\end{knitrout}
+
+Slot 'Mu' and 'Sigma' are matrices for the distribution parameters for each replicate and each component (usually, one component is one state, see Section \ref{sec:component}).
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{dim}\hlstd{(fit}\hlopt{@}\hlkwc{Mu}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+## [1] 18  2
+\end{verbatim}
+\begin{alltt}
+\hlkwd{dim}\hlstd{(fit}\hlopt{@}\hlkwc{Sigma}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+## [1] 18  2
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+Function \Rfunction{plot} enables visualizing the range of the fitted parameter values across different replicates for the same condition. Notice that for these slots the function is implemented using \Rpackage{ggplot2}, so additional arguments can be passed by '+':
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{plot}\hlstd{(fit,} \hlkwc{slot} \hlstd{=} \hlstr{"Mu"}\hlstd{,} \hlkwc{state} \hlstd{=} \hlnum{2}\hlstd{)} \hlopt{+} \hlkwd{theme}\hlstd{(}\hlkwc{axis.text.x} \hlstd{=} \hlkwd{element_text}\hlstd{(}\hlkwc{angle} \hlstd{=} \hlnum{90}\hlstd{,} \hlkwc{hjust} \hlstd{=} \hlnum{1}\hlstd{))}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/unnamed-chunk-23-1} 
+
+}
+
+
+
 \end{knitrout}
 
 \section{Advanced Functions}
@@ -496,25 +522,22 @@ Function \Rfunction{MBASIC} accepts initial values for a number of parameters. T
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{fit.update} \hlkwb{<-} \hlkwd{MBASIC}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),} \hlkwc{Gamma} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{input),}
-    \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{10}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{,}
-    \hlkwc{Mu.init} \hlstd{= fit}\hlopt{@}\hlkwc{Mu}\hlstd{,} \hlkwc{Sigma.init} \hlstd{= fit}\hlopt{@}\hlkwc{Sigma}\hlstd{,} \hlkwc{V.init} \hlstd{= fit}\hlopt{@}\hlkwc{V}\hlstd{,}
-    \hlkwc{ProbMat.init} \hlstd{= fit}\hlopt{@}\hlkwc{Theta}\hlstd{,} \hlkwc{W.init} \hlstd{= fit}\hlopt{@}\hlkwc{W}\hlstd{,} \hlkwc{Z.init} \hlstd{= fit}\hlopt{@}\hlkwc{Z}\hlstd{,}
-    \hlkwc{b.init} \hlstd{= fit}\hlopt{@}\hlkwc{b}\hlstd{,} \hlkwc{P.init} \hlstd{= fit}\hlopt{@}\hlkwc{P}\hlstd{)}
+\hlstd{fit.update} \hlkwb{<-} \hlkwd{MBASIC}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),} \hlkwc{Gamma} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{input),} \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{10}\hlstd{,}
+    \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{,} \hlkwc{Mu.init} \hlstd{= fit}\hlopt{@}\hlkwc{Mu}\hlstd{,} \hlkwc{Sigma.init} \hlstd{= fit}\hlopt{@}\hlkwc{Sigma}\hlstd{,} \hlkwc{V.init} \hlstd{= fit}\hlopt{@}\hlkwc{V}\hlstd{,} \hlkwc{ProbMat.init} \hlstd{= fit}\hlopt{@}\hlkwc{Theta}\hlstd{,}
+    \hlkwc{W.init} \hlstd{= fit}\hlopt{@}\hlkwc{W}\hlstd{,} \hlkwc{Z.init} \hlstd{= fit}\hlopt{@}\hlkwc{Z}\hlstd{,} \hlkwc{b.init} \hlstd{= fit}\hlopt{@}\hlkwc{b}\hlstd{,} \hlkwc{P.init} \hlstd{= fit}\hlopt{@}\hlkwc{P}\hlstd{)}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
 
-\subsection{Multiple Components in a State}
+\subsection{Multiple Components in a State}\label{sec:component}
 
 MBASIC model assumes that the distribution of each data is a mixture of several components, and the components are mapped to different states. In the simpliest cases, each component corresponds to a distinct state. In some cases, we might want to include multiple components in one state. For example, for ChIP-seq data, we may want to include two components for the enriched state to capture both the weakly enriched and strongly enriched loci. This can be done by specifying the 'statemap' value. In the following example, we assume there are three components for data set, the first component corresponds to the un-enriched state, the second and the third components both belong to the enriched states.
 
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{fit.mix} \hlkwb{<-} \hlkwd{MBASIC}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),} \hlkwc{Gamma} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{input),}
-    \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{10}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{,}
-    \hlkwc{statemap} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{2}\hlstd{,} \hlnum{2}\hlstd{))}
+\hlstd{fit.mix} \hlkwb{<-} \hlkwd{MBASIC}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),} \hlkwc{Gamma} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{input),} \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{10}\hlstd{,}
+    \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{,} \hlkwc{statemap} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{2}\hlstd{,} \hlnum{2}\hlstd{))}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
@@ -528,11 +551,9 @@ Function \Rfunction{MBASIC.sim} simulates data with 'I' units and 'J' clusters. 
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlcom{## Simulate data across I=1000 units with J=3}
-\hlcom{## clusters There are S=3 states}
-\hlstd{dat.sim} \hlkwb{<-} \hlkwd{MBASIC.sim}\hlstd{(}\hlkwc{xi} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"lognormal"}\hlstd{,}
-    \hlkwc{I} \hlstd{=} \hlnum{1000}\hlstd{,} \hlkwc{fac} \hlstd{=} \hlkwd{rep}\hlstd{(}\hlnum{1}\hlopt{:}\hlnum{10}\hlstd{,} \hlkwc{each} \hlstd{=} \hlnum{2}\hlstd{),} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{S} \hlstd{=} \hlnum{3}\hlstd{,}
-    \hlkwc{zeta} \hlstd{=} \hlnum{0.1}\hlstd{)}
+\hlcom{## Simulate data across I=1000 units with J=3 clusters There are S=3 states}
+\hlstd{dat.sim} \hlkwb{<-} \hlkwd{MBASIC.sim}\hlstd{(}\hlkwc{xi} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"lognormal"}\hlstd{,} \hlkwc{I} \hlstd{=} \hlnum{1000}\hlstd{,} \hlkwc{fac} \hlstd{=} \hlkwd{rep}\hlstd{(}\hlnum{1}\hlopt{:}\hlnum{10}\hlstd{,} \hlkwc{each} \hlstd{=} \hlnum{2}\hlstd{),} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,}
+    \hlkwc{S} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{zeta} \hlstd{=} \hlnum{0.1}\hlstd{)}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
@@ -545,12 +566,9 @@ Function \Rfunction{MBASIC.sim} simulates data with 'I' units and 'J' clusters. 
 \hlkwd{names}\hlstd{(dat.sim)}
 \end{alltt}
 \begin{verbatim}
-##  [1] "Theta"      "Y"          "X"         
-##  [4] "fac"        "W"          "Z"         
-##  [7] "V"          "delta"      "zeta"      
-## [10] "prior.mean" "prior.sd"   "stdev"     
-## [13] "Mu"         "bkng"       "snr"       
-## [16] "non.id"
+##  [1] "Theta"      "Y"          "X"          "fac"        "W"          "Z"         
+##  [7] "V"          "delta"      "zeta"       "prior.mean" "prior.sd"   "stdev"     
+## [13] "Mu"         "bkng"       "snr"        "non.id"
 \end{verbatim}
 \begin{alltt}
 \hlkwd{dim}\hlstd{(dat.sim}\hlopt{$}\hlstd{Y)}
@@ -585,8 +603,8 @@ We can apply \Rfunction{MBASIC} to this simulated data. If we pass the simulated
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{dat.sim.fit} \hlkwb{<-} \hlkwd{MBASIC}\hlstd{(}\hlkwc{Y} \hlstd{= dat.sim}\hlopt{$}\hlstd{Y,} \hlkwc{S} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{fac} \hlstd{= dat.sim}\hlopt{$}\hlstd{fac,}
-    \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{para} \hlstd{= dat.sim,} \hlkwc{family} \hlstd{=} \hlstr{"lognormal"}\hlstd{)}
+\hlstd{dat.sim.fit} \hlkwb{<-} \hlkwd{MBASIC}\hlstd{(}\hlkwc{Y} \hlstd{= dat.sim}\hlopt{$}\hlstd{Y,} \hlkwc{S} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{fac} \hlstd{= dat.sim}\hlopt{$}\hlstd{fac,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{para} \hlstd{= dat.sim,}
+    \hlkwc{family} \hlstd{=} \hlstr{"lognormal"}\hlstd{)}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
@@ -597,25 +615,25 @@ We can apply \Rfunction{MBASIC} to this simulated data. If we pass the simulated
 \hlstd{dat.sim.fit}\hlopt{@}\hlkwc{ARI}
 \end{alltt}
 \begin{verbatim}
-## [1] 0.9200292
+## [1] 0.9919925
 \end{verbatim}
 \begin{alltt}
 \hlstd{dat.sim.fit}\hlopt{@}\hlkwc{W.err}
 \end{alltt}
 \begin{verbatim}
-## [1] 0.0942875
+## [1] 0.0870422
 \end{verbatim}
 \begin{alltt}
 \hlstd{dat.sim.fit}\hlopt{@}\hlkwc{Theta.err}
 \end{alltt}
 \begin{verbatim}
-## [1] 0.2112985
+## [1] 0.1954791
 \end{verbatim}
 \begin{alltt}
 \hlstd{dat.sim.fit}\hlopt{@}\hlkwc{MisClassRate}
 \end{alltt}
 \begin{verbatim}
-## [1] 0.06318779
+## [1] 0.01232213
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -629,8 +647,7 @@ In a degenerate MBASIC model, the states for each unit under each condition are 
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{state.sim} \hlkwb{<-} \hlkwd{MBASIC.sim.state}\hlstd{(}\hlkwc{I} \hlstd{=} \hlnum{1000}\hlstd{,} \hlkwc{K} \hlstd{=} \hlnum{10}\hlstd{,} \hlkwc{J} \hlstd{=} \hlnum{4}\hlstd{,}
-    \hlkwc{S} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{zeta} \hlstd{=} \hlnum{0.1}\hlstd{)}
+\hlstd{state.sim} \hlkwb{<-} \hlkwd{MBASIC.sim.state}\hlstd{(}\hlkwc{I} \hlstd{=} \hlnum{1000}\hlstd{,} \hlkwc{K} \hlstd{=} \hlnum{10}\hlstd{,} \hlkwc{J} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{S} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{zeta} \hlstd{=} \hlnum{0.1}\hlstd{)}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
@@ -640,8 +657,7 @@ In a degenerate MBASIC model, the states for each unit under each condition are 
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{state.sim.fit} \hlkwb{<-} \hlkwd{MBASIC.state}\hlstd{(}\hlkwc{Theta} \hlstd{= state.sim}\hlopt{$}\hlstd{Theta,}
-    \hlkwc{J} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{zeta} \hlstd{=} \hlnum{0.1}\hlstd{)}
+\hlstd{state.sim.fit} \hlkwb{<-} \hlkwd{MBASIC.state}\hlstd{(}\hlkwc{Theta} \hlstd{= state.sim}\hlopt{$}\hlstd{Theta,} \hlkwc{J} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{zeta} \hlstd{=} \hlnum{0.1}\hlstd{)}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
@@ -655,45 +671,29 @@ In a degenerate MBASIC model, the states for each unit under each condition are 
 ## Platform: x86_64-redhat-linux-gnu (64-bit)
 ## 
 ## locale:
-##  [1] LC_CTYPE=zh_TW.UTF-8      
-##  [2] LC_NUMERIC=C              
-##  [3] LC_TIME=en_US.UTF-8       
-##  [4] LC_COLLATE=en_US.UTF-8    
-##  [5] LC_MONETARY=en_US.UTF-8   
-##  [6] LC_MESSAGES=en_US.UTF-8   
-##  [7] LC_PAPER=en_US.UTF-8      
-##  [8] LC_NAME=C                 
-##  [9] LC_ADDRESS=C              
-## [10] LC_TELEPHONE=C            
-## [11] LC_MEASUREMENT=en_US.UTF-8
-## [12] LC_IDENTIFICATION=C       
+##  [1] LC_CTYPE=zh_TW.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8       
+##  [4] LC_COLLATE=en_US.UTF-8     LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+##  [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                  LC_ADDRESS=C              
+## [10] LC_TELEPHONE=C             LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
 ## 
 ## attached base packages:
-## [1] parallel  stats     graphics  grDevices
-## [5] utils     datasets  methods   base     
+## [1] parallel  stats     graphics  grDevices utils     datasets  methods   base     
 ## 
 ## other attached packages:
-##  [1] gplots_2.16.0        MBASIC_0.99.0       
-##  [3] Rcpp_0.11.4          msm_1.5             
-##  [5] mclust_4.4           MASS_7.3-33         
-##  [7] gtools_3.4.1         GenomicRanges_1.14.4
-##  [9] XVector_0.2.0        IRanges_1.20.7      
-## [11] BiocGenerics_0.8.0   doMC_1.3.3          
-## [13] iterators_1.0.7      foreach_1.4.2       
-## [15] cluster_1.15.2      
+##  [1] MBASIC_0.99.0        Rcpp_0.11.4          msm_1.5              mclust_4.4          
+##  [5] MASS_7.3-33          gtools_3.4.1         gplots_2.16.0        ggplot2_1.0.0       
+##  [9] GenomicRanges_1.14.4 XVector_0.2.0        IRanges_1.20.7       BiocGenerics_0.8.0  
+## [13] doMC_1.3.3           iterators_1.0.7      foreach_1.4.2        cluster_1.15.2      
 ## 
 ## loaded via a namespace (and not attached):
-##  [1] BiocStyle_1.0.0    bitops_1.0-6      
-##  [3] caTools_1.17.1     codetools_0.2-8   
-##  [5] compiler_3.1.1     evaluate_0.5.5    
-##  [7] expm_0.99-1.1      formatR_1.0       
-##  [9] gdata_2.13.3       grid_3.1.1        
-## [11] highr_0.4          KernSmooth_2.23-12
-## [13] knitr_1.9          lattice_0.20-29   
-## [15] Matrix_1.1-5       mvtnorm_1.0-2     
-## [17] splines_3.1.1      stats4_3.1.1      
-## [19] stringr_0.6.2      survival_2.37-7   
-## [21] tools_3.1.1
+##  [1] BiocStyle_1.0.0    bitops_1.0-6       caTools_1.17.1     codetools_0.2-8   
+##  [5] colorspace_1.2-4   compiler_3.1.1     digest_0.6.8       evaluate_0.5.5    
+##  [9] expm_0.99-1.1      formatR_1.0        gdata_2.13.3       grid_3.1.1        
+## [13] gtable_0.1.2       highr_0.4          KernSmooth_2.23-12 knitr_1.9         
+## [17] labeling_0.3       lattice_0.20-29    Matrix_1.1-5       munsell_0.4.2     
+## [21] mvtnorm_1.0-2      plyr_1.8.1         proto_0.3-10       reshape2_1.4.1    
+## [25] scales_0.2.4       splines_3.1.1      stats4_3.1.1       stringr_0.6.2     
+## [29] survival_2.37-7    tools_3.1.1
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -726,20 +726,12 @@ In both cases, ``MBASIC.binary" uses the results from ``init.mod" before startin
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
 \hlcom{## Fit a MBASIC model with 4 clusters}
-\hlkwd{MBASIC.binary}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),}  \hlkwc{Mu0} \hlstd{=} \hlkwd{t}\hlstd{(Mu0),}
-              \hlkwc{fac} \hlstd{= conds,}  \hlkwc{J}\hlstd{=}\hlnum{4}\hlstd{,}  \hlkwc{zeta}\hlstd{=}\hlnum{0.2}\hlstd{,}
-              \hlkwc{maxitr} \hlstd{=} \hlnum{100}\hlstd{,} \hlkwc{burnin} \hlstd{=} \hlnum{20}\hlstd{,}
-              \hlkwc{init.mod} \hlstd{= fit,}
-              \hlkwc{struct} \hlstd{=} \hlkwa{NULL}\hlstd{,} \hlkwc{family}\hlstd{=}\hlstr{"negbin"}\hlstd{,}
-              \hlkwc{tol} \hlstd{=} \hlnum{1e-4}\hlstd{,}  \hlkwc{nsig} \hlstd{=} \hlnum{2}\hlstd{)}
+\hlkwd{MBASIC.binary}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),} \hlkwc{Mu0} \hlstd{=} \hlkwd{t}\hlstd{(Mu0),} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{4}\hlstd{,} \hlkwc{zeta} \hlstd{=} \hlnum{0.2}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{100}\hlstd{,}
+    \hlkwc{burnin} \hlstd{=} \hlnum{20}\hlstd{,} \hlkwc{init.mod} \hlstd{= fit,} \hlkwc{struct} \hlstd{=} \hlkwa{NULL}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{,} \hlkwc{tol} \hlstd{=} \hlnum{1e-04}\hlstd{,} \hlkwc{nsig} \hlstd{=} \hlnum{2}\hlstd{)}
 
 \hlcom{## Fit a MBASIC model with more iterations}
-\hlkwd{MBASIC.binary}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),}  \hlkwc{Mu0} \hlstd{=} \hlkwd{t}\hlstd{(Mu0),}
-              \hlkwc{fac} \hlstd{= conds,}  \hlkwc{J}\hlstd{=}\hlnum{3}\hlstd{,}  \hlkwc{zeta}\hlstd{=}\hlnum{0.2}\hlstd{,}
-              \hlkwc{maxitr} \hlstd{=} \hlnum{200}\hlstd{,} \hlkwc{burnin} \hlstd{=} \hlnum{20}\hlstd{,}
-              \hlkwc{init.mod} \hlstd{= fit,}
-              \hlkwc{struct} \hlstd{=} \hlkwa{NULL}\hlstd{,} \hlkwc{family}\hlstd{=}\hlstr{"negbin"}\hlstd{,}
-              \hlkwc{tol} \hlstd{=} \hlnum{1e-4}\hlstd{,}  \hlkwc{nsig} \hlstd{=} \hlnum{2}\hlstd{)}
+\hlkwd{MBASIC.binary}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),} \hlkwc{Mu0} \hlstd{=} \hlkwd{t}\hlstd{(Mu0),} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{zeta} \hlstd{=} \hlnum{0.2}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{200}\hlstd{,}
+    \hlkwc{burnin} \hlstd{=} \hlnum{20}\hlstd{,} \hlkwc{init.mod} \hlstd{= fit,} \hlkwc{struct} \hlstd{=} \hlkwa{NULL}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{,} \hlkwc{tol} \hlstd{=} \hlnum{1e-04}\hlstd{,} \hlkwc{nsig} \hlstd{=} \hlnum{2}\hlstd{)}
 \end{alltt}
 \end{kframe}
 \end{knitrout}

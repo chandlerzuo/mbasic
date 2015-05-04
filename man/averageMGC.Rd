@@ -11,25 +11,25 @@ averageMGC(target, m.prefix, m.suffix = NULL, gc.prefix, gc.suffix = NULL)
 
 \item{m.prefix}{A string for the prefix of the mappability files.}
 
-\item{m.suffix}{A string for the suffix of the mappability files. See details for more information. Default: NULL.}
+\item{m.suffix}{A string for the suffix of the mappability files. See details for more information. Default: \code{NULL}.}
 
 \item{gc.prefix}{A string for the prefix of the GC files.}
 
-\item{gc.suffix}{A string for the suffix of the GC files. See details for more information. Default: NULL.}
+\item{gc.suffix}{A string for the suffix of the GC files. See details for more information. Default: \code{NULL}.}
 }
 \value{
-A \link{RangedData} object with two extra fields from the input argument 'target':
+A \link{RangedData} object with two extra fields from the input argument \code{target}:
 \tabular{ll}{
-mappability \tab The average mappability scores for the sorted elements of 'target'.\cr
-GC \tab The average GC scores for the sorted elements of 'target'.\cr
+mappability \tab The average mappability scores for the sorted elements of \code{target}.\cr
+GC \tab The average GC scores for the sorted elements of \code{target}.\cr
 }
 }
 \description{
 Compute the average mappability and GC scores over a set of genomic intervals.
 }
 \details{
-If 'm.suffix' is NULL, then a single file with name 'm.prefix' should include mappability scores of all chromosomes, and this file is read. Alternatively, all mappability files with 'm.prefix'<chrXX>'m.suffix' are read. The 'gc.suffix' argument has similar effects.\cr
-'target' has to be a sorted GRanges object. If it is not sorted, then the elements are reordered. Users have to make sure that other data sources must follow the same ordering in the elements.
+If \code{m.suffix} is \code{NULL}, then a single file with name \code{m.prefix} should include mappability scores of all chromosomes, and this file is read. Alternatively, all mappability files with \code{m.prefix}<chrXX>\code{m.suffix} are read. The \code{gc.suffix} argument has similar effects.\cr
+\code{target} has to be a \linkS4class{RangedData} object. If it is not sorted, then the elements are reordered. Users have to make sure that other data sources must follow the same ordering in the elements.
 }
 \author{
 Chandler Zuo \email{zuo@stat.wisc.edu}

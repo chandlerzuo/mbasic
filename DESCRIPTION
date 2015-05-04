@@ -13,6 +13,8 @@ Depends:
     cluster,
     doMC,
     GenomicRanges,
+    ggplot2,
+    gplots,
     gtools,
     MASS,
     mclust,

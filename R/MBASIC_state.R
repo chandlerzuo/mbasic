@@ -12,15 +12,15 @@
 #' @param zeta The initial value for the proportion of units that are not clustered. Default: 0.1.
 #' @param out The file directory for writing fitting information in each E-M iteration. Default: NULL (no information is outputted).
 #' @details
-#'  The 'method' argument determines what fitting method will be used. The default is 'em', where an E-M algorithm is used for clustering. If 'naive', then hierarchical clustering is used.\cr
-#' The 'para' argument takes a list object that is supposed to include the following fields:
+#'  The \code{method} argument determines what fitting method will be used. The default is 'SE-MC', where an E-M algorithm is used for clustering. If 'SE-HC', then hierarchical clustering is used.\cr
+#' The \code{para} argument takes a list object that is supposed to include the following fields:
 #'\tabular{ll}{
 #' W \tab A K by (J*S) matrix. The (k,J*(s-1)+j)-th entry is the probability that the units in cluster j has state s in the k-th experiment.\cr
 #' Z \tab An I by J matrix. The (i,j)-th entry is the indicator whether the i-th unit belongs to cluster j.\cr
 #' non.id \tab A binary vector of length I. The i-th entry is the indicator whether the i-th unit does not belong to any cluster.
 #' }
 #' This argument is intended to carry the true parameters in simulation studies. If it is not null, then the model also computes a number of metrics that describes the error in model fitting. Users should be cautious that the order of the rows and columns of matrices in the fields of para should match the Y matrix.
-#' @return An object of class 'MBASICFit'.
+#' @return An object of class \linkS4class{MBASICFit}.
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @examples
 #' state.sim <- MBASIC.sim.state(I = 1000, K = 10, J = 4, S = 3, zeta = 0.1)

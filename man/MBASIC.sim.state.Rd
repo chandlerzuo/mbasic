@@ -32,8 +32,8 @@ A list containing:
  Theta \tab A K by I matrix. The (k,i)-th element is the indicator of whether the i-th unit is binding for condition k.\cr
  W \tab A K by J matrix. Each row is the indicators of the loci sets related an individual replicate. \cr
  Z \tab An I by J matrix. Each column is the indicator for an individual loci set.\cr
- delta \tab Same as the input argument 'delta'.\cr
- zeta \tab Same as the input argumnent 'zeta'.\cr
+ delta \tab Same as the input argument \code{delta}.\cr
+ zeta \tab Same as the input argumnent \code{zeta}.\cr
  non.id \tab A vector of length I indicating the number of each unit not to belong to any cluster.\cr
 }
 }

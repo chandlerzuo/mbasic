@@ -29,7 +29,8 @@
 #' @examples
 #' dat.sim <- MBASIC.sim.binary(I = 100, fac = rep(1:5, each = 2), J = 3, f = 5)
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
-#' @import gtools msm
+#' @importFrom gtools rdirichlet
+#' @importFrom msm rtnorm
 #' @export
 MBASIC.sim.binary <- function(I, fac, J, f, struct=NULL, beta=0.1, zeta = 0.1, beta.non=0.1, xi = 6, family="lognormal") {
   
@@ -184,14 +185,14 @@ MBASIC.sim.binary <- function(I, fac, J, f, struct=NULL, beta=0.1, zeta = 0.1, b
 #'  Theta \tab A K by I matrix. The (k,i)-th element is the indicator of whether the i-th unit is binding for condition k.\cr
 #'  W \tab A K by J matrix. Each row is the indicators of the loci sets related an individual replicate. \cr
 #'  Z \tab An I by J matrix. Each column is the indicator for an individual loci set.\cr
-#'  delta \tab Same as the input argument 'delta'.\cr
-#'  zeta \tab Same as the input argumnent 'zeta'.\cr
+#'  delta \tab Same as the input argument \code{delta}.\cr
+#'  zeta \tab Same as the input argumnent \code{zeta}.\cr
 #'  non.id \tab A vector of length I indicating the number of each unit not to belong to any cluster.\cr
 #' }
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @examples
 #' dat.sim <- MBASIC.sim.state(I = 100, K = 10, J = 3)
-#' @import gtools
+#' @importFrom gtools rdirichlet
 #' @export
 MBASIC.sim.state <- function(I, K, J, S = 2, struct = NULL, delta = NULL, delta.non = NULL, zeta = 0.1, statemap = NULL) {
   
@@ -275,12 +276,12 @@ MBASIC.sim.state <- function(I, K, J, S = 2, struct = NULL, delta = NULL, delta.
 #' \tabular{ll}{
 #'  Y \tab An N by I matrix. The (n,i)-th entry is the observed value at the i-th unit for the n-th experiment. \cr
 #'  X \tab An N by I matrix for the "binom" family, or NULL otherwise. The (n,i)-th entry is the observed size parameter for the i-th unit in the n-th experiment. \cr
-#'  fac \tab Same as the input argument 'fac'.\cr
+#'  fac \tab Same as the input argument \code{fac}.\cr
 #'  Theta \tab A K by I matrix. The (k,i)-th element is the indicator of whether the i-th unit is binding for condition k.\cr
 #'  W \tab A K by (J*S) matrix. The (k,J*(s-1)+j)-th entry is the probability of units in the j-th cluster have state s under the k-th experimental condition. \cr
 #'  Z \tab An I by J matrix. Each column is the indicator for an individual loci set.\cr
-#'  delta \tab Same as the input argument 'delta'.\cr
-#'  zeta \tab Same as the input argumnent 'zeta'.\cr
+#'  delta \tab Same as the input argument \code{delta}.\cr
+#'  zeta \tab Same as the input argumnent \code{zeta}.\cr
 #'  non.id \tab A vector of length I indicating the number of each unit not to belong to any cluster.\cr
 #'  prior.mean \tab A vector of length S, the hyper means for the S states for each experiment.\cr
 #'  prior.sd \tab A vector of length S, the hyper parameters for the dispersions for the S states for each experiment.\cr
@@ -291,7 +292,8 @@ MBASIC.sim.state <- function(I, K, J, S = 2, struct = NULL, delta = NULL, delta.
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @examples
 #' dat.sim <- MBASIC.sim(xi = 2, I = 100, fac = rep(1:5, each = 2), J = 3)
-#' @import gtools msm
+#' @importFrom gtools rdirichlet
+#' @importFrom msm rtnorm
 #' @export
 MBASIC.sim<- function(xi, family = "lognormal", struct = NULL, I, fac, J, S = 2, f = 5, delta = NULL, delta.non = NULL, zeta = 0.1, statemap = NULL) {
   

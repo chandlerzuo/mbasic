@@ -137,7 +137,7 @@ group2mat <- function(x) {
         return(mat)
 }
 
-#' @import mclust
+#' @importFrom mclust adjustedRandIndex
 matchCluster <- function(W, W.true, predZ, Z.true, b.prob, non.id) {
   if(is.null(b.prob))
     b.prob <- rep(0, nrow(predZ))

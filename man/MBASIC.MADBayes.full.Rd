@@ -32,11 +32,11 @@ MBASIC.MADBayes.full(Y, Gamma = NULL, fac, lambdaw = NULL, lambda = NULL,
 \value{
 A list object including the following fields:
 \tabular{ll}{
-allFits \tab A list of 'MBASICFit' objects for the best model fit with each lambda.\cr
-lambda \tab A vector of all lambdas corresponding to 'allFits'.\cr
-Loss \tab A vector for the loss corresponding to 'allFits'.\cr
-BestFit \tab The 'MBASICFit' object with largest Silhouette score.\cr
-Iter \tab Number of iterations for 'BestFit'.\cr
+allFits \tab A list of \linkS4class{MBASICFit} objects for the best model fit with each lambda.\cr
+lambda \tab A vector of all lambdas corresponding to \code{allFits}.\cr
+Loss \tab A vector for the loss corresponding to \code{allFits}.\cr
+BestFit \tab The \linkS4class{MBASICFit} object with largest Silhouette score.\cr
+Iter \tab Number of iterations for \code{BestFit}.\cr
 Time \tab Time in seconds used to fit the model.\cr
 }
 }

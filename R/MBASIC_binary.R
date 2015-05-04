@@ -1,6 +1,5 @@
 #' @name MBASIC.binary
-#' @title Bayesian clustering model for binary state matrix with prior estimated background means.
-#'
+#' @title Bayesian clustering model for binary state matrix with prior estimated background means. This function is deprecated.
 #' @param Y An N by I matrix containing the data from N experiments across I observation units (loci).
 #' @param Mu0 An N by I matrix for the prior estimated mean for the background state, for N experiments across the I observation units (loci).
 #' @param fac A vector of length N denoting the experimental condition for each replicate.

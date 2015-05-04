@@ -18,10 +18,10 @@ readReads(reads, extended, fragLen = 200, pairedEnd = FALSE,
 
 \item{use.names}{A boolean value to be passed to \link{GenomicRanges} functions.}
 
-\item{format}{A string of file format. Must be either "BAM" or "BED".}
+\item{format}{A string of file format. Must be either 'BAM' or 'BED'.}
 }
 \value{
-A \link{GRanges} object.
+A \linkS4class{RangedData} object.
 }
 \description{
 Read sequencing reads from either a BAM or a BED file.

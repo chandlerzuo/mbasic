@@ -35,12 +35,12 @@ A list containing:
 \tabular{ll}{
  Y \tab An N by I matrix. The (n,i)-th entry is the observed value at the i-th unit for the n-th experiment. \cr
  X \tab An N by I matrix for the "binom" family, or NULL otherwise. The (n,i)-th entry is the observed size parameter for the i-th unit in the n-th experiment. \cr
- fac \tab Same as the input argument 'fac'.\cr
+ fac \tab Same as the input argument \code{fac}.\cr
  Theta \tab A K by I matrix. The (k,i)-th element is the indicator of whether the i-th unit is binding for condition k.\cr
  W \tab A K by (J*S) matrix. The (k,J*(s-1)+j)-th entry is the probability of units in the j-th cluster have state s under the k-th experimental condition. \cr
  Z \tab An I by J matrix. Each column is the indicator for an individual loci set.\cr
- delta \tab Same as the input argument 'delta'.\cr
- zeta \tab Same as the input argumnent 'zeta'.\cr
+ delta \tab Same as the input argument \code{delta}.\cr
+ zeta \tab Same as the input argumnent \code{zeta}.\cr
  non.id \tab A vector of length I indicating the number of each unit not to belong to any cluster.\cr
  prior.mean \tab A vector of length S, the hyper means for the S states for each experiment.\cr
  prior.sd \tab A vector of length S, the hyper parameters for the dispersions for the S states for each experiment.\cr

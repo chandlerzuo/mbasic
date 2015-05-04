@@ -28,14 +28,14 @@ MBASIC.state(Theta, J, struct = NULL, method = "SE-MC", zeta = 0.1,
 \item{out}{The file directory for writing fitting information in each E-M iteration. Default: NULL (no information is outputted).}
 }
 \value{
-An object of class 'MBASICFit'.
+An object of class \linkS4class{MBASICFit}.
 }
 \description{
 This function clusters a state-space matrix.
 }
 \details{
-The 'method' argument determines what fitting method will be used. The default is 'em', where an E-M algorithm is used for clustering. If 'naive', then hierarchical clustering is used.\cr
-The 'para' argument takes a list object that is supposed to include the following fields:
+The \code{method} argument determines what fitting method will be used. The default is 'SE-MC', where an E-M algorithm is used for clustering. If 'SE-HC', then hierarchical clustering is used.\cr
+The \code{para} argument takes a list object that is supposed to include the following fields:
 \tabular{ll}{
 W \tab A K by (J*S) matrix. The (k,J*(s-1)+j)-th entry is the probability that the units in cluster j has state s in the k-th experiment.\cr
 Z \tab An I by J matrix. The (i,j)-th entry is the indicator whether the i-th unit belongs to cluster j.\cr
