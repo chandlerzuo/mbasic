@@ -27,7 +27,7 @@ knitr::opts_chunk$set(eval = TRUE, message = FALSE, cache = TRUE, echo = TRUE, r
 
 This document provides an introduction to the power analysis of ChIP-seq data with the \software{MBASIC} package (\textbf{MBASIC} which stands for \textbf{M}atrix \textbf{B}ased \textbf{A}nalysis for \textbf{S}tate-space \textbf{I}nference and \textbf{C}lustering) \cite{zuo14}. \software{MBASIC} provides a Bayesian framework for clustering units based on their infered states over a set of experimental conditions.
 
-\software{MBASIC} is especially useful for integrative analysis for ChIP-seq experiments. In this case, a set of prespecified loci is clustered based on their activities over celltypes and transcription factors. We build a pipeline in the \software{MBASIC} package and will focus on this pipeline in this vignette. We will introduce the general functionalities for the \textbf{MBASIC} model at the end of the vignette.
+\software{MBASIC} is especially useful for integrative analysis for ChIP-seq experiments. In this case, a set of prespecified loci is clustered based on their activities over celltypes and transcription factors. We build a pipeline in the \software{MBASIC} package and will focus on this pipeline in this vignette. We will introduce some advanced options in building the \textbf{MBASIC} model in Section \ref{sec:adv}.
 
 \section{MBASIC Pipeline for Sequencing Data}
 
@@ -81,7 +81,7 @@ conds <- paste(tbl$cell, tbl$factor, sep = ".")
 
 \subsection{Executing Step 2 and 3 Altogether}
 
-Now we are in a position to continue the next steps in the pipeline. There are two ways to execute these steps: (1) use function \Rfunction{MBASIC.pipeline}, which wraps up all the consecutive steps; or (2) execute each step separately. The following code calls the function Rfunction{MBASIC.pipeline}:
+Now we are in a position to continue the next steps in the pipeline. There are two ways to execute these steps: (1) use function \Rfunction{MBASIC.pipeline} to execute the two steps together; or (2) execute each step separately. The following code calls the function \Rfunction{MBASIC.pipeline}:
 
 <<results="hide">>=
 ## remove file 'data.Rda' since it will be generated
@@ -111,9 +111,9 @@ class(allfits$BestFit)
     inputfile & A string vector for the matching input files. The length must be the same as ``chipfile".\\
     input.suffix & A string for the suffix of input files. If NULL, ``inputfile" will be treated as the full names of the input files. Otherwise, all inputfiles with the initial ``inputfile" and this suffix will be merged.\\
     chipformat (inputformat) & A string specifying the type of all ChIP (input) files, or a vector of string specifying the types of each ChIP (input) file.  Currently three file types are allowed: ``BAM", ``BED" or ``TAGALIGN'' (``TAGALIGN'' and ``BED'' files are treated as same).  Default: ``BAM".\\
-    m.prefix (optional) & A string for the prefix of the mappability files.\\
-    m.suffix (optional) & A string for the suffix of the mappability files. See our man files for more details.  Default: NULL.\\
-    gc.prefix (optional) & A string for the prefix of the GC files.\\
+    m.prefix (optional) & A string for the prefix of the mappability files. Default: NULL.\\
+    m.suffix (optional) & A string for the suffix of the mappability files. See our man files for more details. Default: NULL.\\
+    gc.prefix (optional) & A string for the prefix of the GC files. Default: NULL.\\
     gc.suffix (optional) & A string for the suffix of the GC files.  See our man files for more details. Default: NULL.\\
     \hline
     \multicolumn{2}{c}{Genomic Information}\\
@@ -127,7 +127,6 @@ class(allfits$BestFit)
     \hline
     S & The number of states.\\
     fac & A vector of length N for the experimental condition of each ChIP replicate.\\
-    struct & A matrix indicating the levels of the signal matrix. \\
     J & A single number or a numeric vector of the numbers of clusters to be included in the model.\\
     family & The distribution of family to be used.  \software{MBASIC} currently support five distribution types: 'lognormal', 'negbin', 'binom', 'scaled-t', 'gamma-binom'. See our man files for more information.\\
     \hline
@@ -141,7 +140,7 @@ class(allfits$BestFit)
   \end{tabular}
 \end{table}
 
-Before we move on to describe the step-wise execution, we highlight the usage of argument 'datafile'. When we fit 'MBASIC.fit', we process ChIP and input data and save the processed data in 'datafile'. When we compute 'MBASIC.fit', since 'datafile' already exists on our disk, \Rfunction{MBASIC.allfit} automatically loads our processed data. This can save substantially amount of time if the size of our data is large.
+Before we move on to describe the step-wise execution, we highlight the usage of the argument 'datafile'. In the above codes, when we compute 'fit', the file 'datafile' is not generated yet, so we process ChIP and input data and save the processed data in 'datafile'. When we compute 'allfits', \Rfunction{MBASIC.allfit} detects that 'datafile' already exists, so it automatically loads the preprocessed data and skip the step of processing the ChIP and input data. This can save substantially amount of time if the size of our data is large.
 
 \subsection{Step 2: Generate the Data Matrices}
 
@@ -247,11 +246,23 @@ dim(fit@Sigma)
 
 Function \Rfunction{plot} enables visualizing the range of the fitted parameter values across different replicates for the same condition. Notice that for these slots the function is implemented using \Rpackage{ggplot2}, so additional arguments can be passed by '+':
 
-<<fig.align="center",dpi=600,fig.width=6,fig.height=6,cache=FALSE>>=
+<<fig.align="center",dpi=600,fig.width=4,fig.height=4,cache=FALSE>>=
 plot(fit, slot = "Mu", state = 2) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 @
 
-\section{Advanced Functions}
+Besides calling the \Rfunction{plot} function on our fitted object, we can also use \Rfunction{ggplot} to visualize how the loci within a single replicate are allocated to different states:
+
+<<fig.align="center",dpi=600,fig.width=4,fig.height=5,cache=FALSE>>=
+## which replicate to plot
+repid <- 1
+chip.counts <- dat$chip[, repid]
+input.counts <- dat$input[, repid]
+pred.states <- as.character(apply(fit@Theta[rownames(fit@Theta) == conds[repid], ], 2, which.max))
+ggplot() + geom_point(aes(x = input.counts, y = chip.counts, color = pred.states)) +
+  theme(legend.position = "top")
+@
+
+\section{Advanced Functions}\label{sec:adv}
 
 \subsection{Model Initialization}
 
