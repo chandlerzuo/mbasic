@@ -9,7 +9,7 @@
 %\usepackage{Sweave}
 <<eval=TRUE, echo=FALSE,results="asis">>=
 BiocStyle::latex()
-knitr::opts_chunk$set(eval = TRUE, message = FALSE, cache = TRUE, echo = TRUE, results = "markup", tidy = TRUE, warning = FALSE)
+knitr::opts_chunk$set(eval = TRUE, message = FALSE, cache = FALSE, echo = TRUE, results = "markup", tidy = TRUE, warning = FALSE)
 @
 
 \title{MBASIC: Matrix Based Analysis for State-space Inference and Clustering}
@@ -54,11 +54,11 @@ setwd("~/mbasic_git/test/")
 
 To illustrate Step 1 we first generate a set of synthetic data. \software{MBASIC} package provides a function \Rfunction{generateSyntheticData} to assist our demo. This function generates synthetic BED data for ChIP and input samples, as well as mappability and GC scores in a directory specified by the 'dir' argument. It also generates a target set of loci for our analysis. By default, the number of loci is 100, each with size 20 bp. All data are generated across 5 chromosomes, each with size 10K bp. ChIP data are from 2 celltypes, and for each celltype there are K=5 TFs. Under each condition randomly 1-3 replicates for the ChIP data are generated. All ChIP data from the same celltype are matched to the same set of 3 input replicates.
 
-<<cache=FALSE>>=
+<<>>=
 library(MBASIC)
 @ 
 
-<<>>=
+<<cache=TRUE>>=
 target <- generateSyntheticData(dir = "syntheticData")
 head(target)
 system("ls syntheticData/*/*", intern = TRUE)[1:5]
@@ -68,14 +68,14 @@ We have developed the \Rfunction{ChIPInputMatch} function to help match the ChIP
 
 We acknowledge that the current function may not parse all data file names correctly. For practical data files, users are suggested to check its result, and manual corrections may be needed.
 
-<<>>=
+<<cache=TRUE>>=
 tbl <- ChIPInputMatch(dir = paste("syntheticData/", c("chip", "input"), sep = ""), celltypes = c("Cell1", "Cell2"), suffices = c(".bam", ".bed"), depth = 5)
 head(tbl)
 @
 
 We also need to specify the experimental condition for each data set by a vector 'conds'.
 
-<<>>=
+<<cache=TRUE>>=
 conds <- paste(tbl$cell, tbl$factor, sep = ".")
 @
 
@@ -83,7 +83,7 @@ conds <- paste(tbl$cell, tbl$factor, sep = ".")
 
 Now we are in a position to continue the next steps in the pipeline. There are two ways to execute these steps: (1) use function \Rfunction{MBASIC.pipeline} to execute the two steps together; or (2) execute each step separately. The following code calls the function \Rfunction{MBASIC.pipeline}:
 
-<<results="hide">>=
+<<results="hide",cache=TRUE>>=
 ## remove file 'data.Rda' since it will be generated
 ## try(file.remove("data.Rda"))
 fit <- MBASIC.pipeline(chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, chipformat = tbl$chipformat, inputformat = tbl$inputformat, fragLen = 150, pairedEnd = FALSE, unique = TRUE, fac = conds, J = 3, S = 2, family = "negbin", datafile = "data.Rda")
@@ -94,7 +94,7 @@ We list the meanings of the arguments of \Rfunction{MBASIC.pipeline} in Table \r
 
 Alternatively, we can fit models with varying numbers of clusters simultaneously, and pick the one with the minimum BIC value:
 
-<<>>=
+<<cache=TRUE>>=
 allfits <- MBASIC.pipeline(chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, chipformat = tbl$chipformat, inputformat = tbl$inputformat, fragLen = 150, pairedEnd = FALSE, unique = TRUE, fac = conds, J = 3:10, S = 2, family = "negbin", datafile = "data.Rda")
 names(allfits)
 class(allfits$BestFit)
@@ -146,12 +146,12 @@ Before we move on to describe the step-wise execution, we highlight the usage of
 
 We can execute Step 2 and 3 separately. In Step 2, we use the function \Rfunction{generateReadMatrices} to calculate the ChIP count at each locus for each ChIP replicate. We also calculate the count at each locus for each matching input.
 
-<<results="hide">>=
+<<results="hide",cache=TRUE>>=
 ## Step 2: Generate mapped count matrices
 dat <- generateReadMatrices(chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, chipformat = tbl$chipformat, inputformat = tbl$inputformat, fragLen = 150, pairedEnd = FALSE, unique = TRUE)
 @
 
-<<results="hide">>=
+<<results="hide",cache=TRUE>>=
 conds <- paste(tbl$cell, tbl$factor, sep = ".")
 @
 
@@ -264,24 +264,36 @@ ggplot() + geom_point(aes(x = input.counts, y = chip.counts, color = pred.states
 
 \section{Advanced Functions}\label{sec:adv}
 
-\subsection{Model Initialization}
-
-Function \Rfunction{MBASIC} accepts initial values for a number of parameters. This is especially useful when an initial run of \Rfunction{MBASIC} reaches the maximum number of iterations, but the algorithm is not converged. In this case, we can rerun the \Rfunction{MBASIC} using the previously fitted model parameters to initialize the model.
-
-<<results="hide">>=
-fit.update <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3,
-                     maxitr = 10, family="negbin", Mu.init = fit@Mu, Sigma.init = fit@Sigma,
-                     V.init = fit@V, ProbMat.init = fit@Theta, W.init = fit@W,
-                     Z.init = fit@Z, b.init = fit@b, P.init = fit@P)
-@
-
-\subsection{Multiple Components in a State}\label{sec:component}
+\subsection{Multiple Components in One State}\label{sec:component}
 
 MBASIC model assumes that the distribution of each data is a mixture of several components, and the components are mapped to different states. In the simpliest cases, each component corresponds to a distinct state. In some cases, we might want to include multiple components in one state. For example, for ChIP-seq data, we may want to include two components for the enriched state to capture both the weakly enriched and strongly enriched loci. This can be done by specifying the 'statemap' value. In the following example, we assume there are three components for data set, the first component corresponds to the un-enriched state, the second and the third components both belong to the enriched states.
 
 <<results="hide">>=
 fit.mix <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3, maxitr = 10, family = "negbin", statemap = c(1, 2, 2))
 @ 
+
+\subsection{Minimum Enrichment Setting for Negative Binomial Distributions}
+
+When using \Rfunction{MBASIC} to analyze data with the negative binomial distribution, the 'min.count' can be used to specify the minimum data threshold for enriched components. For ChIP-seq data, this can be used as a threshold for the enrichment detection. For the previous example, if we want to add a restriction that all loci with states other than 1 must have values at least 5, we can use:
+
+<<results="hide">>=
+fit.threshold1 <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3, maxitr = 10, family = "negbin", statemap = c(1, 2, 2), min.count = 5)
+@ 
+
+We can also use 'min.count' to specify different minimum data thresholds for each component:
+
+<<>>=
+fit.threshold2 <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3, maxitr = 10, family = "negbin", statemap = c(1, 2, 2), min.count = c(0, 5, 10))
+@ 
+
+\subsection{Model Initialization}
+
+Function \Rfunction{MBASIC} accepts initial values for a number of parameters. This is especially useful when an initial run of \Rfunction{MBASIC} reaches the maximum number of iterations, but the algorithm is not converged. In this case, we can rerun the \Rfunction{MBASIC} using the previously fitted model parameters to initialize the model.
+
+<<results="hide">>=
+fit.update <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3,
+                     maxitr = 10, family="negbin", initial = fit)
+@
 
 \subsection{Simulation}
 

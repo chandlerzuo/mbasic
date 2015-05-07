@@ -6,7 +6,7 @@
 \usage{
 MBASIC.MADBayes.full(Y, Gamma = NULL, fac, lambdaw = NULL, lambda = NULL,
   maxitr = 30, S = 2, tol = 1e-10, ncores = 15, nfits = 3,
-  nlambdas = 30, para = NULL, initialize = "madbayes")
+  nlambdas = 30, para = NULL, initialize = "kmeans")
 }
 \arguments{
 \item{Y}{An N by I matrix containing the data from N experiments across I observation units (loci).}

@@ -6,10 +6,8 @@
 \usage{
 MBASIC(Y, Gamma = NULL, S, fac, J = NULL, maxitr = 100, struct = NULL,
   para = NULL, family = "lognormal", method = "MBASIC", zeta = 0.1,
-  tol = 1e-10, tol.par = 0.001, out = NULL, X = NULL, verbose = FALSE,
-  statemap = NULL, Mu.init = NULL, Sigma.init = NULL, V.init = NULL,
-  ProbMat.init = NULL, W.init = NULL, Z.init = NULL, b.init = NULL,
-  P.init = NULL)
+  min.count = 0, tol = 1e-10, tol.par = 0.001, out = NULL,
+  verbose = FALSE, statemap = NULL, initial = NULL)
 }
 \arguments{
 \item{Y}{An N by I matrix containing the data from N experiments across I observation units.}
@@ -34,6 +32,8 @@ MBASIC(Y, Gamma = NULL, S, fac, J = NULL, maxitr = 100, struct = NULL,
 
 \item{zeta}{The initial value for the proportion of units that are not clustered. Default: 0.1. If 0, no singleton cluster is fitted.}
 
+\item{min.count}{The minimum count threshold for each component. This argument is only used when \code{family='negbin'}. If it is a single number, it is the threshold for all components >= 2. If it is a vector, it is the threshold for each component.}
+
 \item{tol}{Tolerance for the relative increment in log-likelihood value in checking the algorithm convergence. Default: 1e-10.}
 
 \item{tol.par}{Tolerance for the relative error in parameter updates in checking the algorithm convergence. Default: 1e-5.}
@@ -42,7 +42,9 @@ MBASIC(Y, Gamma = NULL, S, fac, J = NULL, maxitr = 100, struct = NULL,
 
 \item{verbose}{A boolean variable indicating whether intermediate model fitting metrics should be printed. Default: FALSE.}
 
-\item{statemap}{A vector the same length as the number of mixture components, and taking values from 1 to S representing the states of each component. Default: NULL.}
+\item{statemap}{A vector the same length as the number of mixture components, and taking values from 1 to S representing the states of each component. Default: NULL. See details for more information.}
+
+\item{initial}{Either a \code{\link{list}} or \linkS4class{MBASICFit} object that provides initial values for model parameters. Default: NULL.}
 }
 \value{
 An object of class \linkS4class{MBASICFit}.
@@ -54,9 +56,9 @@ This function is designed to analyze general state-space models. The data consis
 MBASIC assumes that there are S underlying states for each expeirment and each loci. A single state may also include multiple mixture components, indexed by m. In total, we can have M mixture components. The mapping from mixture components to the states are provided by \code{statemap}. By default, \code{statemap=NULL}, in which case each state has only one component, and M=S.\cr
 Function MBASIC currently supports five different distributional families: log-normal, negative binomial, binomial, gamma-binomial and scaled-t distributions. This should be specified by the \code{family} argument.\cr
 For the log-normal distributions, log(Y+1) is modeled as normal distributions. For experiment n, if locus i has component m, distribution for log(Y[n,i]+1) is N(Mu[n,m]*Gamma[n,i+I(m-1)], Sigma[n,m]).\cr
-For the negative binomial distributions, the meanings of Mu and Sigma are different. For experiment n, if locus i has component m, distribution of Y[n,i] is NB(Mu[n,m]*Gamma[n,i+I(m-1)], Sigma[n,m]). In this package, NB(mu, a) denotes the negative-binomial distribution with mean mu and size a (i.e. the variance is mu*(1+mu/a)).\cr
-For the binomial distribution, for experiment n, if locus i has component m, distribution for Y[n,i] is Binom(X[n,i], Mu[n,m]).\cr
-For the gamma-binomial distribution, for experiment n, if locus i has component m, distribution for Y[n,i] is Binom(X[n,i], p) where p follows a gamma prior of gamma(Mu[n,m], Sigma[n,m]).\cr
+For the negative binomial distributions, the meanings of Mu and Sigma are different. For experiment n, if locus i has component m, distribution of Y[n,i]-min.count[m] is NB(Mu[n,m]*Gamma[n,i+I(m-1)], Sigma[n,m]). In this package, NB(mu, a) denotes the negative-binomial distribution with mean mu and size a (i.e. the variance is mu*(1+mu/a)). Notice that if a single value of 'min.count' is provided, it will be converted to a vector of \code{c(0, rep(min.count, M-1))}.\cr
+For the binomial distribution, for experiment n, if locus i has component m, distribution for Y[n,i] is Binom(Gamma[n,i], Mu[n,m]).\cr
+For the gamma-binomial distribution, for experiment n, if locus i has component m, distribution for Y[n,i] is Binom(Gamma[n,i], p) where p follows a gamma prior of gamma(Mu[n,m], Sigma[n,m]).\cr
 For the scaled-t distribution, for experiment n, if locus i has component m, distribution for Y[n,i]/Gamma[n,i+I(m-1)]/Mu[n,m] is t distribution with Sigma[n,m] degrees of freedom.\cr
 The \code{Gamma} parameter encodes the background information for all N experiments, I units and M components. It can be a matrix with dimension K by I * M, where the background datum for experiment n, unit i and component m is Gamma[n,i+I*(m-1)]. If in the input \code{Gamma=NULL}, then it is regenerated as a matrix of entries 1 with dimension N x IM. If in the input \code{Gamma} is a N x I matrix, then this function adds I(M-1) columns of all 1s to this matrix.\cr
  The \code{method} argument determines what fitting method will be used. The default is 'MBASIC', where the states and the clustering are simultaneously estimated. 'SE-HC' and 'SE-MC' methods use 2-step algorithms. In the first step, both estimate the states for each unit by an E-M algorithm for each experiment. In the second step, 'SE-HC' uses hierarchical clustering to cluster the units, while 'SE-MC' uses function \code{\link{MBASIC.state}} to identify clusters.\cr

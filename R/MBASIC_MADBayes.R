@@ -190,7 +190,7 @@ MBASIC.MADBayes.internal <- function(Y, Gamma, fac, lambdaw = NULL, lambda, maxi
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @import doMC
 #' @export
-MBASIC.MADBayes.full <- function(Y, Gamma = NULL, fac, lambdaw = NULL, lambda = NULL, maxitr = 30, S = 2, tol = 1e-10, ncores = 15, nfits = 3, nlambdas = 30, para = NULL, initialize = "madbayes") {
+MBASIC.MADBayes.full <- function(Y, Gamma = NULL, fac, lambdaw = NULL, lambda = NULL, maxitr = 30, S = 2, tol = 1e-10, ncores = 15, nfits = 3, nlambdas = 30, para = NULL, initialize = "kmeans") {
   t0 <- Sys.time()
   if(!is.null(lambda)) {
     ncores <- min(c(ncores, length(lambda) * nfits))
@@ -198,13 +198,14 @@ MBASIC.MADBayes.full <- function(Y, Gamma = NULL, fac, lambdaw = NULL, lambda = 
   registerDoMC(ncores)
     
   if(!is.null(lambda)) {
-    lambda <- sort(unique(lambda))
-    alllambdas <- rep(lambda, each = nfits)
+    lambdas <- sort(unique(lambda))
+    alllambdas <- rep(lambdas, each = nfits)
     results <- foreach(i = seq_along(alllambdas)) %dopar% {
       set.seed(i + Sys.time())
       fit <- MBASIC.MADBayes(Y, Gamma, fac, lambdaw = lambdaw, lambda = alllambdas[i], maxitr = maxitr, S = S, tol = tol, verbose = FALSE, para = para, initialize = initialize)
       list(fit = fit, lambda = alllambdas[i])
     }
+    initLosses <- NULL
   } else {
     if(!is.numeric(nlambdas)) {
       stop("Error: 'nlambdas' must take a numeric value.")

@@ -1,0 +1,17 @@
+base
+cluster
+foreach
+iterators
+doMC
+BiocGenerics
+IRanges
+XVector
+GenomicRanges
+ggplot2
+gplots
+gtools
+MASS
+mclust
+msm
+Rcpp
+MBASIC

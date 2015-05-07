@@ -4,43 +4,18 @@
 \alias{MBASIC.full}
 \title{Simultaneously fitting MBASIC model for different numbers of clusters.}
 \usage{
-MBASIC.full(Y, Gamma = NULL, S, fac, J = NULL, maxitr = 100,
-  struct = NULL, para = NULL, family = "lognormal", method = "MBASIC",
-  zeta = 0.1, tol = 1e-10, tol.par = 0.001, out = NULL, X = NULL,
-  verbose = FALSE, statemap = NULL, Mu.init = NULL, Sigma.init = NULL,
-  V.init = NULL, ProbMat.init = NULL, W.init = NULL, Z.init = NULL,
-  b.init = NULL, P.init = NULL, ncores = 1)
+MBASIC.full(J = NULL, struct = NULL, out = NULL, ncores = 1, ...)
 }
 \arguments{
-\item{Y}{An N by I matrix containing the data from N experiments across I observation units.}
-
-\item{S}{An integer for the number of states.}
-
-\item{fac}{A vector of levels repr1esenting the conditions of each replicate.}
-
 \item{J}{A vector of the numbers of clusters to be identified.}
-
-\item{maxitr}{The maximum number of iterations in the E-M algorithm. Default: 100.}
 
 \item{struct}{A list of K by J matrix indicating the structures of each cluster. Default: NULL.}
 
-\item{para}{A list object that contains the true model parameters. Default: NULL. See details for more information.}
-
-\item{family}{The distribution of family to be used. Either "lognormal", "negbin", "binom", "gamma-binom". See details for more information.}
-
-\item{method}{A string for the fitting method, 'MBASIC' (default), 'PE-MC', 'SE-HC',  or 'SE-MC'. See details for more information.}
-
-\item{zeta}{The initial value for the proportion of units that are not clustered. Default: 0.1. If 0, no singleton cluster is fitted.}
-
-\item{tol}{Tolerance for error in checking the E-M algorithm's convergence. Default: 1e-04.}
-
-\item{out}{The file directory for writing fitting information in each E-M iteration. Default: NULL (no information is outputted).}
-
-\item{verbose}{A boolean variable indicating whether intermediate model fitting metrics should be printed. Default: FALSE.}
-
-\item{statemap}{A vector the same length as the number of mixture components, and taking values from 1 to S representing the states of each component. Default: NULL.}
+\item{out}{The prefix of the file names to write model output information. Default: NULL, when the information is written to the R output.}
 
 \item{ncores}{The number of CPUs to be used in parallele. Default: 1.}
+
+\item{...}{Other parameters that are passed to \code{\link{MBASIC}}.}
 }
 \value{
 A list object including the following fields:
@@ -63,5 +38,8 @@ dat.sim.fit <- MBASIC.full(Y = dat.sim$Y, S = 3, fac = rep(1:10, each = 2), J = 
 }
 \author{
 Chandler Zuo \email{zuo@stat.wisc.edu}
+}
+\seealso{
+\code{\link{MBASIC}}
 }
 
