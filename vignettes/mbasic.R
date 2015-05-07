@@ -11,24 +11,6 @@ setwd("~/mbasic_git/test/")
 ## -----------------------------------------------
 library(MBASIC)
 
-## ----results="hide",cache=TRUE------------------
-## remove file 'data.Rda' since it will be generated
-## try(file.remove("data.Rda"))
-fit <- MBASIC.pipeline(chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, chipformat = tbl$chipformat, inputformat = tbl$inputformat, fragLen = 150, pairedEnd = FALSE, unique = TRUE, fac = conds, J = 3, S = 2, family = "negbin", datafile = "data.Rda")
-class(fit)
-
-## ----cache=TRUE---------------------------------
-allfits <- MBASIC.pipeline(chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, chipformat = tbl$chipformat, inputformat = tbl$inputformat, fragLen = 150, pairedEnd = FALSE, unique = TRUE, fac = conds, J = 3:10, S = 2, family = "negbin", datafile = "data.Rda")
-names(allfits)
-class(allfits$BestFit)
-
-## ----results="hide",cache=TRUE------------------
-## Step 2: Generate mapped count matrices
-dat <- generateReadMatrices(chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, chipformat = tbl$chipformat, inputformat = tbl$inputformat, fragLen = 150, pairedEnd = FALSE, unique = TRUE)
-
-## ----results="hide",cache=TRUE------------------
-conds <- paste(tbl$cell, tbl$factor, sep = ".")
-
 ## ----results="hide"-----------------------------
 ## Step 2': calculate the mappability and GC-content scores for each locus
 target <- averageMGC(target = target, m.prefix = "syntheticData/mgc/", m.suffix = "_M.txt", gc.prefix = "syntheticData/mgc/", gc.suffix = "_GC.txt")

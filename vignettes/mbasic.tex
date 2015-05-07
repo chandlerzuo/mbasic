@@ -256,7 +256,7 @@ Alternatively, we can fit models with varying numbers of clusters simultaneously
     \multicolumn{2}{c}{Genomic Information}\\
     \hline
     target & A RangedData object for the target intervals where the reads are mapped.\\
-    fragLen & Either a single value or a 2-column matrix of the fragment lengths for the chip and input files.  Default: 150.\\
+    fragLen & Either a single value or a 2-column matrix of the fragment lengths, the first column for the different fragment lengths for each file in 'chipfile', and the second column for the fragment lengths for each file in 'inputfile'. Default: 150.\\
     pairedEnd & Either a boolean value or a 2-column boolean matrix for  whether each file is a paired-end data set. Currently this function only allows ``BAM" files for paired-end data. Default: FALSE.\\
     unique & A boolean value for whether only reads with distinct genomic coordinates or strands are mapped.  Default: TRUE.\\
     \hline
