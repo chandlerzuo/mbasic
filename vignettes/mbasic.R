@@ -77,15 +77,37 @@ ggplot() + geom_point(aes(x = input.counts, y = chip.counts, color = pred.states
 ## ----results="hide"-----------------------------
 fit.mix <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3, maxitr = 10, family = "negbin", statemap = c(1, 2, 2))
 
+## -----------------------------------------------
+mincount.thresholds <- apply(dat$input, 2, function(x) quantile(0.25)) * apply(dat$chip, 2, mean) / apply(dat$input, 2, mean)
+mincount.thresholds[mincount.thresholds < 5] <- 5
+fit.threshold1 <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3, maxitr = 10, family = "negbin", statemap = c(1, 2, 2), min.count = mincount.thresholds)
+
 ## ----results="hide"-----------------------------
-fit.threshold1 <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3, maxitr = 10, family = "negbin", statemap = c(1, 2, 2), min.count = 5)
+fit.threshold2 <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3, maxitr = 10, family = "negbin", statemap = c(1, 2, 2), min.count = 5)
 
 ## -----------------------------------------------
-fit.threshold2 <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3, maxitr = 10, family = "negbin", statemap = c(1, 2, 2), min.count = c(0, 5, 10))
+fit.threshold3 <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3, maxitr = 10, family = "negbin", statemap = c(1, 2, 2), min.count = c(0, 5, 10))
+
+## -----------------------------------------------
+mincount.mat <- cbind(0, mincount.thresholds, 2 * mincount.thresholds)
+fit.threshold4 <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3, maxitr = 10, family = "negbin", statemap = c(1, 2, 2), min.count = mincount.mat)
 
 ## ----results="hide"-----------------------------
 fit.update <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3,
                      maxitr = 10, family="negbin", initial = fit)
+
+## -----------------------------------------------
+dat.asb <- MBASIC.sim(xi = 10, family = "binom", I = 1000, fac = rep(seq(10), each = 2), J = 3, S = 3, zeta = 0.1)
+## The counts from either the maternal or the paternal allele
+dim(dat.asb$Y)
+## The total number of counts from both alleles
+dim(dat.asb$X)
+
+## -----------------------------------------------
+## Using binomial distributions
+fit.asb.bin <- MBASIC(Y = dat.asb$Y, Gamma = dat.asb$X, S = 3, fac = dat.asb$fac, J = 3, maxitr = 5, para = dat.asb, family = "binom")
+## Using gamma-binomial distributions
+fit.asb.gb <- MBASIC(Y = dat.asb$Y, Gamma = dat.asb$X, S = 3, fac = dat.asb$fac, J = 3, maxitr = 5, para = dat.asb, family = "gamma-binom")
 
 ## -----------------------------------------------
 ## Simulate data across I=1000 units with J=3 clusters

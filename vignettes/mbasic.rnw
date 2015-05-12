@@ -274,17 +274,34 @@ fit.mix <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J =
 
 \subsection{Minimum Enrichment Setting for Negative Binomial Distributions}
 
-When using \Rfunction{MBASIC} to analyze data with the negative binomial distribution, the 'min.count' can be used to specify the minimum data threshold for enriched components. For ChIP-seq data, this can be used as a threshold for the enrichment detection. For the previous example, if we want to add a restriction that all loci with states other than 1 must have values at least 5, we can use:
+When using \Rfunction{MBASIC} to analyze data with the negative binomial distribution, the 'min.count' can be used to specify the minimum data threshold for enriched components. For ChIP-seq data, this can be used as a threshold for the enrichment detection. 'min.count' accepts four formats: a scalar, a vector with the same length as the number of components, a vector with the same length as the number of replicates, and a matrix. 
 
-<<results="hide">>=
-fit.threshold1 <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3, maxitr = 10, family = "negbin", statemap = c(1, 2, 2), min.count = 5)
-@ 
-
-We can also use 'min.count' to specify different minimum data thresholds for each component:
+We recommend that users specify different thresholds for individual replicates that account for their sequencing depth difference. In this case, we should let 'min.count' be a vector the same length as the number of replicates, and it specifies the threshold for each replicate for all components other than 1. The following example set the threshold based on the 25\% percentiles for the matching input of each replicate:
 
 <<>>=
-fit.threshold2 <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3, maxitr = 10, family = "negbin", statemap = c(1, 2, 2), min.count = c(0, 5, 10))
+mincount.thresholds <- apply(dat$input, 2, function(x) quantile(0.25)) * apply(dat$chip, 2, mean) / apply(dat$input, 2, mean)
+mincount.thresholds[mincount.thresholds < 5] <- 5
+fit.threshold1 <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3, maxitr = 10, family = "negbin", statemap = c(1, 2, 2), min.count = mincount.thresholds)
+@
+
+For the scalar value, 'min.count' specifies the threshold for all units with components other than 1. In the previous example, if we want to add a restriction that all loci with states other than 1 must have values at least 5, we can use:
+
+<<results="hide">>=
+fit.threshold2 <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3, maxitr = 10, family = "negbin", statemap = c(1, 2, 2), min.count = 5)
 @ 
+
+If 'min.count' is a vector the same length as the number of components, it specifies the threshold for each component for all the replicates:
+
+<<>>=
+fit.threshold3 <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3, maxitr = 10, family = "negbin", statemap = c(1, 2, 2), min.count = c(0, 5, 10))
+@ 
+
+Finally, we can specify the thresholds for every component and every replicate using a matrix input:
+
+<<>>=
+mincount.mat <- cbind(0, mincount.thresholds, 2 * mincount.thresholds)
+fit.threshold4 <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3, maxitr = 10, family = "negbin", statemap = c(1, 2, 2), min.count = mincount.mat)
+@
 
 \subsection{Model Initialization}
 
@@ -295,11 +312,32 @@ fit.update <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, 
                      maxitr = 10, family="negbin", initial = fit)
 @
 
-\subsection{Simulation}
+\subsection{Analyze the Allele Specific Binding Data}
 
-The \software{MBASIC} package also provides functions to simulate and fit general MBASIC models.
+The \software{MBASIC} can be used to analyze allele-specific binding data. For such data, we need prepare two data matrices for the read counts for all loci across all replicates. One matrix should be the counts from either the paternal or the maternal allele; the other matrix should be the sum of maternal and paternal allele counts. Calculating allele-specific counts requires either remapping the sequencing reads to the non-reference genome or first matching to the reference genome then analyzing the mismatch information. \software{MBASIC} does not implement such procedures, and require the users to provide the processed data matrices.
 
-Function \Rfunction{MBASIC.sim} simulates data with 'I' units and 'J' clusters. The 'S' argument specifies the number of different states, and 'zeta' is the proportion of singleton. 'fac' specifies the condition for each experiment. The 'xi' argument relates to the magnitude of the simulated data. For detailed description users are recommended to read our manual.
+We can use the \Rfunction{MBASIC.sim} function (see Section \ref{sec:sim}) to generate a synthetic data set for allele-specific counts:
+
+<<>>=
+dat.asb <- MBASIC.sim(xi = 10, family = "binom", I = 1000, fac = rep(seq(10), each = 2), J = 3, S = 3, zeta = 0.1)
+## The counts from either the maternal or the paternal allele
+dim(dat.asb$Y)
+## The total number of counts from both alleles
+dim(dat.asb$X)
+@ 
+
+We can fit MBASIC models on such data with either mixtures of binomial distributions or gamma-binomial distributions (i.e. binomial distributions with Gamma priors). Notice that the total count matrix is passed through the 'Gamma' parameter:
+
+<<>>=
+## Using binomial distributions
+fit.asb.bin <- MBASIC(Y = dat.asb$Y, Gamma = dat.asb$X, S = 3, fac = dat.asb$fac, J = 3, maxitr = 5, para = dat.asb, family = "binom")
+## Using gamma-binomial distributions
+fit.asb.gb <- MBASIC(Y = dat.asb$Y, Gamma = dat.asb$X, S = 3, fac = dat.asb$fac, J = 3, maxitr = 5, para = dat.asb, family = "gamma-binom")
+@ 
+
+\subsection{Simulation}\label{sec:sim}
+
+The \software{MBASIC} package also provides functions to simulate and fit general MBASIC models. Function \Rfunction{MBASIC.sim} simulates data with 'I' units and 'J' clusters. The 'S' argument specifies the number of different states, and 'zeta' is the proportion of singleton. 'fac' specifies the condition for each experiment. The 'xi' argument relates to the magnitude of the simulated data. For detailed description users are recommended to read our manual.
 
 <<>>=
 ## Simulate data across I=1000 units with J=3 clusters

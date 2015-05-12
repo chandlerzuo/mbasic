@@ -24,7 +24,8 @@
 #' MBASIC assumes that there are S underlying states for each expeirment and each loci. A single state may also include multiple mixture components, indexed by m. In total, we can have M mixture components. The mapping from mixture components to the states are provided by \code{statemap}. By default, \code{statemap=NULL}, in which case each state has only one component, and M=S.\cr
 #' Function MBASIC currently supports five different distributional families: log-normal, negative binomial, binomial, gamma-binomial and scaled-t distributions. This should be specified by the \code{family} argument.\cr
 #' For the log-normal distributions, log(Y+1) is modeled as normal distributions. For experiment n, if locus i has component m, distribution for log(Y[n,i]+1) is N(Mu[n,m]*Gamma[n,i+I(m-1)], Sigma[n,m]).\cr
-#' For the negative binomial distributions, the meanings of Mu and Sigma are different. For experiment n, if locus i has component m, distribution of Y[n,i]-min.count[m] is NB(Mu[n,m]*Gamma[n,i+I(m-1)], Sigma[n,m]). In this package, NB(mu, a) denotes the negative-binomial distribution with mean mu and size a (i.e. the variance is mu*(1+mu/a)). Notice that if a single value of 'min.count' is provided, it will be converted to a vector of \code{c(0, rep(min.count, M-1))}.\cr
+#' For the negative binomial distributions, the meanings of Mu and Sigma are different. For experiment n, if locus i has component m, distribution of Y[n,i]-min.count[n,m] is NB(Mu[n,m]*Gamma[n,i+I(m-1)], Sigma[n,m]). In this package, NB(mu, a) denotes the negative-binomial distribution with mean mu and size a (i.e. the variance is mu*(1+mu/a)). Notice that if a single value of 'min.count' is provided, it will be converted to a vector of \code{c(0, rep(min.count, M-1))}.\cr
+#' The 'min.count' for the negative binomial distribution specifies the minimum enrichment for each replicate and compoment. It will be formed in an N by M matrix, but the function accepts its input as a vector of length N (recommended) or M, or a single value. If it is a single value, it will be used as the common threshold for all replicates and compoments >= 2. If it is a vector of length N, it will be used as the replicate specific thresholds for all components >= 2. If it is a vector of length M, it will be used as the threshold for each component for all replicates. If \code{min.count=NULL}, no threshold is applied.\cr
 #' For the binomial distribution, for experiment n, if locus i has component m, distribution for Y[n,i] is Binom(Gamma[n,i], Mu[n,m]).\cr
 #' For the gamma-binomial distribution, for experiment n, if locus i has component m, distribution for Y[n,i] is Binom(Gamma[n,i], p) where p follows a gamma prior of gamma(Mu[n,m], Sigma[n,m]).\cr
 #' For the scaled-t distribution, for experiment n, if locus i has component m, distribution for Y[n,i]/Gamma[n,i+I(m-1)]/Mu[n,m] is t distribution with Sigma[n,m] degrees of freedom.\cr
@@ -92,24 +93,6 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
   stateMap <- matrix(0, nrow = M, ncol = S)
   stateMap[cbind(seq(M), statemap)] <- 1
 
-  if(length(min.count) == 1) {
-    min.count <- rep(min.count, M)
-    min.count[statemap == 1] <- 0
-  } else if(is.null(min.count)) {
-    min.count <- rep(0, M)
-  } else if(length(min.count) != M) {
-    warning("Length of 'min.count' is not the same as 'S' or 'stateMap'. No minimum count threshold value is set.")
-    min.count <- rep(0, M)
-  }
-  if(family != "negbin" & sum(min.count != 0) > 0) {
-    warning("'min.count' is only supported for the negative binomial distribution. No minimum count threshold value is set.")
-    min.count <- rep(0, M)
-  }
-  if(sum(min.count < 0) > 0) {
-    warning("Negative values in 'min.count' are reset as 0.")
-    min.count[min.count < 0] <- 0
-  }
-  
   ## prespecified
   K <- length(unique(fac))
   facNames <- as.character(unique(fac))
@@ -122,7 +105,32 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
   if(length(fac) != N)
     stop("Error: total number of replicates do not match with the number of rows in Y")
 
-  if(family == "binom") {
+  if(length(min.count) == 1) {
+    min.count <- matrix(min.count, nrow = N, ncol = M)
+    min.count[, statemap == 1] <- 0
+  } else if(is.null(min.count)) {
+    min.count <- matrix(0, nrow = N, ncol = M)
+  } else if(length(min.count) == N) {
+    tmp <- min.count
+    min.count <- matrix(0, nrow = N, ncol = M)
+    min.count[, statemap != 1] <- tmp
+  } else if(length(min.count) == M) {
+    min.count <- matrix(rep(min.count, each = N), ncol = M)
+  } else if(ncol(min.count) != M | nrow(min.count) != N) {
+    warning("The dimension of 'min.count' is invalid. No minimum value threshold is applied.")
+    min.count <- matrix(0, nrow = N, ncol = M)
+  }
+  
+  if(family != "negbin" & sum(min.count != 0) > 0) {
+    warning("'min.count' is only supported for the negative binomial distribution. No minimum count threshold value is set.")
+  }
+  
+  if(sum(min.count < 0) > 0) {
+    warning("Negative values in 'min.count' are reset as 0.")
+    min.count[min.count < 0] <- 0
+  }
+
+  if(family %in% c("binom", "gamma-binom")) {
     if(is.null(Gamma)) {
       Gamma <- matrix(apply(Y, 1, max), nrow = N, ncol = I)
     } else if(nrow(Gamma) != N | ncol(Gamma) != I) {
@@ -133,7 +141,7 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
         Gamma[Gamma < Y] <- Y[Gamma < Y]
       }
     }
-    Gamma[Gamma == 0] <- 1
+    Gamma <- matrix(c(Gamma), nrow = N, ncol = I * M)
   }
   
   if(is.null(Gamma)) {
@@ -144,15 +152,18 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
   } else if(nrow(Gamma) != N | ncol(Gamma) != I * M) {
     stop("Error: structure of 'Gamma' is not correct. See details.")
   }
+  
   if(min(Gamma) == 0) {
     Gamma <- Gamma + min(Gamma[Gamma > 0])
   }
   
-  ## scale the Gamma matrix
+  ## scale the Gamma matrix if the distribution is not binomial or gamma-binomial
   scaleMat <- matrix(1, nrow = N, ncol = M)
-  for(m in seq(M)) {
-    scaleMat[, m] <- apply(Gamma[, I * (m - 1) + seq(I)], 1, mean)
-    Gamma[, I * (m - 1) + seq(I)] <- Gamma[, I * (m - 1) + seq(I)] / scaleMat[, m]
+  if(family %in% c("lognormal", "negbin", "scaled-t")) {
+    for(m in seq(M)) {
+      scaleMat[, m] <- apply(Gamma[, I * (m - 1) + seq(I)], 1, mean)
+      Gamma[, I * (m - 1) + seq(I)] <- Gamma[, I * (m - 1) + seq(I)] / scaleMat[, m]
+    }
   }
   
   if(is.null(struct)) {
@@ -392,7 +403,7 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
       PDF <- matrix(0, nrow = N * M, ncol = I)
       for(m in seq_len(M)) {
         Gamma.m <- Gamma[, (m - 1) * I + seq(I)]
-        PDF[seq(N) + (m - 1) * N, ] <- logdensity(Y, Mu[, m], Sigma[, m], Gamma.m, family, min.count[m])
+        PDF[seq(N) + (m - 1) * N, ] <- logdensity(Y, Mu[, m], Sigma[, m], Gamma.m, family, min.count[, m])
       }
       PDF <- trimLogValue(PDF)
     }
@@ -525,7 +536,7 @@ InitStates <- function() {
   for(m in seq(M)) {
     Gamma.m <- Gamma[, I * (m - 1) + seq(I)]
     idx <- (m - 1) * N + seq_len(N)
-    F1.full[idx,] <- logdensity(Y, Mu[, m], Sigma[, m], Gamma.m, family, min.count[m])
+    F1.full[idx,] <- logdensity(Y, Mu[, m], Sigma[, m], Gamma.m, family, min.count[, m])
   }
   F1.full <- trimLogValue(F1.full)
   F1.full <- exp(F1.full)
@@ -564,14 +575,15 @@ InitDist <- function() {
   
   for(m in seq(M)) {
     m3 <- NULL
-    thr <- min.count[m]
+    thr <- min.count[, m]
     if(family == "lognormal") {
       Y.sec <- c(Y)[c(Y) <= quantile(c(Y), m / M) & c(Y) >= quantile(c(Y), (m - 1) / M)]
       Y.sec <- log(Y.sec + 1)
     } else if(family  == "negbin") {
-      Y.sec <- c(Y)[c(Y) < quantile(c(Y), m / M) & c(Y) > quantile(c(Y), (m - 1) / M)]
-      Y.sec <- Y.sec - thr
-      Gamma.sec <- c(Gamma * Gamma)[c(Y) < quantile(c(Y), m / M) & c(Y) > quantile(c(Y), (m - 1) / M)]
+      Y.sec <- c(Y - thr)[c(Y - thr) < quantile(c(Y - thr), m / M) & c(Y - thr) > quantile(c(Y - thr), (m - 1) / M)]
+      Y.sec[Y.sec < 0] <- 0
+      ## Y.sec <- Y.sec - thr
+      Gamma.sec <- c(Gamma * Gamma)[c(Y - thr) < quantile(c(Y - thr), m / M) & c(Y - thr) > quantile(c(Y - thr), (m - 1) / M)]
       m3 <- mean(Gamma.sec)
     } else if(family == "scaled-t") {
       Y.sec <- abs(Y)
@@ -603,7 +615,7 @@ UpdateDist <- function() {
   for(m in seq_len(M)) {
     idx <- seq(N) + (m - 1) * N
     Gamma.m <- Gamma[, I * (m - 1) + seq(I)]
-    thr <- min.count[m]
+    thr <- min.count[, m]
     m3 <- NULL
     if(family == "lognormal") {
       m1 <- apply(log(Y + 1) * ProbMat.full[idx, ], 1, sum) / apply(Gamma.m * ProbMat.full[idx, ], 1, sum)
@@ -632,10 +644,10 @@ UpdateDist <- function() {
   }
   
   ## order the means
-  Mu <- Mu + rep(min.count, each = nrow(Mu))
+  Mu <- Mu + min.count
   od <-  apply(Mu, 1, order)
   Mu <- matrix(Mu[cbind(rep(seq_len(N), each = M), c(od))], ncol = M, byrow = TRUE)
-  Mu <- Mu - rep(min.count, each = nrow(Mu))
+  Mu <- Mu - min.count
   Sigma <- matrix(Sigma[cbind(rep(seq_len(N), each = M), c(od))], ncol = M, byrow = TRUE)
 
   Return(c("Mu", "Sigma"))
@@ -651,7 +663,7 @@ UpdateStates <- function() {
   for(m in seq(M)) {
     idx <- (m - 1) * N + seq_len(N)
     Gamma.m <- Gamma[, seq(I) + I * (m - 1)]
-    F1.full[idx, ] <- exp(logdensity(Y, Mu[, m], Sigma[, m], Gamma.m, family, min.count[m])) * V[, m]
+    F1.full[idx, ] <- exp(logdensity(Y, Mu[, m], Sigma[, m], Gamma.m, family, min.count[, m])) * V[, m]
   }
   F1.tmp <- F1.full
   ## convert to (NS) x I
@@ -771,11 +783,11 @@ logdensity <- function(y, mu, sigma, gamma, family, thr) {
       a <- mu / (1 - mu) * sigma
       b <- sigma
      return(
-          log(beta(a + y, x - y + b)) -
-              log(beta(a, b)) + log(choose(x, y))
+          log(beta(a + y, gamma - y + b)) -
+              log(beta(a, b)) + log(choose(gamma, y))
       )
   } else {
-      return(dbinom(y, prob = mu, size = x, log = TRUE))
+      return(dbinom(y, prob = mu, size = gamma, log = TRUE))
   }
 }
 
@@ -901,7 +913,7 @@ InitWZb <- function() {
 #' ## Fit the model
 #' dat.sim.fit <- MBASIC.full(Y = dat.sim$Y, S = 3, fac = rep(1:10, each = 2), J = 3:5, maxitr = 3, para = NULL, family = "lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-6, tol.par = 0.001)
 #' @useDynLib MBASIC
-#' @import doMC
+#' @import foreach
 #' @export
 MBASIC.full <- function(J=NULL, struct = NULL, out = NULL, ncores = 1, ...) {
   t0 <- Sys.time()
@@ -916,7 +928,8 @@ MBASIC.full <- function(J=NULL, struct = NULL, out = NULL, ncores = 1, ...) {
     stop("Error: at least J or struct must be not NULL.")
   }
 
-  registerDoMC(min(c(ncores, nmodels)))
+  startParallel(ncores)
+  
   allfits <- foreach(i = seq(nmodels)) %dopar% {
     if(!is.null(allstructs)) {
       struct <- allstructs[[i]]
@@ -929,6 +942,9 @@ MBASIC.full <- function(J=NULL, struct = NULL, out = NULL, ncores = 1, ...) {
     }
     MBASIC(J = J, struct = struct, out = out, ...)
   }
+
+  endParallel()
+  
   bestBIC <- Inf
   bestFit <- NULL
   for(fit in allfits) {

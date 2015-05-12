@@ -223,6 +223,26 @@ trimProbValue <- function(x) {
   return(x)
 }
 
+
+#' @import doParallel
+startParallel <- function(ncores) {
+  if(.Platform$OS.type == "unix") {
+    registerDoParallel(ncores)
+  } else {
+    cl <- makeCluster(ncores)
+    registerDoParallel(cl)
+    Return("cl")
+  }
+}
+
+#' @import doParallel
+endParallel <- function() {
+  if(.Platform$OS.type != "unix") {
+    stopCluster(cl)
+  }
+}
+
+# E-step implemented in R as debugging
 estep <- function(W, P, V, zeta, probz, PDF, designMap, stateMap, unitMap) {
   I <- ncol(PDF)
   J <- ncol(W)

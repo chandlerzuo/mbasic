@@ -40,8 +40,10 @@ MBASIC.MADBayes.internal <- function(Y, Gamma, fac, lambdaw = NULL, lambda, maxi
   }
 
   if(is.null(lambdaw)) {
-    lambdaw <- 2 * mean(na.omit(Sigma))
+    lambdaw <- 2
   }
+  
+  lambdaw <- lambdaw * mean(na.omit(Sigma))
   lambda <- lambda * lambdaw
   
   ## Initialize cluster
@@ -69,7 +71,7 @@ MBASIC.MADBayes.internal <- function(Y, Gamma, fac, lambdaw = NULL, lambda, maxi
   Z <- matrix(0, nrow = I, ncol = J)
   Z[cbind(seq(I), ret$clusterLabels + 1)] <- 1
 
-  W <- ret$W[, seq(max(ret$clusterLabels) + 1)]
+  W <- ret$W[, seq(max(ret$clusterLabels) + 1), drop = FALSE]
   
   Theta.err <- W.err <- ari <- mcr <- numeric(0)
   if(!is.null(para)) {
@@ -123,7 +125,7 @@ MBASIC.MADBayes.internal <- function(Y, Gamma, fac, lambdaw = NULL, lambda, maxi
     Theta.total <- Theta.total + Theta.norm[(s - 1) * K + seq(K), ]
   }
   Theta.norm <- Theta.norm / t(matrix(rep(t(Theta.total), S), nrow = I))
-  if(J == I) {
+  if(J == I | var(ret$clusterLabels) == 0) {
     sil.norm <- 0
   } else {
     dist.norm <- dist(t(Theta.norm), method = "manhattan")
@@ -188,15 +190,16 @@ MBASIC.MADBayes.internal <- function(Y, Gamma, fac, lambdaw = NULL, lambda, maxi
 #' Time \tab Time in seconds used to fit the model.\cr
 #' }
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
-#' @import doMC
+#' @import foreach
 #' @export
 MBASIC.MADBayes.full <- function(Y, Gamma = NULL, fac, lambdaw = NULL, lambda = NULL, maxitr = 30, S = 2, tol = 1e-10, ncores = 15, nfits = 3, nlambdas = 30, para = NULL, initialize = "kmeans") {
   t0 <- Sys.time()
   if(!is.null(lambda)) {
     ncores <- min(c(ncores, length(lambda) * nfits))
   }
-  registerDoMC(ncores)
-    
+  
+  startParallel(ncores)
+  
   if(!is.null(lambda)) {
     lambdas <- sort(unique(lambda))
     alllambdas <- rep(lambdas, each = nfits)
@@ -217,11 +220,11 @@ MBASIC.MADBayes.full <- function(Y, Gamma = NULL, fac, lambdaw = NULL, lambda = 
     ## Initialize clusters and pick a range of lambda values
     if(initialize == "madbayes") {
       ret <- foreach(i = seq(as.integer(sqrt(I)) + 1)) %dopar% {
-        .Call("madbayes_init", Theta, 0, as.integer(S - 1), i, package = "MBASIC")
+        .Call("madbayes_init", Theta, 0, S, i, package = "MBASIC")
       }
     } else if(initialize == "kmeans++") {
       ret <- foreach(i = seq(as.integer(sqrt(I)) + 1)) %dopar% {
-        .Call("madbayes_init_kmeanspp", Theta, as.integer(S - 1), i, package = "MBASIC")
+        .Call("madbayes_init_kmeanspp", Theta, S, i, package = "MBASIC")
       }
     } else if(initialize == "kmeans") {
       Theta.aug <- matrix(0, nrow = K * S, ncol = I)
@@ -236,6 +239,8 @@ MBASIC.MADBayes.full <- function(Y, Gamma = NULL, fac, lambdaw = NULL, lambda = 
       stop("Error: a vector for 'lambda' values must be provided.")
     }
 
+    endParallel()
+    
     message("Initialized clusters")
     
     initLosses <- rep(0, length(ret))
@@ -278,6 +283,11 @@ MBASIC.MADBayes.full <- function(Y, Gamma = NULL, fac, lambdaw = NULL, lambda = 
       list(fit = fit, lambda = alllambdas[i])
     }
   }
+
+  if(.Platform$OS.type != "unix") {
+    stopCluster(cl)
+  }
+  
   message("Finished individual models")
   ## Within the same lambda, choose the model that minimizes the loss
   bestLosses <- rep(Inf, length(lambdas))
@@ -379,10 +389,10 @@ InitializeClusters.MADBayes <- function() {
     ##  clusterLabels <- sample(seq(J), I, replace = TRUE) - 1
     clusterLabels <- kmeans(t(Theta.aug), centers = J)$cluster - 1
   } else if(initialize == "kmeans++" ) {
-    ret <- .Call("madbayes_init_kmeanspp", Theta, as.integer(S - 1), J, I, package = "MBASIC")
+    ret <- .Call("madbayes_init_kmeanspp", Theta, S, J, package = "MBASIC")
     clusterLabels <- ret$clusterLabels
   } else if(initialize == "madbayes") {
-    ret <- .Call("madbayes_init", Theta, lambda / lambdaw, as.integer(S - 1), I, package = "MBASIC")
+    ret <- .Call("madbayes_init", Theta, lambda / lambdaw, S, I, package = "MBASIC")
     clusterLabels <- ret$clusterLabels
   } else {
     clusterLabels <- sample(seq(J), I, replace = TRUE)

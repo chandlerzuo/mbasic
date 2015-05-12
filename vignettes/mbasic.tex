@@ -584,26 +584,56 @@ MBASIC model assumes that the distribution of each data is a mixture of several 
 
 \subsection{Minimum Enrichment Setting for Negative Binomial Distributions}
 
-When using \Rfunction{MBASIC} to analyze data with the negative binomial distribution, the 'min.count' can be used to specify the minimum data threshold for enriched components. For ChIP-seq data, this can be used as a threshold for the enrichment detection. For the previous example, if we want to add a restriction that all loci with states other than 1 must have values at least 5, we can use:
+When using \Rfunction{MBASIC} to analyze data with the negative binomial distribution, the 'min.count' can be used to specify the minimum data threshold for enriched components. For ChIP-seq data, this can be used as a threshold for the enrichment detection. 'min.count' accepts four formats: a scalar, a vector with the same length as the number of components, a vector with the same length as the number of replicates, and a matrix. 
+
+We recommend that users specify different thresholds for individual replicates that account for their sequencing depth difference. In this case, we should let 'min.count' be a vector the same length as the number of replicates, and it specifies the threshold for each replicate for all components other than 1. The following example set the threshold based on the 25\% percentiles for the matching input of each replicate:
 
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
+\hlstd{mincount.thresholds} \hlkwb{<-} \hlkwd{apply}\hlstd{(dat}\hlopt{$}\hlstd{input,} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{)} \hlkwd{quantile}\hlstd{(}\hlnum{0.25}\hlstd{))} \hlopt{*}
+    \hlkwd{apply}\hlstd{(dat}\hlopt{$}\hlstd{chip,} \hlnum{2}\hlstd{, mean)}\hlopt{/}\hlkwd{apply}\hlstd{(dat}\hlopt{$}\hlstd{input,} \hlnum{2}\hlstd{, mean)}
+\hlstd{mincount.thresholds[mincount.thresholds} \hlopt{<} \hlnum{5}\hlstd{]} \hlkwb{<-} \hlnum{5}
 \hlstd{fit.threshold1} \hlkwb{<-} \hlkwd{MBASIC}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),} \hlkwc{Gamma} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{input),}
     \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{10}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{,}
-    \hlkwc{statemap} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{2}\hlstd{,} \hlnum{2}\hlstd{),} \hlkwc{min.count} \hlstd{=} \hlnum{5}\hlstd{)}
+    \hlkwc{statemap} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{2}\hlstd{,} \hlnum{2}\hlstd{),} \hlkwc{min.count} \hlstd{= mincount.thresholds)}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
 
-We can also use 'min.count' to specify different minimum data thresholds for each component:
+For the scalar value, 'min.count' specifies the threshold for all units with components other than 1. In the previous example, if we want to add a restriction that all loci with states other than 1 must have values at least 5, we can use:
 
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
 \hlstd{fit.threshold2} \hlkwb{<-} \hlkwd{MBASIC}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),} \hlkwc{Gamma} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{input),}
     \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{10}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{,}
+    \hlkwc{statemap} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{2}\hlstd{,} \hlnum{2}\hlstd{),} \hlkwc{min.count} \hlstd{=} \hlnum{5}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+If 'min.count' is a vector the same length as the number of components, it specifies the threshold for each component for all the replicates:
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{fit.threshold3} \hlkwb{<-} \hlkwd{MBASIC}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),} \hlkwc{Gamma} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{input),}
+    \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{10}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{,}
     \hlkwc{statemap} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{2}\hlstd{,} \hlnum{2}\hlstd{),} \hlkwc{min.count} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{5}\hlstd{,} \hlnum{10}\hlstd{))}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+Finally, we can specify the thresholds for every component and every replicate using a matrix input:
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{mincount.mat} \hlkwb{<-} \hlkwd{cbind}\hlstd{(}\hlnum{0}\hlstd{, mincount.thresholds,} \hlnum{2} \hlopt{*} \hlstd{mincount.thresholds)}
+\hlstd{fit.threshold4} \hlkwb{<-} \hlkwd{MBASIC}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),} \hlkwc{Gamma} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{input),}
+    \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{10}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{,}
+    \hlkwc{statemap} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{2}\hlstd{,} \hlnum{2}\hlstd{),} \hlkwc{min.count} \hlstd{= mincount.mat)}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
@@ -622,11 +652,54 @@ Function \Rfunction{MBASIC} accepts initial values for a number of parameters. T
 \end{kframe}
 \end{knitrout}
 
-\subsection{Simulation}
+\subsection{Analyze the Allele Specific Binding Data}
 
-The \software{MBASIC} package also provides functions to simulate and fit general MBASIC models.
+The \software{MBASIC} can be used to analyze allele-specific binding data. For such data, we need prepare two data matrices for the read counts for all loci across all replicates. One matrix should be the counts from either the paternal or the maternal allele; the other matrix should be the sum of maternal and paternal allele counts. Calculating allele-specific counts requires either remapping the sequencing reads to the non-reference genome or first matching to the reference genome then analyzing the mismatch information. \software{MBASIC} does not implement such procedures, and require the users to provide the processed data matrices.
 
-Function \Rfunction{MBASIC.sim} simulates data with 'I' units and 'J' clusters. The 'S' argument specifies the number of different states, and 'zeta' is the proportion of singleton. 'fac' specifies the condition for each experiment. The 'xi' argument relates to the magnitude of the simulated data. For detailed description users are recommended to read our manual.
+We can use the \Rfunction{MBASIC.sim} function (see Section \ref{sec:sim}) to generate a synthetic data set for allele-specific counts:
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{dat.asb} \hlkwb{<-} \hlkwd{MBASIC.sim}\hlstd{(}\hlkwc{xi} \hlstd{=} \hlnum{10}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"binom"}\hlstd{,} \hlkwc{I} \hlstd{=} \hlnum{1000}\hlstd{,}
+    \hlkwc{fac} \hlstd{=} \hlkwd{rep}\hlstd{(}\hlkwd{seq}\hlstd{(}\hlnum{10}\hlstd{),} \hlkwc{each} \hlstd{=} \hlnum{2}\hlstd{),} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{S} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{zeta} \hlstd{=} \hlnum{0.1}\hlstd{)}
+\hlcom{## The counts from either the maternal or the}
+\hlcom{## paternal allele}
+\hlkwd{dim}\hlstd{(dat.asb}\hlopt{$}\hlstd{Y)}
+\end{alltt}
+\begin{verbatim}
+## [1]   20 1000
+\end{verbatim}
+\begin{alltt}
+\hlcom{## The total number of counts from both alleles}
+\hlkwd{dim}\hlstd{(dat.asb}\hlopt{$}\hlstd{X)}
+\end{alltt}
+\begin{verbatim}
+## [1]   20 1000
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+We can fit MBASIC models on such data with either mixtures of binomial distributions or gamma-binomial distributions (i.e. binomial distributions with Gamma priors). Notice that the total count matrix is passed through the 'Gamma' parameter:
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{## Using binomial distributions}
+\hlstd{fit.asb.bin} \hlkwb{<-} \hlkwd{MBASIC}\hlstd{(}\hlkwc{Y} \hlstd{= dat.asb}\hlopt{$}\hlstd{Y,} \hlkwc{Gamma} \hlstd{= dat.asb}\hlopt{$}\hlstd{X,}
+    \hlkwc{S} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{fac} \hlstd{= dat.asb}\hlopt{$}\hlstd{fac,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{5}\hlstd{,} \hlkwc{para} \hlstd{= dat.asb,}
+    \hlkwc{family} \hlstd{=} \hlstr{"binom"}\hlstd{)}
+\hlcom{## Using gamma-binomial distributions}
+\hlstd{fit.asb.gb} \hlkwb{<-} \hlkwd{MBASIC}\hlstd{(}\hlkwc{Y} \hlstd{= dat.asb}\hlopt{$}\hlstd{Y,} \hlkwc{Gamma} \hlstd{= dat.asb}\hlopt{$}\hlstd{X,}
+    \hlkwc{S} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{fac} \hlstd{= dat.asb}\hlopt{$}\hlstd{fac,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{5}\hlstd{,} \hlkwc{para} \hlstd{= dat.asb,}
+    \hlkwc{family} \hlstd{=} \hlstr{"gamma-binom"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\subsection{Simulation}\label{sec:sim}
+
+The \software{MBASIC} package also provides functions to simulate and fit general MBASIC models. Function \Rfunction{MBASIC.sim} simulates data with 'I' units and 'J' clusters. The 'S' argument specifies the number of different states, and 'zeta' is the proportion of singleton. 'fac' specifies the condition for each experiment. The 'xi' argument relates to the magnitude of the simulated data. For detailed description users are recommended to read our manual.
 
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
@@ -700,25 +773,25 @@ We can apply \Rfunction{MBASIC} to this simulated data. If we pass the simulated
 \hlstd{dat.sim.fit}\hlopt{@}\hlkwc{ARI}
 \end{alltt}
 \begin{verbatim}
-## [1] 0.8535781
+## [1] 0.9652715
 \end{verbatim}
 \begin{alltt}
 \hlstd{dat.sim.fit}\hlopt{@}\hlkwc{W.err}
 \end{alltt}
 \begin{verbatim}
-## [1] 0.1088941
+## [1] 0.08198988
 \end{verbatim}
 \begin{alltt}
 \hlstd{dat.sim.fit}\hlopt{@}\hlkwc{Theta.err}
 \end{alltt}
 \begin{verbatim}
-## [1] 0.2428601
+## [1] 0.1822525
 \end{verbatim}
 \begin{alltt}
 \hlstd{dat.sim.fit}\hlopt{@}\hlkwc{MisClassRate}
 \end{alltt}
 \begin{verbatim}
-## [1] 0.102609
+## [1] 0.0281953
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -782,25 +855,26 @@ In a degenerate MBASIC model, the states for each unit under each condition are 
 ##  [7] gplots_2.16.0        ggplot2_1.0.0       
 ##  [9] GenomicRanges_1.14.4 XVector_0.2.0       
 ## [11] IRanges_1.20.7       BiocGenerics_0.8.0  
-## [13] doMC_1.3.3           iterators_1.0.7     
+## [13] doParallel_1.0.8     iterators_1.0.7     
 ## [15] foreach_1.4.2        cluster_1.15.2      
 ## 
 ## loaded via a namespace (and not attached):
 ##  [1] BiocStyle_1.0.0    bitops_1.0-6      
 ##  [3] caTools_1.17.1     codetools_0.2-8   
 ##  [5] colorspace_1.2-4   compiler_3.1.1    
-##  [7] digest_0.6.8       evaluate_0.5.5    
-##  [9] expm_0.99-1.1      formatR_1.0       
-## [11] gdata_2.13.3       grid_3.1.1        
-## [13] gtable_0.1.2       highr_0.4         
-## [15] KernSmooth_2.23-12 knitr_1.9         
-## [17] labeling_0.3       lattice_0.20-29   
-## [19] Matrix_1.1-5       munsell_0.4.2     
-## [21] mvtnorm_1.0-2      plyr_1.8.1        
-## [23] proto_0.3-10       reshape2_1.4.1    
-## [25] scales_0.2.4       splines_3.1.1     
-## [27] stats4_3.1.1       stringr_0.6.2     
-## [29] survival_2.37-7    tools_3.1.1
+##  [7] digest_0.6.8       doMC_1.3.3        
+##  [9] evaluate_0.5.5     expm_0.99-1.1     
+## [11] formatR_1.0        gdata_2.13.3      
+## [13] grid_3.1.1         gtable_0.1.2      
+## [15] highr_0.4          KernSmooth_2.23-12
+## [17] knitr_1.9          labeling_0.3      
+## [19] lattice_0.20-29    Matrix_1.1-5      
+## [21] munsell_0.4.2      mvtnorm_1.0-2     
+## [23] plyr_1.8.1         proto_0.3-10      
+## [25] reshape2_1.4.1     scales_0.2.4      
+## [27] splines_3.1.1      stats4_3.1.1      
+## [29] stringr_0.6.2      survival_2.37-7   
+## [31] tools_3.1.1
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
