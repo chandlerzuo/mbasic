@@ -276,11 +276,13 @@ fit.mix <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J =
 
 When using \Rfunction{MBASIC} to analyze data with the negative binomial distribution, the 'min.count' can be used to specify the minimum data threshold for enriched components. For ChIP-seq data, this can be used as a threshold for the enrichment detection. 'min.count' accepts four formats: a scalar, a vector with the same length as the number of components, a vector with the same length as the number of replicates, and a matrix. 
 
-We recommend that users specify different thresholds for individual replicates that account for their sequencing depth difference. In this case, we should let 'min.count' be a vector the same length as the number of replicates, and it specifies the threshold for each replicate for all components other than 1. The following example set the threshold based on the 25\% percentiles for the matching input of each replicate:
+We recommend that users specify different thresholds for individual replicates that account for their sequencing depth difference. In this case, we should let 'min.count' be a vector the same length as the number of replicates, and it specifies the threshold for each replicate for all components other than 1. The following example sets the threshold based on the 25\% percentiles for the matching input of each replicate. Notice that the output of \Rfunction{generateReadMatrices} contains the sequencing depth information (``dat\$depth'') that is used here to scale the ChIP samples against their matching inputs:
 
 <<>>=
-mincount.thresholds <- apply(dat$input, 2, function(x) quantile(0.25)) * apply(dat$chip, 2, mean) / apply(dat$input, 2, mean)
+mincount.thresholds <- apply(dat$input, 2, function(x) quantile(x, 0.25)) * apply(dat$depth, 1, function(x) x[1] / x[2])
+mincount.thresholds <- as.integer(mincount.thresholds)
 mincount.thresholds[mincount.thresholds < 5] <- 5
+summary(mincount.thresholds)
 fit.threshold1 <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3, maxitr = 10, family = "negbin", statemap = c(1, 2, 2), min.count = mincount.thresholds)
 @
 

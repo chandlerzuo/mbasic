@@ -48,7 +48,7 @@
 #' dat.sim.fit <- MBASIC(Y = dat.sim$Y, S = 3, fac = rep(1:10, each = 2), J = 3, maxitr = 3, para = NULL, family = "lognormal", method = "MBASIC", zeta = 0.1, tol = 1e-6)
 #' @useDynLib MBASIC
 #' @export
-MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL,  family="lognormal", method = "MBASIC", zeta = 0.1, min.count = 0, tol = 1e-10, tol.par = 0.001, out = NULL, verbose = FALSE, statemap = NULL, initial = NULL) {
+MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL, para = NULL, family="lognormal", method = "MBASIC", zeta = 0.1, min.count = 0, tol = 1e-10, tol.par = 0.001, out = NULL, verbose = FALSE, statemap = NULL, initial = NULL) {
 
   Mu.init <- Sigma.init <- V.init <- ProbMat.init <- W.init <- Z.init <- b.init <- P.init <- NULL
 

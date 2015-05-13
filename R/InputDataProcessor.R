@@ -161,9 +161,10 @@ ChIPInputMatch <- function(dir, suffices, depth = 5, celltypes) {
 #' chip \tab A matrix for the number of mapped reads at each target interval (row) from each ChIP file (column).\cr
 #' input \tab A matrix for the number of mapped reads at each target interval(row) from matching input files for the ChIP file (column).\cr
 #' target \tab A GRanges object with sorted elements.\cr
+#' depth \tab A matrix of two columns for the read depths of each ChIP file and its matching input.\cr
 #'}
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
-#' @import doMC
+#' @import foreach
 #' @export
 generateReadMatrices <- function(chipfile, inputfile, input.suffix, target, chipformat = "BAM", inputformat = "BAM", fragLen = 150, pairedEnd = FALSE, unique = TRUE, ncores = 1) {
   ## Check the arguments
@@ -213,7 +214,7 @@ generateReadMatrices <- function(chipfile, inputfile, input.suffix, target, chip
   inputfile <- as.character(inputfile)
   chipfile <- as.character(chipfile)
 
-  registerDoMC(ncores)
+  startParallel(ncores)
   
   ## process all input files
   uniqueInputCounts <- foreach(file = na.omit(unique(inputfile))) %dopar% {
@@ -222,12 +223,14 @@ generateReadMatrices <- function(chipfile, inputfile, input.suffix, target, chip
           listinputstr <- paste("ls ", file, "*", input.suffix, sep = "")
       else
           listinputstr <- paste("ls ", file, sep = "")
-      uniqueInputCount <- 0
+      uniqueInputCount <- uniqueInputDepth <- 0
       for(ifile in system(listinputstr, intern = TRUE)) {
           message("processing input file ", ifile)
           rds <- readReads(ifile, extended = TRUE, fragLen = fragLen[ which(inputfile == file)[1], 1 ], pairedEnd = pairedEnd[ which(inputfile == file)[1], 1 ], format = inputformat[which(inputfile == file)[1]])
-          if(unique)
-              rds <- unique(rds)
+          if(unique) {
+            rds <- unique(rds)
+            message("Unique records: ", length(rds$ranges))
+          }
           chrs <- unique(c(as.character(rds$chromosome),
                            as.character(target$chromosome)))
           rds.fac <- factor(as.character(rds$chromosome), label = chrs, level = chrs)
@@ -238,14 +241,19 @@ generateReadMatrices <- function(chipfile, inputfile, input.suffix, target, chip
                                chromosome = target.fac)
           
           uniqueInputCount <- uniqueInputCount + unlist(as.list(countOverlaps(target, rds)))
+          uniqueInputDepth <- uniqueInputDepth + length(rds$ranges)
       }
       gc()
-      uniqueInputCount
+      list(Counts = uniqueInputCount, depth = uniqueInputDepth)
   }
 
   uniqueInputCountsWithoutNA <- NULL
+  uniqueInputDepthsWithoutNA <- NULL
   if(length(uniqueInputCounts) > 0) {
-      uniqueInputCountsWithoutNA <- matrix(unlist(uniqueInputCounts), ncol = length(uniqueInputCounts))
+    for(i in seq(length(uniqueInputCounts))) {
+      uniqueInputCountsWithoutNA <- cbind(uniqueInputCountsWithoutNA, uniqueInputCounts[[i]]$Counts)
+      uniqueInputDepthsWithoutNA <- c(uniqueInputDepthsWithoutNA, uniqueInputCounts[[i]]$depth)
+    }
   }
 
   ## process all chip files
@@ -263,36 +271,48 @@ generateReadMatrices <- function(chipfile, inputfile, input.suffix, target, chip
                         chromosome = rds.fac)
       target <- RangedData(target$ranges,
                            chromosome = target.fac)
-      unlist(as.list(countOverlaps(target, rds)))
+      list(Counts = unlist(as.list(countOverlaps(target, rds))), depth = length(rds$ranges))
   }
 
-  uniqueChIPCountsWithoutNA <- NULL
+  endParallel()
+
+  uniqueChIPCountsWithoutNA <- uniqueChIPDepthsWithoutNA <- NULL
   if(length(uniqueChIPCounts) > 0) {
-      uniqueChIPCountsWithoutNA <- matrix(unlist(uniqueChIPCounts), ncol = length(uniqueChIPCounts))
+    for(i in seq(length(uniqueChIPCounts))) {
+      uniqueChIPCountsWithoutNA <- cbind(uniqueChIPCountsWithoutNA, uniqueChIPCounts[[i]]$Counts)
+      uniqueChIPDepthsWithoutNA <- c(uniqueChIPDepthsWithoutNA, uniqueChIPCounts[[i]]$depth)
+    }
   }
 
   uniquechipcounts <- matrix(1, nrow = length(target$ranges), ncol = length(unique(chipfile)))
   uniqueinputcounts <- matrix(1, nrow = length(target$ranges), ncol = length(unique(inputfile)))
+  uniquechipdepths <- rep(NA, length(unique(chipfile)))
+  uniqueinputdepths <- rep(NA, length(unique(inputfile)))
   inputfile[is.na(inputfile)] <- "NA"
   chipfile[is.na(chipfile)] <- "NA"
-  colnames(uniqueinputcounts) <- unique(inputfile)
-  colnames(uniquechipcounts) <- unique(chipfile)
+  colnames(uniqueinputcounts) <- names(uniqueinputdepths) <- unique(inputfile)
+  colnames(uniquechipcounts) <- names(uniquechipdepths) <- unique(chipfile)
   if(!is.null(uniqueChIPCountsWithoutNA)) {
       uniquechipcounts[, colnames(uniquechipcounts) != "NA"] <- uniqueChIPCountsWithoutNA
+      uniquechipdepths[names(uniquechipdepths) != "NA"] <- uniqueChIPDepthsWithoutNA
   }
   if(!is.null(uniqueInputCountsWithoutNA)) {
       uniqueinputcounts[, colnames(uniqueinputcounts) != "NA"] <- uniqueInputCountsWithoutNA
+      uniqueinputdepths[names(uniqueinputdepths) != "NA"] <- uniqueInputDepthsWithoutNA
   }
   
   allchipcounts <- allinputcounts <- matrix(0, nrow = length(target$ranges), ncol = nfiles)
+  allchipdepths <- allinputdepths <- rep(NA, nfiles)
   
   for(i in seq_len(nfiles)) {
-    allchipcounts[ , i ] <- uniquechipcounts[ , chipfile[i] ]
-    allinputcounts[ , i ] <- uniqueinputcounts[ , inputfile[i] ]
+    allchipcounts[, i] <- uniquechipcounts[, chipfile[i]]
+    allinputcounts[, i] <- uniqueinputcounts[, inputfile[i]]
+    allchipdepths[i] <- uniquechipdepths[chipfile[i]]
+    allinputdepths[i] <- uniqueinputdepths[inputfile[i]]
   }
 
   gc()
-  return(list(chip = allchipcounts, input = allinputcounts, target = target))
+  return(list(chip = allchipcounts, input = allinputcounts, target = target, depth = cbind(allchipdepths, allinputdepths)))
   
 }
 

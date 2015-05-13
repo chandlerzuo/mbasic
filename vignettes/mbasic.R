@@ -78,8 +78,10 @@ ggplot() + geom_point(aes(x = input.counts, y = chip.counts, color = pred.states
 fit.mix <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3, maxitr = 10, family = "negbin", statemap = c(1, 2, 2))
 
 ## -----------------------------------------------
-mincount.thresholds <- apply(dat$input, 2, function(x) quantile(0.25)) * apply(dat$chip, 2, mean) / apply(dat$input, 2, mean)
+mincount.thresholds <- apply(dat$input, 2, function(x) quantile(x, 0.25)) * apply(dat$depth, 1, function(x) x[1] / x[2])
+mincount.thresholds <- as.integer(mincount.thresholds)
 mincount.thresholds[mincount.thresholds < 5] <- 5
+summary(mincount.thresholds)
 fit.threshold1 <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3, maxitr = 10, family = "negbin", statemap = c(1, 2, 2), min.count = mincount.thresholds)
 
 ## ----results="hide"-----------------------------

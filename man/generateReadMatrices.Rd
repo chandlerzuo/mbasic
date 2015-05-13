@@ -35,6 +35,7 @@ A list of two matrices:
 chip \tab A matrix for the number of mapped reads at each target interval (row) from each ChIP file (column).\cr
 input \tab A matrix for the number of mapped reads at each target interval(row) from matching input files for the ChIP file (column).\cr
 target \tab A GRanges object with sorted elements.\cr
+depth \tab A matrix of two columns for the read depths of each ChIP file and its matching input.\cr
 }
 }
 \description{

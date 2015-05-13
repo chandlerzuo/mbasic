@@ -2,7 +2,7 @@ base
 cluster
 foreach
 iterators
-doMC
+doParallel
 BiocGenerics
 IRanges
 XVector

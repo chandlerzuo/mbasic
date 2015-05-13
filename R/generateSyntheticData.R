@@ -52,7 +52,7 @@ generateSyntheticData <- function(dir, nchr = 5, K = 5, I = 100, J = 3) {
         strand <- sample(c("+", "-"), sum(Y[ idrow, ]), replace = TRUE)
         dat <- data.frame(chr = chr, start = midpos - 10, end = midpos + 9, unknown = NA, unknown2 = NA, strand = strand)
         filename <- paste(chipdir, "wgEncodeLabExpCell", idcell, "Fac", idtf, "CtrlAlnRep", idrep, ".bed", sep = "")
-        write.table(dat, file = filename, col.names = FALSE, row.names = FALSE)
+        write.table(dat, file = filename, col.names = FALSE, row.names = FALSE, quote = FALSE)
       }
     }
   }
@@ -65,15 +65,15 @@ generateSyntheticData <- function(dir, nchr = 5, K = 5, I = 100, J = 3) {
       strand <- sample(c("+", "-"), sum(inputcount), replace = TRUE)
       dat <- data.frame(chr = chr, start = midpos - 10, end = midpos + 9, unknown = NA, unknown2 = NA, strand = strand)
       filename <- paste(inputdir, "wgEncodeLabExpCell", idcell, "InputCtrlAlnRep", idrep, ".bed", sep = "")
-      write.table(dat, file = filename, col.names = FALSE, row.names = FALSE)
+      write.table(dat, file = filename, col.names = FALSE, row.names = FALSE, quote = FALSE)
     }
   }
 
   ## generate M and GC files
 
   for(i in seq_len(nchr)) {
-    write.table(cbind((0 : 99) * 100, sqrt(runif(100))), col.names = FALSE, row.names = FALSE, file = paste(mgcdir, "chr", i, "_M.txt", sep = ""))
-    write.table(cbind((0 : 99) * 100, sqrt(runif(100))), col.names = FALSE, row.names = FALSE, file = paste(mgcdir, "chr", i, "_GC.txt", sep = ""))
+    write.table(cbind((0 : 99) * 100, sqrt(runif(100))), col.names = FALSE, row.names = FALSE, file = paste(mgcdir, "chr", i, "_M.txt", sep = ""), quote = FALSE)
+    write.table(cbind((0 : 99) * 100, sqrt(runif(100))), col.names = FALSE, row.names = FALSE, file = paste(mgcdir, "chr", i, "_GC.txt", sep = ""), quote = FALSE)
   }
   gc()
 

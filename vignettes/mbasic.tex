@@ -114,22 +114,22 @@ To illustrate Step 1 we first generate a set of synthetic data. \software{MBASIC
 ## RangedData with 6 rows and 1 value column across 1 space
 ##      space       ranges |  chromosome
 ##   <factor>    <IRanges> | <character>
-## 1        1 [4240, 4260] |        chr1
-## 2        1 [1160, 1180] |        chr2
-## 3        1 [2000, 2020] |        chr5
-## 4        1 [5600, 5620] |        chr3
-## 5        1 [9400, 9420] |        chr4
-## 6        1 [4760, 4780] |        chr2
+## 1        1 [1480, 1500] |        chr3
+## 2        1 [3480, 3500] |        chr5
+## 3        1 [9320, 9340] |        chr2
+## 4        1 [8680, 8700] |        chr4
+## 5        1 [9970, 9990] |        chr5
+## 6        1 [4480, 4500] |        chr3
 \end{verbatim}
 \begin{alltt}
 \hlkwd{system}\hlstd{(}\hlstr{"ls syntheticData/*/*"}\hlstd{,} \hlkwc{intern} \hlstd{=} \hlnum{TRUE}\hlstd{)[}\hlnum{1}\hlopt{:}\hlnum{5}\hlstd{]}
 \end{alltt}
 \begin{verbatim}
 ## [1] "syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep1.bed"
-## [2] "syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep2.bed"
-## [3] "syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep3.bed"
-## [4] "syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep1.bed"
-## [5] "syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep2.bed"
+## [2] "syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep1.bed"
+## [3] "syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep2.bed"
+## [4] "syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep3.bed"
+## [5] "syntheticData/chip/wgEncodeLabExpCell1Fac3CtrlAlnRep1.bed"
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -149,11 +149,11 @@ We acknowledge that the current function may not parse all data file names corre
 \begin{verbatim}
 ##                                                    chipfile
 ## 1 syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep1.bed
-## 2 syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep2.bed
-## 3 syntheticData/chip/wgEncodeLabExpCell1Fac1CtrlAlnRep3.bed
-## 4 syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep1.bed
-## 5 syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep2.bed
-## 6 syntheticData/chip/wgEncodeLabExpCell1Fac3CtrlAlnRep1.bed
+## 2 syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep1.bed
+## 3 syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep2.bed
+## 4 syntheticData/chip/wgEncodeLabExpCell1Fac2CtrlAlnRep3.bed
+## 5 syntheticData/chip/wgEncodeLabExpCell1Fac3CtrlAlnRep1.bed
+## 6 syntheticData/chip/wgEncodeLabExpCell1Fac3CtrlAlnRep2.bed
 ##                                          inputfile
 ## 1 syntheticData/input/wgEncodeLabExpCell1InputCtrl
 ## 2 syntheticData/input/wgEncodeLabExpCell1InputCtrl
@@ -163,10 +163,10 @@ We acknowledge that the current function may not parse all data file names corre
 ## 6 syntheticData/input/wgEncodeLabExpCell1InputCtrl
 ##   lab experiment  cell factor control chipformat
 ## 1 Lab        Exp Cell1   Fac1    Ctrl        BED
-## 2 Lab        Exp Cell1   Fac1    Ctrl        BED
-## 3 Lab        Exp Cell1   Fac1    Ctrl        BED
+## 2 Lab        Exp Cell1   Fac2    Ctrl        BED
+## 3 Lab        Exp Cell1   Fac2    Ctrl        BED
 ## 4 Lab        Exp Cell1   Fac2    Ctrl        BED
-## 5 Lab        Exp Cell1   Fac2    Ctrl        BED
+## 5 Lab        Exp Cell1   Fac3    Ctrl        BED
 ## 6 Lab        Exp Cell1   Fac3    Ctrl        BED
 ##   inputformat
 ## 1         BED
@@ -391,8 +391,8 @@ Slot 'Theta' records the probabilities for each locus to have each state under e
 \hlkwd{head}\hlstd{(fit}\hlopt{@}\hlkwc{Theta}\hlstd{[}\hlnum{1}\hlstd{, ])}
 \end{alltt}
 \begin{verbatim}
-## [1] 5.737626e-02 9.674464e-01 9.497319e-01
-## [4] 4.879753e-05 1.185049e-03 9.999761e-01
+## [1] 9.973414e-01 5.966249e-05 9.499628e-01
+## [4] 3.426173e-05 9.795932e-01 8.545716e-09
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -430,12 +430,12 @@ Slot 'clustProb' is a matrix for the posterior probablity of each locus to belon
 \end{alltt}
 \begin{verbatim}
 ##      b.prob                  
-## [1,]  0.578 0.000 0.422 0.000
-## [2,]  0.315 0.000 0.000 0.685
-## [3,]  0.849 0.001 0.138 0.013
-## [4,]  0.075 0.000 0.925 0.000
-## [5,]  0.119 0.881 0.000 0.000
-## [6,]  0.906 0.019 0.000 0.075
+## [1,]  0.392 0.000 0.037 0.572
+## [2,]  0.100 0.899 0.000 0.000
+## [3,]  0.144 0.000 0.856 0.000
+## [4,]  0.092 0.000 0.000 0.908
+## [5,]  0.996 0.000 0.000 0.004
+## [6,]  0.069 0.928 0.003 0.000
 \end{verbatim}
 \begin{alltt}
 \hlstd{clusterLabels} \hlkwb{<-} \hlkwd{apply}\hlstd{(fit}\hlopt{@}\hlkwc{clustProb}\hlstd{,} \hlnum{1}\hlstd{, which.max)} \hlopt{-}
@@ -445,7 +445,7 @@ Slot 'clustProb' is a matrix for the posterior probablity of each locus to belon
 \begin{verbatim}
 ## clusterLabels
 ##  0  1  2  3 
-## 67 10 12 11
+## 58  8 12 22
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -477,12 +477,12 @@ Slot 'W' is a matrix for the state-space profiles for all clusters. For a model 
 \end{alltt}
 \begin{verbatim}
 ##             [,1]  [,2]  [,3]
-## Cell1.Fac1 0.890 0.982 0.000
-## Cell1.Fac2 0.000 0.908 0.635
-## Cell1.Fac3 0.001 0.039 0.876
-## Cell1.Fac4 1.000 0.071 0.948
-## Cell1.Fac5 0.000 0.095 0.961
-## Cell2.Fac1 0.837 1.000 0.000
+## Cell1.Fac1 0.995 0.309 0.273
+## Cell1.Fac2 1.000 0.461 0.000
+## Cell1.Fac3 0.968 0.977 1.000
+## Cell1.Fac4 0.000 0.976 0.358
+## Cell1.Fac5 0.000 0.200 0.077
+## Cell2.Fac1 0.177 0.000 0.014
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -586,14 +586,22 @@ MBASIC model assumes that the distribution of each data is a mixture of several 
 
 When using \Rfunction{MBASIC} to analyze data with the negative binomial distribution, the 'min.count' can be used to specify the minimum data threshold for enriched components. For ChIP-seq data, this can be used as a threshold for the enrichment detection. 'min.count' accepts four formats: a scalar, a vector with the same length as the number of components, a vector with the same length as the number of replicates, and a matrix. 
 
-We recommend that users specify different thresholds for individual replicates that account for their sequencing depth difference. In this case, we should let 'min.count' be a vector the same length as the number of replicates, and it specifies the threshold for each replicate for all components other than 1. The following example set the threshold based on the 25\% percentiles for the matching input of each replicate:
+We recommend that users specify different thresholds for individual replicates that account for their sequencing depth difference. In this case, we should let 'min.count' be a vector the same length as the number of replicates, and it specifies the threshold for each replicate for all components other than 1. The following example sets the threshold based on the 25\% percentiles for the matching input of each replicate. Notice that the output of \Rfunction{generateReadMatrices} contains the sequencing depth information (``dat\$depth'') that is used here to scale the ChIP samples against their matching inputs:
 
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{mincount.thresholds} \hlkwb{<-} \hlkwd{apply}\hlstd{(dat}\hlopt{$}\hlstd{input,} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{)} \hlkwd{quantile}\hlstd{(}\hlnum{0.25}\hlstd{))} \hlopt{*}
-    \hlkwd{apply}\hlstd{(dat}\hlopt{$}\hlstd{chip,} \hlnum{2}\hlstd{, mean)}\hlopt{/}\hlkwd{apply}\hlstd{(dat}\hlopt{$}\hlstd{input,} \hlnum{2}\hlstd{, mean)}
+\hlstd{mincount.thresholds} \hlkwb{<-} \hlkwd{apply}\hlstd{(dat}\hlopt{$}\hlstd{input,} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{)} \hlkwd{quantile}\hlstd{(x,}
+    \hlnum{0.25}\hlstd{))} \hlopt{*} \hlkwd{apply}\hlstd{(dat}\hlopt{$}\hlstd{depth,} \hlnum{1}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) x[}\hlnum{1}\hlstd{]}\hlopt{/}\hlstd{x[}\hlnum{2}\hlstd{])}
+\hlstd{mincount.thresholds} \hlkwb{<-} \hlkwd{as.integer}\hlstd{(mincount.thresholds)}
 \hlstd{mincount.thresholds[mincount.thresholds} \hlopt{<} \hlnum{5}\hlstd{]} \hlkwb{<-} \hlnum{5}
+\hlkwd{summary}\hlstd{(mincount.thresholds)}
+\end{alltt}
+\begin{verbatim}
+##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##   5.000   6.000   7.000   7.737   9.000  13.000
+\end{verbatim}
+\begin{alltt}
 \hlstd{fit.threshold1} \hlkwb{<-} \hlkwd{MBASIC}\hlstd{(}\hlkwc{Y} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{chip),} \hlkwc{Gamma} \hlstd{=} \hlkwd{t}\hlstd{(dat}\hlopt{$}\hlstd{input),}
     \hlkwc{S} \hlstd{=} \hlnum{2}\hlstd{,} \hlkwc{fac} \hlstd{= conds,} \hlkwc{J} \hlstd{=} \hlnum{3}\hlstd{,} \hlkwc{maxitr} \hlstd{=} \hlnum{10}\hlstd{,} \hlkwc{family} \hlstd{=} \hlstr{"negbin"}\hlstd{,}
     \hlkwc{statemap} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{2}\hlstd{,} \hlnum{2}\hlstd{),} \hlkwc{min.count} \hlstd{= mincount.thresholds)}
@@ -773,25 +781,25 @@ We can apply \Rfunction{MBASIC} to this simulated data. If we pass the simulated
 \hlstd{dat.sim.fit}\hlopt{@}\hlkwc{ARI}
 \end{alltt}
 \begin{verbatim}
-## [1] 0.9652715
+## [1] 0.9618484
 \end{verbatim}
 \begin{alltt}
 \hlstd{dat.sim.fit}\hlopt{@}\hlkwc{W.err}
 \end{alltt}
 \begin{verbatim}
-## [1] 0.08198988
+## [1] 0.1234523
 \end{verbatim}
 \begin{alltt}
 \hlstd{dat.sim.fit}\hlopt{@}\hlkwc{Theta.err}
 \end{alltt}
 \begin{verbatim}
-## [1] 0.1822525
+## [1] 0.2201079
 \end{verbatim}
 \begin{alltt}
 \hlstd{dat.sim.fit}\hlopt{@}\hlkwc{MisClassRate}
 \end{alltt}
 \begin{verbatim}
-## [1] 0.0281953
+## [1] 0.04211858
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -862,19 +870,18 @@ In a degenerate MBASIC model, the states for each unit under each condition are 
 ##  [1] BiocStyle_1.0.0    bitops_1.0-6      
 ##  [3] caTools_1.17.1     codetools_0.2-8   
 ##  [5] colorspace_1.2-4   compiler_3.1.1    
-##  [7] digest_0.6.8       doMC_1.3.3        
-##  [9] evaluate_0.5.5     expm_0.99-1.1     
-## [11] formatR_1.0        gdata_2.13.3      
-## [13] grid_3.1.1         gtable_0.1.2      
-## [15] highr_0.4          KernSmooth_2.23-12
-## [17] knitr_1.9          labeling_0.3      
-## [19] lattice_0.20-29    Matrix_1.1-5      
-## [21] munsell_0.4.2      mvtnorm_1.0-2     
-## [23] plyr_1.8.1         proto_0.3-10      
-## [25] reshape2_1.4.1     scales_0.2.4      
-## [27] splines_3.1.1      stats4_3.1.1      
-## [29] stringr_0.6.2      survival_2.37-7   
-## [31] tools_3.1.1
+##  [7] digest_0.6.8       evaluate_0.5.5    
+##  [9] expm_0.99-1.1      formatR_1.0       
+## [11] gdata_2.13.3       grid_3.1.1        
+## [13] gtable_0.1.2       highr_0.4         
+## [15] KernSmooth_2.23-12 knitr_1.9         
+## [17] labeling_0.3       lattice_0.20-29   
+## [19] Matrix_1.1-5       munsell_0.4.2     
+## [21] mvtnorm_1.0-2      plyr_1.8.1        
+## [23] proto_0.3-10       reshape2_1.4.1    
+## [25] scales_0.2.4       splines_3.1.1     
+## [27] stats4_3.1.1       stringr_0.6.2     
+## [29] survival_2.37-7    tools_3.1.1
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
