@@ -231,14 +231,14 @@ generateReadMatrices <- function(chipfile, inputfile, input.suffix, target, chip
             rds <- unique(rds)
             message("Unique records: ", length(rds$ranges))
           }
-          chrs <- unique(c(as.character(rds$chromosome),
-                           as.character(target$chromosome)))
-          rds.fac <- factor(as.character(rds$chromosome), label = chrs, level = chrs)
-          target.fac <- factor(as.character(target$chromosome), label = chrs, level = chrs)
+          chrs <- unique(c(as.character(rds$space),
+                           as.character(target$space)))
+          rds.fac <- factor(as.character(rds$space), label = chrs, level = chrs)
+          target.fac <- factor(as.character(target$space), label = chrs, level = chrs)
           rds <- RangedData(rds$ranges,
-                            chromosome = rds.fac)
+                            space = rds.fac)
           target <- RangedData(target$ranges,
-                               chromosome = target.fac)
+                               space = target.fac)
           
           uniqueInputCount <- uniqueInputCount + unlist(as.list(countOverlaps(target, rds)))
           uniqueInputDepth <- uniqueInputDepth + length(rds$ranges)
@@ -263,14 +263,14 @@ generateReadMatrices <- function(chipfile, inputfile, input.suffix, target, chip
       if(unique)
           rds <- unique(rds)
       gc()
-      chrs <- unique(c(as.character(rds$chromosome),
-                       as.character(target$chromosome)))
-      rds.fac <- factor(as.character(rds$chromosome), label = chrs, level = chrs)
-      target.fac <- factor(as.character(target$chromosome), label = chrs, level = chrs)
+      chrs <- unique(c(as.character(rds$space),
+                       as.character(target$space)))
+      rds.fac <- factor(as.character(rds$space), label = chrs, level = chrs)
+      target.fac <- factor(as.character(target$space), label = chrs, level = chrs)
       rds <- RangedData(rds$ranges,
-                        chromosome = rds.fac)
+                        space = rds.fac)
       target <- RangedData(target$ranges,
-                           chromosome = target.fac)
+                           space = target.fac)
       list(Counts = unlist(as.list(countOverlaps(target, rds))), depth = length(rds$ranges))
   }
 
@@ -362,7 +362,7 @@ averageMGC <- function(target, m.prefix, m.suffix = NULL, gc.prefix, gc.suffix =
   }
   
   allmgc <- NULL
-  for(chr in as.character(unique(target$chromosome))) {
+  for(chr in as.character(unique(target$space))) {
     message("processing ", chr)
     if(!is.null(m.suffix))
       map <- as.matrix(read.table(paste(m.prefix, chr, m.suffix, sep = "")))
@@ -376,8 +376,8 @@ averageMGC <- function(target, m.prefix, m.suffix = NULL, gc.prefix, gc.suffix =
       gc <- as.matrix(allgc[ allgc$chr == chr, -1 ])
     message("read gc file")
     
-    genecoord <- cbind(start(target$ranges[target$chromosome == chr]),
-                       end(target$ranges[target$chromosome == chr]))
+    genecoord <- cbind(start(target$ranges[target$space == chr]),
+                       end(target$ranges[target$space == chr]))
     avgmgc <- .Call("avg_score", genecoord, map[ , 2], gc[ , 2], diff(map[1:2, 1]), diff(gc[1:2, 1]), package = "MBASIC")
     allmgc <- rbind(allmgc, avgmgc)
   }
@@ -476,6 +476,6 @@ readReads <- function(reads, extended, fragLen = 200, pairedEnd = FALSE, use.nam
       reads.gr <- c(reads.forward.extended, reads.reverse.extended)
       names(reads.gr) <- names(c(reads.forward,reads.reverse))
     }
-    return(RangedData(chromosome = seqnames(reads.gr), ranges = ranges(reads.gr)))
+    return(RangedData(space = seqnames(reads.gr), ranges = ranges(reads.gr)))
   }
 }

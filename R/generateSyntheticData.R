@@ -36,7 +36,7 @@ generateSyntheticData <- function(dir, nchr = 5, K = 5, I = 100, J = 3) {
   ir.start[ ir.start < 30 ] <- 30
   ir.end <- ir.start + 20
     
-  target <- RangedData(chromosome = sample(paste("chr", seq_len(nchr), sep = ""), length(ir.start), replace = TRUE), IRanges(start = ir.start, end = ir.end))
+  target <- RangedData(space = sample(paste("chr", seq_len(nchr), sep = ""), length(ir.start), replace = TRUE), IRanges(start = ir.start, end = ir.end))
 
   Y <- dat.sim$Y
 
@@ -48,7 +48,7 @@ generateSyntheticData <- function(dir, nchr = 5, K = 5, I = 100, J = 3) {
       for(idrep in seq_len(n[ idfac ])) {
         idrow <- idrow + 1
         midpos <- rep(start(target), Y[ idrow, ]) + sample(1:20, sum(Y[ idrow, ]), replace = TRUE)
-        chr <- rep(target$chromosome, Y[ idrow, ])
+        chr <- rep(target$space, Y[ idrow, ])
         strand <- sample(c("+", "-"), sum(Y[ idrow, ]), replace = TRUE)
         dat <- data.frame(chr = chr, start = midpos - 10, end = midpos + 9, unknown = NA, unknown2 = NA, strand = strand)
         filename <- paste(chipdir, "wgEncodeLabExpCell", idcell, "Fac", idtf, "CtrlAlnRep", idrep, ".bed", sep = "")
@@ -61,7 +61,7 @@ generateSyntheticData <- function(dir, nchr = 5, K = 5, I = 100, J = 3) {
     for(idrep in seq_len(3)) {
       inputcount <- sample(1:3, I, replace = TRUE)
       midpos <- rep(start(target), inputcount) + sample(1:20, sum(inputcount), replace = TRUE)
-      chr <- rep(target$chromosome, inputcount)
+      chr <- rep(target$space, inputcount)
       strand <- sample(c("+", "-"), sum(inputcount), replace = TRUE)
       dat <- data.frame(chr = chr, start = midpos - 10, end = midpos + 9, unknown = NA, unknown2 = NA, strand = strand)
       filename <- paste(inputdir, "wgEncodeLabExpCell", idcell, "InputCtrlAlnRep", idrep, ".bed", sep = "")
