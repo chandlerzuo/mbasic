@@ -871,7 +871,12 @@ getBest <- function(varnames) {
 
 InitWZb <- function() {
   Inherit(c("ProbMat", "zeta", "I", "J", "S", "K", "struct"))
-  km.fit <- kmeans(t(ProbMat), centers = J)
+  tryCatch({
+    km.fit <- kmeans(t(ProbMat), centers = J)
+  }, error = function(e) {
+    ## use Kmeans++ initialization
+    km.fit <- kmeanspp(ProbMat, J)
+  })
   Z <- matrix(0, nrow = I, ncol = J)
   Z[cbind(seq(I), km.fit$cluster)] <- 1
   W <- t(km.fit$centers)
@@ -957,3 +962,16 @@ MBASIC.full <- function(J=NULL, struct = NULL, out = NULL, ncores = 1, ...) {
               Time = as.numeric(Sys.time() - t0, units = "secs")))
 }
 
+kmeanspp <- function(dat, J) {
+  dist.mat <- matrix(Inf, nrow = ncol(dat), ncol = J)
+  centers <- matrix(0, nrow = nrow(dat), ncol = J)
+  ## centers[, 1] <- apply(dat, 1, mean)
+  centers[, 1] <- dat[, sample(seq(ncol(dat)), 1)]
+  dist.mat[, 1] <- apply(dat, 2, function(x) sum((x - centers[, 1]) ^ 2))
+  for(j in seq(J)[-1]) {
+    centers[, j] <- dat[, sample(seq(ncol(dat)), 1, prob = apply(dist.mat, 1, min))]
+    dist.mat[, j] <- apply(dat, 2, function(x) sum((x - centers[, j]) ^ 2))
+  }
+  return(list(cluster = apply(dist.mat, 1, which.min),
+              centers = t(centers)))
+}
