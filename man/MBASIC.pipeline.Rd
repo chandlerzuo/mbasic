@@ -7,7 +7,7 @@
 MBASIC.pipeline(chipfile, inputfile, input.suffix, target, chipformat,
   inputformat, fragLen, pairedEnd, unique, m.prefix = NULL, m.suffix = NULL,
   gc.prefix = NULL, gc.suffix = NULL, datafile = NULL, ncores = 10, J,
-  ...)
+  method = "mbasic", ...)
 }
 \arguments{
 \item{chipfile}{A string vector for the ChIP files.}
@@ -38,10 +38,14 @@ MBASIC.pipeline(chipfile, inputfile, input.suffix, target, chipformat,
 
 \item{datafile}{The file location to save or load the data matrix. See details.}
 
-\item{...}{Parameters for function MBASIC.}
+\item{J}{The number of clusters to be fitted.}
+
+\item{method}{The fitting algorithm, either "mbasic" (default), which runs an Expectation-Maximization algorithm, or "madbayes", which runs a K-means-like algorithm.}
+
+\item{...}{Parameters for \code{\link{MBASIC}} (if method is "mbasic") or \code{\link{MBASIC.MADBayes.full}}.}
 }
 \value{
-A \linkS4class{MBASICFit} class object.
+If \code{method="mbasic"}, the return value by function \code{\link{MBASIC}} (if 'J' is scalar) or \code{\link{MBASIC.full}} (if 'J' is a vector). If \code{method="madbayes"}, the return value by function \code{\link{MBASIC.MADBayes.full}}.
 }
 \description{
 The pipeline for fitting a MBASIC model for sequencing data.

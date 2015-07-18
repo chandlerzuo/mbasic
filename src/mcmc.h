@@ -3,7 +3,7 @@
 
 #include <Rcpp.h>
 //#include <stdlib.h>
-//#include <time.h>
+#include <time.h>
 
 /*
  * note : RcppExport is an alias to `extern "C"` defined by Rcpp.

@@ -37,6 +37,9 @@ setMethod("plot",
             }
             K <- length(unique(rownames(x@Theta)))
             S <- nrow(x@Theta) / K
+            if(S == 1) {
+              S <- max(x@Theta)
+            }
             ids <- NULL
             J <- ncol(x@clustProb) - 1
             clusterLabels <- apply(x@clustProb, 1, which.max) - 1
@@ -55,7 +58,11 @@ setMethod("plot",
               if(is.null(main)) {
                 main <- paste("State", state)
               }
-              Theta <- x@Theta[seq(K) + K * (state - 1), ]
+              if(dim(x@Theta) > K) {
+                Theta <- x@Theta[seq(K) + K * (state - 1), ]
+              } else {
+                Theta <- matrix(as.numeric(x@Theta == state), nrow = nrow(x@Theta))
+              }
               colnames(Theta) <- seq(ncol(Theta))
               Theta <- Theta[, ids]
               xline.pos <- cumsum(clusterSizes) + 0.5

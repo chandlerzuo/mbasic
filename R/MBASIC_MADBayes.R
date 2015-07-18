@@ -29,6 +29,12 @@ MBASIC.MADBayes.internal <- function(Y, Gamma, fac, lambdaw = NULL, lambda, maxi
 
   GetModelStructure()
 
+  facNames <- as.character(unique(fac))
+  facMap <- seq(K)
+  names(facMap) <- facNames
+  fac <- as.character(fac)
+  fac <- facMap[as.character(fac)]
+  
   ## Initialize Mu, Sigma, Theta
 
   if(is.null(Mu.init) | is.null(Sigma.init) | is.null(Theta.init)) {
@@ -135,17 +141,23 @@ MBASIC.MADBayes.internal <- function(Y, Gamma, fac, lambdaw = NULL, lambda, maxi
   P <- matrix(1 / S, ncol = S, nrow = I)
   V <- matrix(1, nrow = N, ncol = S)
   probz <- apply(Z, 2, mean)
-  loglik <- .Call("loglik", W, P, V, 1e-10, probz, PDF, fac, seq(S) - 1, package = "MBASIC")
+  loglik <- .Call("loglik", W, P, V, 1e-10, probz, PDF, fac - 1, seq(S) - 1, package = "MBASIC")
   npars <- ncol(Z) - 1 + prod(dim(W)) * (S - 1) / S + N * S * 2
-  
+
+  Theta <- ret$Theta + 1
+  rownames(Theta) <- facNames
+  rownames(W) <- rep(facNames, S)
+  Mu <- ret$Mu * scaleFactor
+  Sigma <- ret$Sigma * scaleFactor * scaleFactor
+  rownames(Mu) <- rownames(Sigma) <- rownames(V) <- facNames[fac]
+ 
   new("MBASICFit",
-      Theta = t(ret$Theta) + 1,
+      Theta = Theta,
       W = W,
       clustProb = cbind(0, Z),
-      ##      P = ret$P,
       alllik = ret$loss,
-      Mu = ret$Mu * scaleFactor,
-      Sigma = ret$Sigma * scaleFactor * scaleFactor,
+      Mu = Mu,
+      Sigma = Sigma,
       converged = (ret$Iter <= maxitr),
       Z = Z,
       Iter = ret$Iter,
@@ -163,7 +175,6 @@ MBASIC.MADBayes.internal <- function(Y, Gamma, fac, lambdaw = NULL, lambda, maxi
         bic = -2 * loglik + log(N * I) * npars)
     )
 }
-
 
 #' @name MBASIC.MADBayes.full
 #' @title MAD-Bayes method to fit the MBASIC model.
@@ -192,7 +203,7 @@ MBASIC.MADBayes.internal <- function(Y, Gamma, fac, lambdaw = NULL, lambda, maxi
 #' @author Chandler Zuo \email{zuo@@stat.wisc.edu}
 #' @import foreach
 #' @export
-MBASIC.MADBayes.full <- function(Y, Gamma = NULL, fac, lambdaw = NULL, lambda = NULL, maxitr = 30, S = 2, tol = 1e-10, ncores = 15, nfits = 3, nlambdas = 30, para = NULL, initialize = "kmeans") {
+MBASIC.MADBayes.full <- function(Y, Gamma = NULL, fac, lambdaw = NULL, lambda = NULL, maxitr = 30, S = 2, tol = 1e-10, ncores = 15, nfits = 1, nlambdas = 30, para = NULL, initialize = "kmeans") {
   t0 <- Sys.time()
   if(!is.null(lambda)) {
     ncores <- min(c(ncores, length(lambda) * nfits))
@@ -279,7 +290,7 @@ MBASIC.MADBayes.full <- function(Y, Gamma = NULL, fac, lambdaw = NULL, lambda = 
     results <- foreach(i = seq_along(alllambdas)) %dopar% {
       set.seed(i + Sys.time())
       ##      fit <- MBASIC.MADBayes.internal(Y, Gamma, fac, lambdaw = lambdaw, lambda = alllambdas[i], maxitr = maxitr, S = S, tol = tol, verbose = FALSE, para = para, initialize = initialize, Theta.init = Theta, Mu.init = Mu, Sigma.init = Sigma, clusterLabels.init = initClusterLabels[[i]], scaleFactor = scaleFactor)
-      fit <- MBASIC.MADBayes.internal(Y, Gamma, fac, lambdaw = lambdaw, lambda = alllambdas[i], maxitr = maxitr, S = S, tol = tol, verbose = FALSE, para = para, initialize = initialize, Theta.init = Theta, Mu.init = Mu, Sigma.init = Sigma, scaleFactor = scaleFactor, J = allJs[i])
+      fit <- MBASIC.MADBayes.internal(Y, Gamma, fac, lambdaw = lambdaw, lambda = alllambdas[i], maxitr = maxitr, S = S, tol = tol, verbose = TRUE, para = para, initialize = initialize, Theta.init = Theta, Mu.init = Mu, Sigma.init = Sigma, scaleFactor = scaleFactor, J = allJs[i])
       list(fit = fit, lambda = alllambdas[i])
     }
   }

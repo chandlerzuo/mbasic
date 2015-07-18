@@ -27,50 +27,56 @@ dat$input1 <- bkng_mean(inputdat = dat$input, target = target, family = "negbin"
 
 ## ----results="hide"-----------------------------
 ## Step 3: Fit an MBASIC model
-fit <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J=3, maxitr = 10, family="negbin")
+fit.mbasic <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J=3, maxitr = 10, family="negbin")
+## Step 3: Fit multiple MBASIC models simultaneously
+allfits.mbasic <- MBASIC.full(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J=3:10, maxitr = 10, family="negbin", ncores = 10)
+fit.mbasic <- allfits.mbasic$BestFit
 
 ## ----results="hide"-----------------------------
-## Step 3: Fit an MBASIC model
-allfits <- MBASIC.full(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J=3:10, maxitr = 10, family="negbin", ncores = 10)
+allfits.madbayes <- MBASIC.MADBayes.full(Y = log(t(dat$chip) + 1), Gamma = log(t(dat$input) + 1), S = 2, fac = conds, maxitr = 10, ncores = 10, nlambdas = 10, nfits = 1)
+fit.madbayes <- allfits.madbayes$BestFit
 
 ## ----eval=FALSE---------------------------------
 #  showClass("MBASICFit")
 
 ## -----------------------------------------------
-dim(fit@Theta)
-rownames(fit@Theta)
-head(fit@Theta[1, ])
+dim(fit.mbasic@Theta)
+rownames(fit.mbasic@Theta)
+head(fit.mbasic@Theta[1, ])
 
 ## ----fig.align="center",dpi=600,fig.width=6,fig.height=6,cache=FALSE----
-plot(fit, slot = "Theta", xlab = "Locus", state = 2, cexRow = 0.6, cexCol = 0.4)
+plot(fit.mbasic, slot = "Theta", xlab = "Locus", state = 2, cexRow = 0.6, cexCol = 0.4)
+plot(fit.madbayes, slot = "Theta", xlab = "Locus", state = 2, cexRow = 0.6, cexCol = 0.4)
 
 ## -----------------------------------------------
-dim(fit@clustProb)
-round(head(fit@clustProb),3)
-clusterLabels <- apply(fit@clustProb, 1, which.max) - 1
+dim(fit.mbasic@clustProb)
+round(head(fit.mbasic@clustProb),3)
+clusterLabels <- apply(fit.mbasic@clustProb, 1, which.max) - 1
 table(clusterLabels)
 
 ## -----------------------------------------------
-rownames(fit@W)
-dim(fit@W)
-round(head(fit@W[seq(10) + 10, ]),3)
+rownames(fit.mbasic@W)
+dim(fit.mbasic@W)
+round(head(fit.mbasic@W[seq(10) + 10, ]),3)
 
 ## ----fig.align="center",dpi=600,fig.width=6,fig.height=6,cache=FALSE----
-plot(fit, slot = "W", state = 2, cexRow = 0.6, cexCol = 1, srtCol = 0, adjCol = c(0.5, 1))
+plot(fit.mbasic, slot = "W", state = 2, cexRow = 0.6, cexCol = 1, srtCol = 0, adjCol = c(0.5, 1))
+plot(fit.madbayes, slot = "W", state = 2, cexRow = 0.6, cexCol = 1, srtCol = 0, adjCol = c(0.5, 1))
 
 ## -----------------------------------------------
-dim(fit@Mu)
-dim(fit@Sigma)
+dim(fit.mbasic@Mu)
+dim(fit.mbasic@Sigma)
 
 ## ----fig.align="center",dpi=600,fig.width=4,fig.height=4,cache=FALSE----
-plot(fit, slot = "Mu", state = 2) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+plot(fit.mbasic, slot = "Mu", state = 2) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+plot(fit.madbayes, slot = "Mu", state = 2) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 ## ----fig.align="center",dpi=600,fig.width=4,fig.height=5,cache=FALSE----
 ## which replicate to plot
 repid <- 1
 chip.counts <- dat$chip[, repid]
 input.counts <- dat$input[, repid]
-pred.states <- as.character(apply(fit@Theta[rownames(fit@Theta) == conds[repid], ], 2, which.max))
+pred.states <- as.character(apply(fit.mbasic@Theta[rownames(fit.mbasic@Theta) == conds[repid], ], 2, which.max))
 ggplot() + geom_point(aes(x = input.counts, y = chip.counts, color = pred.states)) +
   theme(legend.position = "top")
 
@@ -96,7 +102,7 @@ fit.threshold4 <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = con
 
 ## ----results="hide"-----------------------------
 fit.update <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3,
-                     maxitr = 10, family="negbin", initial = fit)
+                     maxitr = 10, family="negbin", initial = fit.mbasic)
 
 ## -----------------------------------------------
 dat.asb <- MBASIC.sim(xi = 10, family = "binom", I = 1000, fac = rep(seq(10), each = 2), J = 3, S = 3, zeta = 0.1)

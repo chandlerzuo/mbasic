@@ -1,3 +1,4 @@
+% \VignetteEngine{knitr::knitr}
 %% \VignetteIndexEntry{CSSP: ChIP-Seq Statistical Power}
 \documentclass[a4paper,10pt]{article}
 \usepackage{amsmath,mathrsfs,graphicx}
@@ -38,7 +39,7 @@ Applying the \textbf{MBASIC} framework to analyzing ChIP-seq data sets includes 
 \begin{enumerate}
 \item \textit{Matching each ChIP replicate data set with their input data set:} This step matches ChIP replicate files with their matching input files;
 \item \textit{Calculating mapped counts and the covariate on the target loci:} This step calculates the mapped counts from each ChIP and input replicate files on each of the target locus;
-\item \textit{Fitting MBASIC model:} This step fits the MBASIC model to identify the binding states for each locus and cluster the loci based on their binding states across different conditions.
+\item \textit{Fitting MBASIC model:} This step fits the MBASIC model, using either an E-M algorithm or a MAD-Bayes algorithm, to identify the binding states for each locus and cluster the loci based on their binding states across different conditions.
 \end{enumerate}
 
 \software{MBASIC} integrates Step 2-3 in a single function \Rfunction{MBASIC.pipeline}. For Step 1 \software{MBASIC} provides a function \Rfunction{ChIPInputMatch} that assists matching the ChIP files with input files based on the naming convention of the ENCODE datasets. We have found that in practice, more often than not, some violations to the ENCODE file name conventions always occur, and manual adjustments to the results of our automated matching are inevitable. Therefore, we do not integrate this function in \Rfunction{MBASIC.pipeline}.
@@ -86,19 +87,27 @@ Now we are in a position to continue the next steps in the pipeline. There are t
 <<results="hide",cache=TRUE>>=
 ## remove file 'data.Rda' since it will be generated
 ## try(file.remove("data.Rda"))
-fit <- MBASIC.pipeline(chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, chipformat = tbl$chipformat, inputformat = tbl$inputformat, fragLen = 150, pairedEnd = FALSE, unique = TRUE, fac = conds, J = 3, S = 2, family = "negbin", datafile = "data.Rda")
-class(fit)
+fit.mbasic <- MBASIC.pipeline(chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, chipformat = tbl$chipformat, inputformat = tbl$inputformat, fragLen = 150, pairedEnd = FALSE, unique = TRUE, fac = conds, J = 3, S = 2, family = "negbin", datafile = "data.Rda")
+class(fit.mbasic)
 @
 
 We list the meanings of the arguments of \Rfunction{MBASIC.pipeline} in Table \ref{tbl:arguments}. The above example fits a clustering model with 3 clusters. It returns an object of class \Rclass{MBASICFit}. This class is described in more details in Section \ref{sec:mbasicfit}.
 
-Alternatively, we can fit models with varying numbers of clusters simultaneously, and pick the one with the minimum BIC value:
+When we specify 'method=''mbasic''', we can fit models with varying numbers of clusters simultaneously using the MBASIC algorithm, and pick the one with the minimum BIC value:
 
 <<cache=TRUE>>=
-allfits <- MBASIC.pipeline(chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, chipformat = tbl$chipformat, inputformat = tbl$inputformat, fragLen = 150, pairedEnd = FALSE, unique = TRUE, fac = conds, J = 3:10, S = 2, family = "negbin", datafile = "data.Rda")
-names(allfits)
-class(allfits$BestFit)
+allfits.mbasic <- MBASIC.pipeline(chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, chipformat = tbl$chipformat, inputformat = tbl$inputformat, fragLen = 150, pairedEnd = FALSE, unique = TRUE, fac = conds, J = 3:10, S = 2, family = "negbin", datafile = "data.Rda", method = "mbasic")
+names(allfits.mbasic)
+class(allfits.mbasic$BestFit)
 @ 
+
+We can also invoke the MAD-Bayes algorithm, a K-means-like algorithm, by specifying 'method="madbayes"'. Notice that in this case, we do not need specify the number of clusters ('J') and the distribution family ('family'):
+
+<<cache=TRUE>>=
+allfits.madbayes <- MBASIC.pipeline(chipfile = tbl$chipfile, inputfile = tbl$inputfile, input.suffix = ".bed", target = target, chipformat = tbl$chipformat, inputformat = tbl$inputformat, fragLen = 150, pairedEnd = FALSE, unique = TRUE, fac = conds, J = 3:10, S = 2, datafile = "data.Rda", method = "madbayes")
+names(allfits.madbayes)
+class(allfits.madbayes$BestFit)
+@
 
 \begin{table}
   \centering
@@ -140,7 +149,7 @@ class(allfits$BestFit)
   \end{tabular}
 \end{table}
 
-Before we move on to describe the step-wise execution, we highlight the usage of the argument 'datafile'. In the above codes, when we compute 'fit', the file 'datafile' is not generated yet, so we process ChIP and input data and save the processed data in 'datafile'. When we compute 'allfits', \Rfunction{MBASIC.allfit} detects that 'datafile' already exists, so it automatically loads the preprocessed data and skip the step of processing the ChIP and input data. This can save substantially amount of time if the size of our data is large.
+Before we move on to describe the step-wise execution, we highlight the usage of the argument 'datafile'. In the above codes, when we compute 'fit.mbasic', the file 'datafile' is not generated yet, so we process ChIP and input data and save the processed data in 'datafile'. When we compute 'allfits.mbasic', \Rfunction{MBASIC.allfit} detects that 'datafile' already exists, so it automatically loads the preprocessed data and skip the step of processing the ChIP and input data. This can save substantially amount of time if the size of our data is large.
 
 \subsection{Step 2: Generate the Data Matrices}
 
@@ -178,23 +187,26 @@ library(MBASIC)
 load("dat.Rda")
 @
 
-We can build an MBASIC model using function \Rfunction{MBASIC}:
+When using the MBASIC's E-M algorithm, we can either fit one MBASIC model using function \Rfunction{MBASIC}, or simultaneously fit models with different numbers of clusters by using function \Rfunction{MBASIC.full}:
 
 <<results="hide">>=
 ## Step 3: Fit an MBASIC model
-fit <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J=3, maxitr = 10, family="negbin")
+fit.mbasic <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J=3, maxitr = 10, family="negbin")
+## Step 3: Fit multiple MBASIC models simultaneously
+allfits.mbasic <- MBASIC.full(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J=3:10, maxitr = 10, family="negbin", ncores = 10)
+fit.mbasic <- allfits.mbasic$BestFit
 @
 
-We can also simultaneously fit models with different numbers of clusters:
+We can also invoke the MAD-Bayes algorithm in this step by using function \Rfunction{MBASIC.MADBayes.full}:
 
 <<results="hide">>=
-## Step 3: Fit an MBASIC model
-allfits <- MBASIC.full(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J=3:10, maxitr = 10, family="negbin", ncores = 10)
-@
+allfits.madbayes <- MBASIC.MADBayes.full(Y = log(t(dat$chip) + 1), Gamma = log(t(dat$input) + 1), S = 2, fac = conds, maxitr = 10, ncores = 10, nlambdas = 10, nfits = 1)
+fit.madbayes <- allfits.madbayes$BestFit
+@ 
 
 \section{Interpreting the Results}\label{sec:mbasicfit}
 
-The outputs of both \Rfunction{MBASIC} and \Rfunction{MBASIC.pipeline} functions are of S-4 class \Rclass{MBASICFit}.
+The slot ``BestFit'' in the return value of \Rfunction{MBASIC.full}, \Rfunction{MBASIC.MADBayes.full}, and \Rfunction{MBASIC.pipeline} are of the S-4 class \Rclass{MBASICFit}.
 
 <<eval=FALSE>>=
 showClass("MBASICFit")
@@ -203,51 +215,54 @@ showClass("MBASICFit")
 Slot 'Theta' records the probabilities for each locus to have each state under each condition. For a model with K experiment conditions, S states and I units, slot 'Theta' is a matrix of dimension KS by I, and the (K(s-1)+k, i)-th entry is the probability for the i-th locus to have state s under condition k. 
 
 <<>>=
-dim(fit@Theta)
-rownames(fit@Theta)
-head(fit@Theta[1, ])
+dim(fit.mbasic@Theta)
+rownames(fit.mbasic@Theta)
+head(fit.mbasic@Theta[1, ])
 @
 
 In our example, suppose state 1 corresponds to the un-enriched state, and state 2 the enriched state. We can use the function \Rfunction{plot} to draw a heatmap to visualize the enrichment states across all data.
 
 <<fig.align="center",dpi=600,fig.width=6,fig.height=6,cache=FALSE>>=
-plot(fit, slot = "Theta", xlab = "Locus", state = 2, cexRow = 0.6, cexCol = 0.4)
+plot(fit.mbasic, slot = "Theta", xlab = "Locus", state = 2, cexRow = 0.6, cexCol = 0.4)
+plot(fit.madbayes, slot = "Theta", xlab = "Locus", state = 2, cexRow = 0.6, cexCol = 0.4)
 @ 
 
 Slot 'clustProb' is a matrix for the posterior probablity of each locus to belong to each cluster. The first column contains the probability for each locus to be a singleton (i.e. not belong to any clusters). The (j+1)-th column contains the probabilities for each locus to be in cluster j.
 
 <<>>=
-dim(fit@clustProb)
-round(head(fit@clustProb),3)
-clusterLabels <- apply(fit@clustProb, 1, which.max) - 1
+dim(fit.mbasic@clustProb)
+round(head(fit.mbasic@clustProb),3)
+clusterLabels <- apply(fit.mbasic@clustProb, 1, which.max) - 1
 table(clusterLabels)
 @
 
 Slot 'W' is a matrix for the state-space profiles for all clusters. For a model with K conditions, S states and J clusters, this matrix has dimension KS by J, where the (k+K(s-1),j)-th entry contains the probability that a unit in cluster j has state s under condition k. For our example, the enriched probability for all clusters is in rows 11-20.
 
 <<>>=
-rownames(fit@W)
-dim(fit@W)
-round(head(fit@W[seq(10) + 10, ]),3)
+rownames(fit.mbasic@W)
+dim(fit.mbasic@W)
+round(head(fit.mbasic@W[seq(10) + 10, ]),3)
 @
 
 We can also use the \Rfunction{plot} function to visualize the probability for each cluster to have a particular state under all conditions.
 
 <<fig.align="center",dpi=600,fig.width=6,fig.height=6,cache=FALSE>>=
-plot(fit, slot = "W", state = 2, cexRow = 0.6, cexCol = 1, srtCol = 0, adjCol = c(0.5, 1))
+plot(fit.mbasic, slot = "W", state = 2, cexRow = 0.6, cexCol = 1, srtCol = 0, adjCol = c(0.5, 1))
+plot(fit.madbayes, slot = "W", state = 2, cexRow = 0.6, cexCol = 1, srtCol = 0, adjCol = c(0.5, 1))
 @ 
 
 Slot 'Mu' and 'Sigma' are matrices for the distribution parameters for each replicate and each component (usually, one component is one state, see Section \ref{sec:component}).
 
 <<>>=
-dim(fit@Mu)
-dim(fit@Sigma)
+dim(fit.mbasic@Mu)
+dim(fit.mbasic@Sigma)
 @ 
 
 Function \Rfunction{plot} enables visualizing the range of the fitted parameter values across different replicates for the same condition. Notice that for these slots the function is implemented using \Rpackage{ggplot2}, so additional arguments can be passed by '+':
 
 <<fig.align="center",dpi=600,fig.width=4,fig.height=4,cache=FALSE>>=
-plot(fit, slot = "Mu", state = 2) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+plot(fit.mbasic, slot = "Mu", state = 2) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+plot(fit.madbayes, slot = "Mu", state = 2) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 @
 
 Besides calling the \Rfunction{plot} function on our fitted object, we can also use \Rfunction{ggplot} to visualize how the loci within a single replicate are allocated to different states:
@@ -257,7 +272,7 @@ Besides calling the \Rfunction{plot} function on our fitted object, we can also 
 repid <- 1
 chip.counts <- dat$chip[, repid]
 input.counts <- dat$input[, repid]
-pred.states <- as.character(apply(fit@Theta[rownames(fit@Theta) == conds[repid], ], 2, which.max))
+pred.states <- as.character(apply(fit.mbasic@Theta[rownames(fit.mbasic@Theta) == conds[repid], ], 2, which.max))
 ggplot() + geom_point(aes(x = input.counts, y = chip.counts, color = pred.states)) +
   theme(legend.position = "top")
 @
@@ -298,7 +313,7 @@ If 'min.count' is a vector the same length as the number of components, it speci
 fit.threshold3 <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3, maxitr = 10, family = "negbin", statemap = c(1, 2, 2), min.count = c(0, 5, 10))
 @ 
 
-Finally, we can specify the thresholds for every component and every replicate using a matrix input:
+Finally, we can specify the thresholds for every component and every replicate using a matrix input. We recommend setting the first column of this matrix as all 0s unless there are specific reasons to do otherwise:
 
 <<>>=
 mincount.mat <- cbind(0, mincount.thresholds, 2 * mincount.thresholds)
@@ -311,7 +326,7 @@ Function \Rfunction{MBASIC} accepts initial values for a number of parameters. T
 
 <<results="hide">>=
 fit.update <- MBASIC(Y = t(dat$chip), Gamma = t(dat$input), S = 2, fac = conds, J = 3,
-                     maxitr = 10, family="negbin", initial = fit)
+                     maxitr = 10, family="negbin", initial = fit.mbasic)
 @
 
 \subsection{Analyze the Allele Specific Binding Data}

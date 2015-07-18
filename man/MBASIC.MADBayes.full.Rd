@@ -5,7 +5,7 @@
 \title{MAD-Bayes method to fit the MBASIC model.}
 \usage{
 MBASIC.MADBayes.full(Y, Gamma = NULL, fac, lambdaw = NULL, lambda = NULL,
-  maxitr = 30, S = 2, tol = 1e-10, ncores = 15, nfits = 3,
+  maxitr = 30, S = 2, tol = 1e-10, ncores = 15, nfits = 1,
   nlambdas = 30, para = NULL, initialize = "kmeans")
 }
 \arguments{

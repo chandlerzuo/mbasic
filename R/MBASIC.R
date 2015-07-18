@@ -253,14 +253,18 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
   }
 
   if(!is.null(para)) {
-    ProbMat.true <- matrix(0, nrow = S * K, ncol = I)
-    for(s in seq(S)) {
-      ProbMat.true[(s - 1) * K + seq(K), ] <- as.numeric(para$Theta == s)
-    }
-    W.true <- para$W
-    Z.true <- para$Z
-    nonid.true <- para$non.id
-    Mu.true <- para$Mu
+    tryCatch({
+      ProbMat.true <- matrix(0, nrow = S * K, ncol = I)
+      for(s in seq(S)) {
+        ProbMat.true[(s - 1) * K + seq(K), ] <- as.numeric(para$Theta == s)
+      }
+      W.true <- para$W
+      Z.true <- para$Z
+      nonid.true <- para$non.id
+      Mu.true <- para$Mu
+    }, error = function(e) {
+      warning("'para' is invalid and reset as NULL.")
+    })
   }
 
   if(method != "MBASIC") {
@@ -333,8 +337,7 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
       write.out(out, paste("Error for Mu", round(Mu.err, 3)))
 
       W <- ret@W
-      rownames(ProbMat) <- facNames
-      rownames(W) <- rep(facNames, S)
+      rownames(ProbMat) <- rownames(W) <- rep(facNames, S)
       rownames(Mu) <- rownames(Sigma) <- rownames(V) <- facNames[fac]
 
       return(new("MBASICFit",
@@ -489,9 +492,8 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
   if(length(para) > 1)
     PrintUpdate()
 
-  rownames(ProbMat) <- rep(facNames, S)
+  rownames(ProbMat) <- rownames(W) <- rep(facNames, S)
   rownames(Mu) <- rownames(Sigma) <- rownames(V) <- facNames[fac]
-  rownames(W) <- rep(facNames, S)
   
   new("MBASICFit",
       Theta = ProbMat,
@@ -871,12 +873,12 @@ getBest <- function(varnames) {
 
 InitWZb <- function() {
   Inherit(c("ProbMat", "zeta", "I", "J", "S", "K", "struct"))
-  tryCatch({
-    km.fit <- kmeans(t(ProbMat), centers = J)
-  }, error = function(e) {
+  km.fit <- NULL
+  try(km.fit <- kmeans(t(ProbMat), centers = J))
+  if(is.null(km.fit)) {
     ## use Kmeans++ initialization
     km.fit <- kmeanspp(ProbMat, J)
-  })
+  }
   Z <- matrix(0, nrow = I, ncol = J)
   Z[cbind(seq(I), km.fit$cluster)] <- 1
   W <- t(km.fit$centers)
