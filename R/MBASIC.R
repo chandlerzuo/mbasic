@@ -72,7 +72,7 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
       warning("'initial' is not list or class 'MBASICFit'. Its value is skipped.")
     }
   }
-  
+
   if(verbose) {
     write.out(out, "Started")
   }
@@ -120,11 +120,11 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
     warning("The dimension of 'min.count' is invalid. No minimum value threshold is applied.")
     min.count <- matrix(0, nrow = N, ncol = M)
   }
-  
+
   if(family != "negbin" & sum(min.count != 0) > 0) {
     warning("'min.count' is only supported for the negative binomial distribution. No minimum count threshold value is set.")
   }
-  
+
   if(sum(min.count < 0) > 0) {
     warning("Negative values in 'min.count' are reset as 0.")
     min.count[min.count < 0] <- 0
@@ -143,20 +143,20 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
     }
     Gamma <- matrix(c(Gamma), nrow = N, ncol = I * M)
   }
-  
+
   if(is.null(Gamma)) {
-    Gamma <- matrix(0.5, nrow = N, ncol = I * M)
+    Gamma <- matrix(1, nrow = N, ncol = I * M)
   } else if(nrow(Gamma) == N & ncol(Gamma) == I) {
     Gamma.add <- matrix(apply(Gamma, 1, mean), nrow = N, ncol = I * (M - 1))
     Gamma <- cbind(Gamma, Gamma.add)
   } else if(nrow(Gamma) != N | ncol(Gamma) != I * M) {
     stop("Error: structure of 'Gamma' is not correct. See details.")
   }
-  
+
   if(min(Gamma) == 0) {
     Gamma <- Gamma + min(Gamma[Gamma > 0])
   }
-  
+
   ## scale the Gamma matrix if the distribution is not binomial or gamma-binomial
   scaleMat <- matrix(1, nrow = N, ncol = M)
   if(family %in% c("lognormal", "negbin", "scaled-t")) {
@@ -165,7 +165,7 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
       Gamma[, I * (m - 1) + seq(I)] <- Gamma[, I * (m - 1) + seq(I)] / scaleMat[, m]
     }
   }
-  
+
   if(is.null(struct)) {
     if(is.null(J))
       stop("Error: either struct or J must not be missing.")
@@ -177,11 +177,11 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
     if(ncol(struct)!= sum(J) | nrow(struct) != K)
       stop("Error: the dimension of struct is inconsistent with grouping structure!")
   }
-  
+
   if(prod(sort(unique(statemap)) == seq(S)) != 1) {
     stop("Error: 'statemap' must consists of values 1 to 'S'.")
   }
-  
+
   ## design matrix D is K by N
   designMap <- matrix(0, nrow = N, ncol = K)
   for(k in seq(K)) {
@@ -204,7 +204,7 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
   if(family != "binom") {
     numpar <- numpar + N * M ## Sigma
   }
-  
+
   outitr <- 0
   totallik <- oldlik <- -Inf
   alllik <- allerr <- allzeta <- allmisclass <- matchId1 <- W.err <- matchId2 <- allari <- numeric(0)
@@ -213,7 +213,7 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
   if(verbose) {
     write.out(out, "Initialize parameters")
   }
-  
+
   ## initialize distributions
   V <- Sigma <- Mu <- matrix(0, nrow = N, ncol = M)
 
@@ -223,9 +223,9 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
     Mu <- Mu.init
     Sigma <- Sigma.init
   }
-  
+
   b <- rep(0, I)
-  
+
   ## initialize the matrices by K-means
   ## in constructing Z, cluster all locis
   ProbMat <- matrix(0, nrow = K * S, ncol = I)
@@ -269,7 +269,7 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
 
   if(method != "MBASIC") {
     ## SE-HC, PE-MC or SE-MC method
-    
+
     ## em step to estimate Theta
     allpar <- c(c(V), c(Mu), c(Sigma), c(Pi))
     oldpar <- 0
@@ -278,10 +278,10 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
     conv <- FALSE
     for(itr in seq(maxitr)) {
       oldlik <- totallik
-      
+
       ## M step
       UpdateDist()
-      
+
       ## E step
       UpdateStates()
       oldpar <- allpar
@@ -307,7 +307,7 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
       }
     } ## finish iteration
     getBest(c("ProbMat", "Mu", "Sigma", "Pi", "V"))
-    
+
     Theta <- matrix(-1, nrow = K, ncol = I)
     for(k in seq_len(K)) {
       idx <- k + K * (seq_len(S) - 1)
@@ -316,12 +316,12 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
 
     if(!is.null(para))
       allerr <- sqrt(sum((ProbMat - ProbMat.true) ^ 2) / I / K / S)
-    
+
     if(method != "PE-MC") {
       ret <- MBASIC.state(Theta, J=J, zeta = zeta, struct = struct, method = method, maxitr = maxitr, tol = tol, tol.par = tol.par, para = para, out = out, W.init = W.init, Z.init = Z.init, P.init = P.init, b.init = b.init)
-      
+
       conv <- (conv & ret@converged)
-      
+
       ## Pi is the proportion for components in the k experiment to have state s
       ## Pi is different from Z. Z is the posterior probability.
 
@@ -377,7 +377,7 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
   if(!is.null(b.init)) {
   }
   predZ <- Zcond <- Z
-  
+
   ## initialize p, probz
   if(is.null(P.init)) {
     P <- matrix(0, nrow = I, ncol = S)
@@ -389,7 +389,7 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
     P <- P.init
   }
   probz <- apply(rbind(Z, diag(rep(1, J))), 2, mean)
-  
+
   ## EM algorithm
   ## change storage modes for C modules
   storage.mode(statemap) <- "integer"
@@ -410,13 +410,13 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
       }
       PDF <- trimLogValue(PDF)
     }
-   
+
     Theta <- matrix(-1, nrow = K, ncol = I)
     for(k in seq_len(K)) {
       idx <- k + K * (seq_len(S) - 1)
       Theta[k,] <- apply(ProbMat[idx,], 2, which.max)
     }
-    
+
     ## E step
     ## M step for some parameters
     estep.result <- .Call("e_step", W, P, V, zeta, probz, PDF, fac - 1, statemap - 1, package = "MBASIC")
@@ -427,7 +427,7 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
         print(max(abs(estep.result[[s]] - estep.r1[[s]])))
       }
     }
-    
+
     ## Expected Theta matrix
     ProbMat <- estep.result[["Theta"]]
     ProbMat.full <- estep.result[["Theta_nu"]]
@@ -447,13 +447,13 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
     probz <- probz[clustOrder]
     Zcond <- Zcond[, clustOrder, drop = FALSE]
     predZ <- predZ[, clustOrder, drop = FALSE]
-    
+
     if(method != "PE-MC") {
       ## skip this step if the method is PE-MC
       ## M-step for Mu and Sigma
       UpdateDist()
     }
-    
+
     oldlik <- totallik
     totallik <- .Call("loglik", W, P, V, zeta, probz, PDF, fac - 1, statemap - 1, package="MBASIC")
     if(verbose) {
@@ -464,7 +464,7 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
     if(length(para) > 1 & verbose) {
       PrintUpdate()
     }
-    
+
     if(maxlik < totallik) {
       maxlik <- totallik
       assignBest(c("ProbMat", "Theta", "W", "V", "P", "Mu", "Sigma", "zeta", "probz", "predZ", "Zcond", "b.prob"))
@@ -483,9 +483,9 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
       conv <- TRUE
       break
     }
-    
+
   } ## finish outer loop
-  
+
   getBest(c("ProbMat", "Theta", "W", "V", "P", "Mu", "Sigma", "zeta", "probz", "predZ", "Zcond", "b.prob"))
 
   Mu.err <- W.err <- numeric(0)
@@ -494,7 +494,7 @@ MBASIC <- function(Y, Gamma = NULL, S, fac, J=NULL, maxitr = 100, struct = NULL,
 
   rownames(ProbMat) <- rownames(W) <- rep(facNames, S)
   rownames(Mu) <- rownames(Sigma) <- rownames(V) <- facNames[fac]
-  
+
   new("MBASICFit",
       Theta = ProbMat,
       W = W,
@@ -544,7 +544,7 @@ InitStates <- function() {
   F1.full <- exp(F1.full)
   ## convert into (NS) x I
   F1.tmp <- log(crossprod(unitMap, F1.full))
-  
+
   ## initialize ProbMat.full
   for(m in seq(M)) {
     idx <- (m - 1) * N + seq(N)
@@ -554,7 +554,7 @@ InitStates <- function() {
   ProbMat.full <- F1.full / totalF.full
   ProbMat.full[totalF.full == 0] <- 1 / M
   ProbMat.full <- trimProbValue(ProbMat.full)
-  
+
   ## convert to KS by I
   for(s in seq(S)) {
     idx <- (s - 1) * K + seq_len(K)
@@ -574,7 +574,7 @@ InitStates <- function() {
 InitDist <- function() {
   Inherit(c("M", "Y", "family", "Mu", "Sigma", "Gamma", "min.count"))
   Gamma.m <- Gamma[, seq(ncol(Y))]
-  
+
   for(m in seq(M)) {
     m3 <- NULL
     thr <- min.count[, m]
@@ -604,7 +604,7 @@ InitDist <- function() {
     }
     m1 <- mean(Y.sec)
     m2 <- var(Y.sec)
-      
+
     MomentEstimate()
   }
   Return(c("Mu", "Sigma"))
@@ -637,14 +637,14 @@ UpdateDist <- function() {
       ratio[Gamma.m == 0] <- mean(Y[Gamma.m > 0] / Gamma.m[Gamma.m > 0])
       m1 <- apply(ratio * ProbMat.full[idx, ], 1, sum) / apply(ProbMat.full[idx, ], 1, sum)
       m2 <- apply(ratio * ratio * ProbMat.full[idx, ], 1, sum) / apply(ProbMat.full[idx, ], 1, sum)
-    } else { 
+    } else {
       ## binomial
       m1 <- apply(Y * ProbMat.full[idx, ], 1, sum) / apply(Gamma.m * ProbMat.full[idx, ], 1, sum)
       m2 <- NULL
     }
     MomentEstimate()
   }
-  
+
   ## order the means
   Mu <- Mu + min.count
   od <-  apply(Mu, 1, order)
@@ -733,9 +733,9 @@ PrintUpdate <- function() {
   W.f <- matrix(0, nrow = K * S, ncol = J)
   for(s in seq_len(S))
     W.f[s + S * seq(0, K - 1),] <- W[seq_len(K) + K * (s - 1),]
-  
+
   mc <- matchCluster(W.f, W.true, Zcond, Z.true, b.prob, nonid.true)
-  
+
   allmisclass <- c(allmisclass, mc$mcr)
   W.err <- c(W.err, mc$W.err)
   allari <- c(allari, mc$ari)
@@ -936,7 +936,7 @@ MBASIC.full <- function(J=NULL, struct = NULL, out = NULL, ncores = 1, ...) {
   }
 
   startParallel(ncores)
-  
+
   allfits <- foreach(i = seq(nmodels)) %dopar% {
     if(!is.null(allstructs)) {
       struct <- allstructs[[i]]
@@ -951,7 +951,7 @@ MBASIC.full <- function(J=NULL, struct = NULL, out = NULL, ncores = 1, ...) {
   }
 
   endParallel()
-  
+
   bestBIC <- Inf
   bestFit <- NULL
   for(fit in allfits) {
